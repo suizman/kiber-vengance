@@ -159,3 +159,9 @@ Last updated: 2026-10-23.
 ## Rule for future sessions
 
 Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PRODUCT_PLAN.md`, and the current test state. If the code contradicts this memory, verify the behavior and update the documentation; do not perpetuate stale information.
+
+## Sites mobile scrolling correction
+
+- Mobile and tablet layouts through 820 px use document-level vertical scrolling, including at 80–120% UI scale. The app height follows its content; workspace clipping is horizontal only. The piano roll and horizontal control strips retain their own local scrolling.
+- The Service Worker cache revision is v20-mobile-scroll.
+- Validation: dedicated Chromium checks with touch gestures passed at 320/390/768/820 px and UI scales 0.8/1/1.2; the footer was reachable in each case. Desktop layout was checked at 1366 px with all three scales. Typecheck, build, lint and the unit-test command passed. The repository Firefox/Chromium E2E commands failed in this environment; no full-suite pass is claimed. Physical Safari/iOS validation remains outstanding.

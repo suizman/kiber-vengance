@@ -115,3 +115,39 @@ footer{height:30px;border-color:#222b47;background:#080b18;color:#65728f}.status
 .brand-icon{width:58px;height:48px;display:grid;place-items:center;flex:none;filter:drop-shadow(0 0 15px #8b7cff62)}.brand-icon svg{width:58px;height:45px}.logo-k{fill:none;stroke:url(#kvSpectrum);stroke-width:11;stroke-linecap:square;stroke-linejoin:miter}.logo-v{fill:none;stroke:#f5f7ff;stroke-width:10;stroke-linecap:square;stroke-linejoin:miter}.brand-word{display:grid;gap:0}.brand-word b{font-weight:950;line-height:1;letter-spacing:.155em}.brand-word b:first-child{font-size:14px;letter-spacing:.13em;background:linear-gradient(90deg,#f7f9ff 10%,#c9d9ff);background-clip:text;color:transparent}.brand-word b:last-child{font-size:10px;letter-spacing:.22em}.performance-orb.compact .brand-emblem{width:72px;height:auto}.record-label .brand-emblem{width:68px;height:55px;fill:none}
 @media(max-width:1100px){.brand-icon{width:50px}.brand-icon svg{width:50px}.brand-word b:first-child{font-size:12px}.brand-word b:last-child{font-size:9px}}
 @media(max-width:760px){.brand-icon{width:45px;height:42px}.brand-icon svg{width:45px}.brand-word b:first-child{font-size:11px}.brand-word b:last-child{font-size:8px}.boot-mark{width:138px}.about-mark{width:124px}}
+
+/* Mobile uses document scrolling; only editors and control strips scroll locally. */
+@media (max-width:820px) {
+  html {
+    height:auto;
+    min-height:100%;
+    overflow-x:clip;
+    overflow-y:auto;
+  }
+  body {
+    height:auto;
+    min-height:100%;
+    overflow:visible;
+  }
+  .app {
+    display:block;
+    height:auto;
+    min-height:calc(100svh / var(--ui-scale));
+  }
+  main {
+    display:block;
+    height:auto;
+  }
+  .workspace {
+    display:block;
+    height:auto;
+    overflow-x:clip;
+    overflow-y:visible;
+  }
+  .view {
+    overflow:visible;
+  }
+  footer {
+    margin-bottom:env(safe-area-inset-bottom,0px);
+  }
+}

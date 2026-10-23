@@ -100,3 +100,7 @@ La guitarra incluida es un modelo de cuerda pulsada deliberadamente sintético, 
 - Los blobs de samples, regiones de audio y tomas viven en IndexedDB y pueden desaparecer al limpiar los datos del sitio. JSON conserva sus metadatos; para trasladar un proyecto con audio se debe usar Project Package.
 - `OfflineAudioContext` no ofrece cancelación a mitad de una operación ya iniciada. El panel puede abortar antes o después de cada render y entre stems, evitando escrituras posteriores, pero no interrumpir el DSP interno de un stem en curso.
 - La tipografía usa fallbacks del sistema para mantener el funcionamiento offline; puede variar ligeramente entre plataformas.
+
+## Corrección móvil en Sites
+
+Hasta 820 px, la página usa scroll vertical del documento y altura automática para que la edición de clips y el pie sean alcanzables. El piano roll conserva su desplazamiento local. Se elimina el bloqueo causado por overflow:hidden y la altura de escritorio aplicada a la app móvil.
