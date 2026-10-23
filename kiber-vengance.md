@@ -255,7 +255,7 @@ Esta sección actualiza el encargo original con el diseño real alcanzado. El re
 
 1. **Forge** — diseño del instrumento y del clip: piano roll, automatización, síntesis, movimiento, efectos, macros y ayudas armónicas.
 2. **Launch** — interpretación no lineal: matriz de clips, lanzamiento cuantizado, stop por pista y captura de escenas.
-3. **Audio** — producción híbrida: importación, grabación, resampling, regiones no destructivas, fades, pitch, warp por velocidad, automatización, modulación y MIDI Learn.
+3. **Audio** — producción híbrida: importación, grabación, resampling, sampler cromático Prism Keys, regiones no destructivas, fades, pitch, warp por velocidad, automatización, modulación y MIDI Learn.
 4. **Arrange** — construcción de la canción: secciones, selección y edición múltiple, fills, marcadores, mapas de tempo/compás, loop, punch-in y navegación exacta.
 5. **Mix** — acabado técnico: ganancia, faders, panorama, routing, sidechain, medición estéreo, LUFS/ceiling, mono y comparación A/B.
 6. **Perform** — interpretación inmediata: teclado, MIDI, macros expresivos, Scratch Deck y grabación de tomas.
@@ -288,7 +288,7 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 - El arreglo completo, los loops de clips de distinta longitud y las repeticiones alimentan el mismo modelo de eventos usado por reproducción, WAV y MIDI.
 - Solo es exclusivo y Mute es independiente. Ambos afectan a reproducción y render exportado.
 - El proyecto añade colores, pre-gain, grupos y modo de envío por pista; marcadores, tempo/meter maps, loop/punch, zoom, launcher, tomas, automatización global, modulación y MIDI mappings.
-- Las regiones de audio conservan start/length/offset/gain/fades/pitch/source BPM/warp. Los samples, audio de regiones y tomas se guardan fuera del JSON en IndexedDB; Project Package reúne JSON y assets disponibles.
+- Las regiones de audio conservan start/length/offset/gain/fades/pitch/source BPM/warp. Prism Keys conserva su asset, root, trim, tune, envolvente, filtro, modo y polifonía; los samples, audio de regiones y tomas se guardan fuera del JSON en IndexedDB. Project Package reúne JSON y assets disponibles.
 
 ### Flujo de creación construido
 
@@ -297,7 +297,7 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 3. Editar en el piano roll con drag/resize, selección rectangular, velocity, duración, cuantización y automatización.
 4. Dar carácter por clip con síntesis, arpegiador, LFO, efectos y macros.
 5. Improvisar en Launch con cola cuantizada y convertir la interpretación en nuevas secciones del arreglo.
-6. Importar o grabar audio, remezclar el plato, cortar transitorios en pads y editar regiones no destructivas en Audio Studio.
+6. Importar o grabar audio, tocar cualquier muestra cromáticamente con Prism Keys —feedback luminoso, QWERTY `A W S E D F T G Y H U J K`, octavas `Z/X`, touch y MIDI—, remezclar el plato, cortar transitorios en pads y editar regiones no destructivas en Audio Studio.
 7. Construir y editar secciones en Arrange, generar una base que preserve guitarra y lead, colocar marcadores, tempo/compás y definir loop/punch.
 8. Mezclar canales y lanes con pre-gain, grupos, sidechain, faders dB, panorama, sends, medidores, mastering/mono y comparación A/B.
 9. Interpretar y grabar con metrónomo, count-in, swing, timing cuantizado/libre y Scratch Deck; editar después los eventos de la toma.

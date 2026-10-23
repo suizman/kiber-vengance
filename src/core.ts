@@ -1,4 +1,4 @@
-import type { AudioLane, AudioRegion, Automation, AutomationLane, AutomationParameter, Clip, ClipCharacter, EffectChain, MacroState, NoteEvent, NoteExpression, PerformanceEvent, PerformanceTake, Project, Scene, TrackId, TrackState } from './model.js';
+import type { AudioLane, AudioRegion, Automation, AutomationLane, AutomationParameter, Clip, ClipCharacter, EffectChain, MacroState, NoteEvent, NoteExpression, PerformanceEvent, PerformanceTake, Project, SamplerInstrument, Scene, TrackId, TrackState } from './model.js';
 
 export const PROJECT_VERSION=6 as const;
 export const STEPS_PER_BAR=16;
@@ -12,6 +12,7 @@ export const DRUM_NAMES=['KICK','SNARE','CLOSED HAT','OPEN HAT','TOM','PERC','CR
 export const SCALES={minor:[0,2,3,5,7,8,10],major:[0,2,4,5,7,9,11],dorian:[0,2,3,5,7,9,10],phrygian:[0,1,3,5,7,8,10],harmonicMinor:[0,2,3,5,7,8,11]} as const;
 export type ScaleName=keyof typeof SCALES;
 export const KEYS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] as const;
+export function samplerDefaults():SamplerInstrument{return{assetId:null,name:'NO SAMPLE LOADED',size:0,type:'',duration:0,rootNote:60,tune:0,gain:.8,attack:.005,release:.18,filter:1,trimStart:0,trimEnd:1,mode:'gate',reverse:false,polyphony:12}}
 
 export function cryptoId():string{return globalThis.crypto?.randomUUID?.()||Math.random().toString(36).slice(2)}
 export function makeNote(step:number,pitch:number,length=1,velocity=.8,offset=0,expression:Partial<NoteExpression>={}):NoteEvent{return{id:cryptoId(),step,pitch,length,velocity,offset,expression:{pressure:velocity,timbre:.5,bend:0,...expression}}}
@@ -59,10 +60,11 @@ function buildDemoClips():Clip[]{
   leadA.automation.cutoff={0:.35,8:.62,16:.42,24:.8,31:.5};leadB.automation.cutoff={0:.3,16:.55,32:.75,48:.9,63:.65};guitarB.automation.pan={0:.36,16:.64,32:.4,48:.62};padB.automation.volume={0:.35,32:.7,63:.9};return[leadA,leadB,guitarA,guitarB,bassA,bassB,padA,padB,drumsA,drumsB]
 }
 
-export function createProject():Project{
+function createProjectBase():Omit<Project,'sampler'>{
   const clips=buildDemoClips(),by=(track:TrackId,index=0)=>clipsForTrack({clips} as Project,track)[index]!.id,section=(name:string,indexes:Partial<Record<TrackId,number>>={},repeats=1):Scene=>({id:cryptoId(),name,clipIds:Object.fromEntries(TRACKS.map(track=>[track,by(track,indexes[track]||0)])) as Record<TrackId,string>,repeats});
   return{version:PROJECT_VERSION,id:cryptoId(),title:'Chrome Requiem',modifiedAt:Date.now(),tempo:132,swing:.08,meter:{beats:4,unit:4},key:'C',scale:'minor',master:.78,tracks:trackDefaults(),clips,activeClipIds:Object.fromEntries(TRACKS.map(track=>[track,by(track)])) as Record<TrackId,string>,arrangement:[section('IGNITION'),section('ASCENT',{guitar:1,bass:1,pad:1}),section('IMPACT',{lead:1,guitar:1,bass:1,pad:1,drums:1},2),section('AFTERMATH')],editor:{snap:1,zoom:32,pitchLow:36,pitchHigh:96,automationParam:'cutoff',recordMode:'quantized',arrangeZoom:1},markers:[],loop:{enabled:false,start:0,end:64,punch:false},launcher:{quantization:16},performanceTakes:[],samples:[],audioLanes:[],automationLanes:[],modulationRoutes:[],mixerGroups:[{id:'music',name:'MUSIC BUS',color:'#8b7cff',volume:1,mute:false,solo:false,sidechainSource:'drums',sidechainAmount:.18}],tempoMap:[{id:cryptoId(),step:0,bpm:132,curve:'jump'}],meterMap:[{id:cryptoId(),step:0,beats:4,unit:4}],midiMappings:[],masterSettings:{bypass:false,targetLufs:-14,ceilingDb:-1,monoCheck:false,referenceLevel:-12}}
 }
+export function createProject():Project{return{...createProjectBase(),sampler:samplerDefaults()}}
 export function createEmptyProject():Project{const project=createProject(),clips=TRACKS.map(track=>createClip(track,`${TRACK_META[track].label} 1`,2)),clipIds=Object.fromEntries(clips.map(c=>[c.track,c.id])) as Record<TrackId,string>;return{...project,id:cryptoId(),title:'Untitled Signal',modifiedAt:Date.now(),clips,activeClipIds:{...clipIds},arrangement:[{id:cryptoId(),name:'INTRO',clipIds:{...clipIds},repeats:1}]}}
 
 function normalizeClip(input:any,fallback?:ClipCharacter):Clip{const bars=Math.max(1,Math.min(8,+input.bars!||1)),stepsPerBar=Math.max(1,+input.stepsPerBar!||STEPS_PER_BAR),automation:{cutoff:Record<number,number>;volume:Record<number,number>;pan:Record<number,number>}={cutoff:{},volume:{},pan:{},...input.automation},base=fallback||characterDefaults(input.track),own=input.character||{},character:ClipCharacter={arp:{...base.arp,...own.arp},lfo:{...base.lfo,...own.lfo},fx:{...base.fx,...own.fx},macros:{...base.macros,...own.macros}};const notes=(Array.isArray(input.notes)?input.notes:[]).map((n:any)=>({id:n.id||cryptoId(),step:Math.max(0,+n.step||0),pitch:+n.pitch||0,length:Math.max(.01,+n.length||1),velocity:Math.max(.01,Math.min(1,+n.velocity||.8)),offset:Math.max(-.49,Math.min(.49,+n.offset||0)),expression:{pressure:n.expression?.pressure??n.velocity??.8,timbre:n.expression?.timbre??.5,bend:n.expression?.bend??0}}));return{...input,id:input.id,name:input.name,track:input.track,bars,stepsPerBar,notes,automation,character}}

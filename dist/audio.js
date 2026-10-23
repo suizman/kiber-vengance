@@ -24,6 +24,8 @@ export class AudioEngine {
     lastFrequency = {};
     metronome = false;
     liveVoices = new Map();
+    samplerBuffer = null;
+    samplerVoices = new Map();
     launchQueue = new Map();
     launcherStopped = new Set();
     onLaunch = null;
@@ -138,6 +140,30 @@ export class AudioEngine {
     clearDrumSample(kind) { this.drumSamples.delete(kind); }
     async setAudioAsset(id, data) { await this.init(); const buffer = await this.ctx.decodeAudioData(data.slice(0)); this.audioAssets.set(id, buffer); return buffer.duration; }
     clearAudioAsset(id) { this.audioAssets.delete(id); }
+    async setSamplerSample(data, reverse = false) { await this.init(); const decoded = await this.ctx.decodeAudioData(data.slice(0)); if (!reverse)
+        this.samplerBuffer = decoded;
+    else {
+        const flipped = this.ctx.createBuffer(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
+        for (let channel = 0; channel < decoded.numberOfChannels; channel++)
+            flipped.copyToChannel(Float32Array.from(decoded.getChannelData(channel)).reverse(), channel);
+        this.samplerBuffer = flipped;
+    } return decoded.duration; }
+    clearSamplerSample() { for (const id of [...this.samplerVoices.keys()])
+        this.stopSampler(id, true); this.samplerBuffer = null; }
+    async startSampler(id, pitch, velocity = .8, settings = this.project.sampler) { await this.init(); const buffer = this.samplerBuffer; if (!buffer)
+        return false; this.stopSampler(id, true); while (this.samplerVoices.size >= Math.max(1, settings.polyphony || 12))
+        this.stopSampler(this.samplerVoices.keys().next().value, true); const now = this.ctx.currentTime, start = Math.max(0, Math.min(.98, settings.trimStart)) * buffer.duration, end = Math.max(start + .001, Math.min(1, settings.trimEnd)) * buffer.duration, duration = end - start, rate = 2 ** ((pitch - settings.rootNote + settings.tune) / 12), source = this.ctx.createBufferSource(), filter = this.ctx.createBiquadFilter(), gain = this.ctx.createGain(), level = Math.max(.001, Math.min(1.5, settings.gain) * velocity), attack = Math.min(duration / rate * .45, Math.max(.001, settings.attack)); source.buffer = buffer; source.playbackRate.value = rate; source.loop = settings.mode === 'loop'; source.loopStart = start; source.loopEnd = end; filter.type = 'lowpass'; filter.frequency.value = 160 + Math.max(0, Math.min(1, settings.filter)) ** 2 * 19840; gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(level, now + attack); source.connect(filter).connect(gain).connect(this.master); const voice = { source, filter, gain, settings }; this.samplerVoices.set(id, voice); source.onended = () => { if (this.samplerVoices.get(id) === voice)
+        this.samplerVoices.delete(id); source.disconnect(); filter.disconnect(); gain.disconnect(); }; if (source.loop)
+        source.start(now, start);
+    else
+        source.start(now, start, duration); return true; }
+    stopSampler(id, immediate = false) { if (!id)
+        return; const voice = this.samplerVoices.get(id); if (!voice || !this.ctx)
+        return; if (voice.settings.mode === 'one-shot' && !immediate)
+        return; this.samplerVoices.delete(id); const now = this.ctx.currentTime, release = immediate ? .008 : Math.max(.01, voice.settings.release || .18); voice.gain.gain.cancelScheduledValues(now); voice.gain.gain.setTargetAtTime(.0001, now, release / 4); try {
+        voice.source.stop(now + release);
+    }
+    catch { } }
     createEffectBuses() {
         this.buses = {};
         const impulse = this.reverbImpulse();
@@ -525,7 +551,7 @@ export class AudioEngine {
         reject(new Error('No performance capture is active'));
         return;
     } recorder.onerror = () => reject(new Error('Performance capture failed')); recorder.onstop = () => resolve(new Blob(this.performanceChunks || [], { type: recorder.mimeType || 'audio/webm' })); recorder.stop(); }); }
-    diagnostics() { return { effectBuses: Object.keys(this.buses || {}).length, liveVoices: this.liveVoices.size, audioAssets: this.audioAssets.size, activeAudioRegions: this.activeAudioSources.size, schedulerActive: Boolean(this.timer), contextState: this.ctx?.state || 'uninitialized', sampleRate: this.ctx?.sampleRate || null, countingIn: this.countingIn, position: Number(this.position || 0), sceneIndex: Number(this.sceneIndex || 0), songMode: Boolean(this.songMode), performanceRecording: this.performanceRecorder?.state === 'recording', scratchReady: Boolean(this.scratchReady), scratchFrames: this.scratchFrames || 0, scratchPlaying: Boolean(this.scratchPlaying), scratchSpeed: Number(this.scratchSpeed || 0), scratchMix: Number(this.scratchMix || 0) }; }
+    diagnostics() { return { effectBuses: Object.keys(this.buses || {}).length, liveVoices: this.liveVoices.size, samplerLoaded: Boolean(this.samplerBuffer), samplerVoices: this.samplerVoices.size, audioAssets: this.audioAssets.size, activeAudioRegions: this.activeAudioSources.size, schedulerActive: Boolean(this.timer), contextState: this.ctx?.state || 'uninitialized', sampleRate: this.ctx?.sampleRate || null, countingIn: this.countingIn, position: Number(this.position || 0), sceneIndex: Number(this.sceneIndex || 0), songMode: Boolean(this.songMode), performanceRecording: this.performanceRecorder?.state === 'recording', scratchReady: Boolean(this.scratchReady), scratchFrames: this.scratchFrames || 0, scratchPlaying: Boolean(this.scratchPlaying), scratchSpeed: Number(this.scratchSpeed || 0), scratchMix: Number(this.scratchMix || 0) }; }
 }
 function makeCurve(amount) { const c = new Float32Array(256), k = amount * 180; for (let i = 0; i < c.length; i++) {
     const x = i * 2 / c.length - 1;

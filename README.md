@@ -37,6 +37,8 @@ npm run check:full
 
 Audio Studio adds any number of local audio lanes beside the generated instruments. Files and microphone takes are stored privately in IndexedDB and become non-destructive regions with start, length, source offset, gain, fades, pitch, source BPM and tempo-rate warp. The Scratch Deck buffer can be committed as a region. Song WAV and Project Package include loaded audio; plain JSON contains metadata only. Tempo-rate warp currently changes playback rate, so it also changes pitch—the browser-native engine does not claim independent pitch-preserving time stretch.
 
+**Prism Keys** in Audio Studio turns any local audio file into a chromatic performance instrument. Its large multicolor 25-key keyboard gives illuminated per-note feedback and supports mouse, touch, velocity-sensitive MIDI, and the complete chromatic QWERTY row `A W S E D F T G Y H U J K` when armed. Use `Z/X` or the visible octave buttons to switch between C3–C4 and C4–C5. Root note, trim, tuning, level, filter, attack/release, reverse, polyphony, and gate/one-shot/loop modes persist in the v6 project. The private source blob lives in IndexedDB and travels with Project Package; use Record Take to capture a live sampler performance.
+
 The global Automation Lab stores curve points for master or track parameters, offers Read/Touch/Latch/Write metadata, and supports LFO modulation routes. MIDI Learn binds incoming CC messages to these targets. Arrange stores tempo and meter events, while the note transform strip provides retrograde, inversion, double/half time and deterministic humanization.
 
 Launch provides a five-track clip matrix for improvisation. Queue on beats or bars, stop tracks independently, control visible cells with MIDI notes 36–63, and capture the result as arrangement sections. Arrange adds multi-selection, copy/paste, fills, zoom, markers, exact timeline navigation, loop regions, and punch-in limits.
@@ -88,7 +90,7 @@ Editing events does not re-synthesize the already recorded waveform.
 
 ### Presets and local samples
 
-Preset Vault searches and tags factory/user sounds, remembers favorites, saves the current instrument and clip character, and imports or exports JSON banks. Impact Sample Slots accepts local audio for all seven drum voices, with trim, tuning, attack, release, reverse, transient detection and automatic distribution of slices across free pads. Samples participate in live and offline rendering. Project Package exports the v6 JSON plus available sample and Audio Studio assets.
+Preset Vault searches and tags factory/user sounds, remembers favorites, saves the current instrument and clip character, and imports or exports JSON banks. Impact Sample Slots accepts local audio for all seven drum voices, with trim, tuning, attack, release, reverse, transient detection and automatic distribution of slices across free pads. Samples participate in live and offline rendering. Project Package exports the v6 JSON plus available drum, Prism Keys and Audio Studio assets.
 
 ### Mix Console and locators
 

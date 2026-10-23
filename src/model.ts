@@ -30,6 +30,7 @@ export interface PerformanceEvent { id:string; step:number; kind:PerformanceEven
 export interface PerformanceTake { id:string; name:string; createdAt:number; durationSteps:number; trimStart:number; trimEnd:number; events:PerformanceEvent[]; audioAssetId?:string; mimeType?:string }
 export interface SampleSlice { id:string; name:string; start:number; end:number; rootNote:number }
 export interface SampleAsset { id:string; name:string; slot:number; size:number; type:string; trimStart:number; trimEnd:number; tune:number; attack:number; release:number; reverse:boolean; mode?:'one-shot'|'gate'|'loop'; rootNote?:number; chokeGroup?:number; loopStart?:number; loopEnd?:number; slices?:SampleSlice[] }
+export interface SamplerInstrument { assetId:string|null; name:string; size:number; type:string; duration:number; rootNote:number; tune:number; gain:number; attack:number; release:number; filter:number; trimStart:number; trimEnd:number; mode:'one-shot'|'gate'|'loop'; reverse:boolean; polyphony:number }
 export interface AudioRegion { id:string; assetId:string; name:string; startStep:number; lengthSteps:number; offsetSeconds:number; durationSeconds:number; gainDb:number; fadeInSteps:number; fadeOutSteps:number; pitch:number; sourceBpm:number; warp:boolean; warpMode:AudioWarpMode; reverse:boolean }
 export interface AudioLane { id:string; name:string; color:string; volume:number; pan:number; mute:boolean; solo:boolean; groupId:string|null; regions:AudioRegion[] }
 export interface AutomationPoint { id:string; step:number; value:number; curve:AutomationCurve }
@@ -46,7 +47,7 @@ export interface Project {
   tracks:Record<TrackId,TrackState>; clips:Clip[]; activeClipIds:Record<TrackId,string>; arrangement:Scene[];
   editor:{snap:number;zoom:number;pitchLow:number;pitchHigh:number;automationParam:AutomationParameter;recordMode:'quantized'|'free';arrangeZoom:number};
   markers:SongMarker[]; loop:{enabled:boolean;start:number;end:number;punch:boolean}; launcher:{quantization:number};
-  performanceTakes:PerformanceTake[]; samples:SampleAsset[]; audioLanes:AudioLane[]; automationLanes:AutomationLane[];
+  performanceTakes:PerformanceTake[]; samples:SampleAsset[]; sampler:SamplerInstrument; audioLanes:AudioLane[]; automationLanes:AutomationLane[];
   modulationRoutes:ModulationRoute[]; mixerGroups:MixerGroup[]; tempoMap:TempoEvent[]; meterMap:MeterEvent[];
   midiMappings:MidiMapping[]; masterSettings:MasteringSettings;
 }

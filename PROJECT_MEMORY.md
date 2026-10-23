@@ -40,6 +40,7 @@ Last updated: 2026-10-23.
 - Web MIDI supports note-on/off, velocity, pitch bend, channel/poly pressure, and CC74/timbre when supported by the browser.
 - Perform includes a dedicated Scratch Deck. It renders the active mix into a temporary 1/2/4/8-bar buffer and provides sample-interpolated bidirectional touch/mouse/keyboard scratching, waveform feedback, crossfader, filter, sync, brake, spinback, and tempo-derived stutter through an `AudioWorklet`.
 - Audio Studio provides arbitrary non-destructive audio lanes and regions. Local files, microphone recordings, and committed Scratch Deck buffers support position, length, source offset, gain, fades, pitch, source BPM, reverse metadata, and rate-based tempo warp in live playback and offline WAV.
+- Audio Studio also contains **Prism Keys**, a persistent chromatic sampler with a large multicolor 25-key keyboard, strong per-note light feedback, waveform, root note, trim, tuning, level, low-pass filter, attack/release, 1–24 voice polyphony, reverse, and gate/one-shot/loop modes. It is playable by touch/mouse, the full chromatic QWERTY row `A W S E D F T G Y H U J K`, and velocity-sensitive MIDI when armed; `Z/X` or the visible octave buttons move QWERTY between C3–C4 and C4–C5. Record Take captures its live master output.
 - The Automation Lab stores global lanes with curve points and write-mode metadata, audible LFO modulation routes, and persistent MIDI CC Learn mappings. Musical transforms include retrograde, inversion, double/half time, and deterministic humanization.
 
 ### Mixing and isolation
@@ -63,6 +64,7 @@ Last updated: 2026-10-23.
 - Preset Vault provides search, tags, favorites, user presets, and JSON bank import/export alongside the factory bank.
 - Each of the seven drum voices accepts a private local audio sample with trim, semitone tuning, attack, release, and reverse. Blobs remain in IndexedDB; missing assets are reported and fall back to the synthesized kit.
 - Project Package exports an uncompressed ZIP containing the v6 JSON and available local sample and Audio Studio assets.
+- Prism Keys stores its source blob in IndexedDB and includes it in Project Package; plain JSON preserves only the sampler settings and asset reference.
 
 ### Projects and export
 
@@ -89,6 +91,7 @@ Last updated: 2026-10-23.
 
 - `Space`: play/stop.
 - `A S D F G H J K`: performance/recording.
+- In armed Prism Keys: `A W S E D F T G Y H U J K` plays a chromatic octave and `Z/X` moves it down/up.
 - `1`–`5`: select track.
 - `Ctrl/Cmd+K`: command palette.
 - `Shift+S`: Solo the active track.
@@ -126,7 +129,7 @@ Last updated: 2026-10-23.
 
 - `npm run check:full` is the mandatory quality gate.
 - The mandatory final state is a clean `npm run check:full`, including the v6 Audio Studio workflow and 1366×768 density check.
-- Coverage includes migration, serialization, editing, generators, arrangement, a ten-minute scheduler run, Solo, buses, metronome, MIDI export, Firefox with audio/WAV, and Chromium responsive/a11y/PWA behavior.
+- Coverage includes migration, serialization, editing, generators, arrangement, a ten-minute scheduler run, Solo, buses, metronome, MIDI export, Firefox with audio/WAV, and Chromium responsive/a11y/PWA/Prism Keys behavior.
 - Export/Export As, reusable file handles, fallback downloads, local/global seek, the five-channel mixer, performance capture, Scratch Deck, and the full Firefox WAV workflow are covered.
 
 ## Deliberate and honest limitations

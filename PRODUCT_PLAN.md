@@ -22,6 +22,7 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 12. Performance Studio v5: Clip Launcher cuantizado y capturable, edición avanzada del arreglo, mezcla de precisión, tomas con eventos editables, Preset Vault, samples locales, Project Package y exportación profesional configurable.
 13. Signal Core Identity: nombre oficial `КИБЕР VENGANCE`, wordmark cirílico/latino, monograma К/V original, icono PWA renovado y animación de señal accesible con reducción de movimiento.
 14. Hybrid Studio v6: pistas y regiones de audio no destructivas, importación/micrófono/resampling del plato, edición de offset/fades/pitch/warp, slicing por transitorios, automatización y modulación globales, MIDI Learn, mapas de tempo/compás, transformaciones musicales, routing/sidechain, mastering, plantillas, recuperación automática y escala de interfaz 80–120%.
+15. Prism Keys: sampler cromático polifónico persistente con teclado táctil multicolor de 25 teclas, waveform, root/trim/tune/envolvente/filtro, reverse, gate/one-shot/loop, QWERTY/MIDI y portabilidad mediante Project Package.
 
 ## Decisiones técnicas
 
@@ -59,7 +60,7 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 - [x] Autosave, proyecto vacío/demo, duplicado, snapshots, restauración e import/export JSON.
 - [x] WAV y MIDI de arreglo completo o clips activos.
 - [x] Manejo visible de errores, estados de render y migración v2/v3/v4/v5→v6 sin alterar el material musical.
-- [x] Build estático/PWA, runtime TypeScript estricto, 26 pruebas unitarias y 9 flujos de navegador: Firefox con audio/WAV/MPE sostenido y Chromium responsive/a11y/PWA/Scratch Deck/exportación persistente/Launcher/Arrange/Audio Studio/mezcla/librerías.
+- [x] Build estático/PWA, runtime TypeScript estricto, 26 pruebas unitarias y 10 flujos de navegador: Firefox con audio/WAV/MPE sostenido y Chromium responsive/a11y/PWA/Scratch Deck/Prism Keys/exportación persistente/Launcher/Arrange/Audio Studio/mezcla/librerías.
 - [x] Verificación visual de escritorio y móvil sin solapamiento ni scroll horizontal global.
 - [x] Inglés por defecto, español persistente, tutorial guiado y descripciones contextuales accesibles para todos los controles.
 - [x] Atajos sin colisión: `Shift+S` Solo, `Shift+M` Mute y `Shift+V` Mutation; escritura aislada en diálogos y campos.
@@ -81,6 +82,7 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 - [x] Automatización global serializable, rutas de modulación audibles, MIDI Learn persistente, mapas de tempo/compás y transformaciones retrograde/invert/double/half/humanize.
 - [x] Routing por grupos, sidechain disparado por kick, target LUFS, ceiling, mono check, plantillas de proyecto y puntos automáticos de recuperación.
 - [x] Auditoría de densidad con escala 80–120%, breakpoints específicos de 1550/1320/900/760 px y scroll local en subsistemas anchos.
+- [x] Prism Keys con muestra local persistente, 25 teclas cromáticas grandes y multicolor, feedback luminoso por nota, polifonía configurable, modos gate/one-shot/loop, QWERTY cromático completo con cambio de octava, control táctil/MIDI y asset incluido en Project Package.
 
 ## Dependencias externas inevitables y exclusiones deliberadas
 

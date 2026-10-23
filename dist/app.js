@@ -1,4 +1,4 @@
-import { createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, clipLengthSteps, meterSteps, setProjectMeter, makeNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, generateClip, generateBacking, encodeMidi, playbackEvents, History, TRACKS, TRACK_META, DRUM_NAMES, SCALES, KEYS, addArrangementScene, duplicateArrangementScene, moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake, quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, gainToDb, createAudioLane, createAudioRegion, createAutomationLane, detectTransientSlices, transformNotes, cryptoId } from './core.js';
+import { createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, clipLengthSteps, meterSteps, setProjectMeter, makeNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, generateClip, generateBacking, encodeMidi, playbackEvents, History, TRACKS, TRACK_META, DRUM_NAMES, SCALES, KEYS, addArrangementScene, duplicateArrangementScene, moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake, quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, gainToDb, createAudioLane, createAudioRegion, createAutomationLane, detectTransientSlices, transformNotes, cryptoId, samplerDefaults } from './core.js';
 import { AudioEngine, renderWav } from './audio.js';
 window.__kvErrors = [];
 function reportError(message) { window.__kvErrors.push(String(message)); const el = document.getElementById('toast'); if (el) {
@@ -10,6 +10,8 @@ window.addEventListener('unhandledrejection', e => reportError(String(e.reason?.
 const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)], STORAGE = 'kiber-vengance-project-v6', LEGACY_V5 = 'kiber-vengance-project-v5', LEGACY_V4 = 'kiber-vengance-project-v4', LEGACY_V3 = 'kiber-vengance-project-v3', LEGACY = 'kiber-vengance-project-v2', VERSIONS = 'kiber-vengance-versions-v1', UI_STORAGE = 'kiber-vengance-ui-v1', LANGUAGE_STORAGE = 'kiber-vengance-language-v1';
 let project = loadProject(), selectedTrack = 'lead', selectedNotes = new Set(), currentStep = -1, currentScene = -1, transportPosition = 0, globalStartStep = 0, draggedScene = -1, recordArmed = false, metronome = false, saveTimer, animation = 0, clipboard = [], recording = new Map(), rollScroll = {}, activeView = 'forge', commandIndex = 0, pendingDeleteClipId = null, suppressSequencerClick = false, scratchBuffer = null, scratchAnimation = 0, scratchAngle = 0, scratchLastFrame = performance.now(), scratchStuttering = false, performanceTake = null, performanceStarted = 0, performanceTimer = null, mixerReference = null, mixerComparing = false, activePerformanceTakeId = null, performanceEvents = null, exportController = null, launcherCapturing = false, launcherSnapshots = [], selectedScenes = new Set(), sceneClipboard = [], mixerPeaks = {}, lastRecovery = 0;
 const clipStartSteps = new Map();
+let samplerArmed = false, loadedSamplerAssetId = null, samplerQwertyBase = 60;
+const samplerHeld = new Map();
 let language = localStorage.getItem(LANGUAGE_STORAGE) === 'es' ? 'es' : 'en', tutorialStep = 0, helpMode = false;
 const L = (en, es) => language === 'es' ? es : en;
 const history = new History();
@@ -25,7 +27,7 @@ engine.project = project;
 window.__kvDiagnostics = () => engine.diagnostics();
 engine.onScratchGesture = (target, value) => recordPerformanceEvent('scratch', target, value);
 const presets = { lead: ['Razor Choir', 'Neon Talon', 'Solar Vengeance'], guitar: ['Chrome Strings', 'Voltage Chug', 'Glass Horizon'], bass: ['Foundry Pulse', 'Black Reactor', 'Grind Theory'], pad: ['Afterlight', 'Frozen Cathedral', 'Signal Ghost'], drums: ['Titan Frame', 'Riot Assembly', 'Chrome Bones'] };
-const keyMap = 'asdfghjk', pitchNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+const keyMap = 'asdfghjk', pitchNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'], samplerQwertyPitches = [60, 62, 64, 65, 67, 69, 71, 72], samplerQwertyMap = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12 };
 function loadProject() { for (const key of [STORAGE, LEGACY_V5, LEGACY_V4, LEGACY_V3, LEGACY])
     try {
         const value = localStorage.getItem(key);
@@ -40,7 +42,8 @@ function changed(render = false) { project.modifiedAt = Date.now(); $('#saveStat
     list.unshift({ id: cryptoId(), label: `AUTO RECOVERY · ${project.title}`, date: Date.now(), project: structuredClone(project) });
     localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
     lastRecovery = Date.now();
-} localStorage.setItem(STORAGE, JSON.stringify(project)); $('#saveState').textContent = L('SAVED LOCALLY', 'GUARDADO LOCAL'); }, 350); engine.setProject(project); if (render)
+} localStorage.setItem(STORAGE, JSON.stringify(project)); $('#saveState').textContent = L('SAVED LOCALLY', 'GUARDADO LOCAL'); }, 350); engine.setProject(project); if (project.sampler?.assetId !== loadedSamplerAssetId)
+    void loadSamplerAsset(); if (render)
     renderAll(); }
 function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1900); }
 function download(data, name, type = 'application/octet-stream') { const blob = data instanceof Blob ? data : new Blob([data], { type }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -339,7 +342,11 @@ function renderKeyboard() { const base = TRACK_META[selectedTrack].base, offsets
     $(id).querySelectorAll('.key').forEach((k) => { k.onpointerdown = () => startPerformance(k.dataset.source, +k.dataset.pitch, .85, k); k.onpointerup = () => endPerformance(k.dataset.source, k); k.onpointerleave = (e) => { if (e.buttons)
         endPerformance(k.dataset.source, k); }; });
 } }
-function startPerformance(source, pitch, velocity = .8, el = null, expression = {}, channel = null) { el?.classList.add('active'); engine.startLive(source, selectedTrack, pitch, velocity, expression, channel); if (recordArmed && engine.playing && (!project.loop.punch || (transportPosition >= project.loop.start && transportPosition < project.loop.end))) {
+function startPerformance(source, pitch, velocity = .8, el = null, expression = {}, channel = null) { if (samplerArmed && activeView === 'audio') {
+    const keyboardIndex = keyMap.indexOf(source), samplerPitch = keyboardIndex >= 0 ? samplerQwertyPitches[keyboardIndex] : pitch, samplerKey = $(`[data-sampler-pitch="${samplerPitch}"]`);
+    startSamplerPerformance(source, samplerPitch, velocity, samplerKey);
+    return;
+} el?.classList.add('active'); engine.startLive(source, selectedTrack, pitch, velocity, expression, channel); if (recordArmed && engine.playing && (!project.loop.punch || (transportPosition >= project.loop.start && transportPosition < project.loop.end))) {
     const free = project.editor.recordMode === 'free', raw = engine.recordPosition(selectedTrack, { quantized: false });
     if (raw == null)
         return;
@@ -351,7 +358,10 @@ function startPerformance(source, pitch, velocity = .8, el = null, expression = 
     selectedNotes = new Set([n.id]);
     renderPiano();
 } }
-function endPerformance(source, el = null) { el?.classList.remove('active'); engine.stopLive(source); const rec = recording.get(source); if (!rec)
+function endPerformance(source, el = null) { if (engine.samplerVoices.has(source)) {
+    endSamplerPerformance(source);
+    return;
+} el?.classList.remove('active'); engine.stopLive(source); const rec = recording.get(source); if (!rec)
     return; const c = project.clips.find((x) => x.id === rec.clipId); if (!c) {
     recording.delete(source);
     return;
@@ -853,6 +863,122 @@ function renderTempoMap() { const root = $('#arrangeMarkers'); if (!root)
     badge.textContent = `${event.step} · ${event.beats}/${event.unit}`;
     root.append(badge);
 } }
+function samplerSettings() { return project.sampler || (project.sampler = samplerDefaults()); }
+function setupSamplerOctaveControls() {
+    if ($('#samplerOctaveValue'))
+        return;
+    $('#samplerArm').insertAdjacentHTML('afterend', '<span class="sampler-octave"><button id="samplerOctaveDown" aria-label="Sampler octave down">− OCT</button><output id="samplerOctaveValue">C4–C5</output><button id="samplerOctaveUp" aria-label="Sampler octave up">OCT ＋</button></span>');
+    $('.sampler-keyboard-shell').insertAdjacentHTML('beforeend', '<output id="samplerLiveStatus" class="sampler-live-status" aria-live="polite">READY</output>');
+    $('.sampler-hint').textContent = 'A W S E D F T G Y H U J K · Z/X octave · velocity-sensitive MIDI · Record Take captures the performance.';
+    const decorate = () => { if (!$('#samplerKeyboard'))
+        return; for (const key of $$('[data-sampler-pitch]')) {
+        const marker = String(samplerQwertyBase);
+        if (key.dataset.qwertyBase === marker)
+            continue;
+        key.dataset.qwertyBase = marker;
+        key.querySelector('span')?.remove();
+        const pitch = +key.dataset.samplerPitch, entry = Object.entries(samplerQwertyMap).find(([, offset]) => samplerQwertyBase + offset === pitch);
+        key.classList.toggle('qwerty', Boolean(entry));
+        if (entry) {
+            const label = document.createElement('span');
+            label.textContent = entry[0].toUpperCase();
+            key.append(label);
+        }
+    } $('#samplerOctaveValue').textContent = `${samplerNoteName(samplerQwertyBase)}–${samplerNoteName(samplerQwertyBase + 12)}`; $('#samplerOctaveDown').disabled = samplerQwertyBase <= 48; $('#samplerOctaveUp').disabled = samplerQwertyBase >= 60; };
+    const shift = (amount) => { for (const key of Object.keys(samplerQwertyMap))
+        endSamplerPerformance(`sampler-qwerty-${key}`); samplerQwertyBase = Math.max(48, Math.min(60, samplerQwertyBase + amount)); decorate(); $('#samplerLiveStatus').textContent = `QWERTY · ${samplerNoteName(samplerQwertyBase)}–${samplerNoteName(samplerQwertyBase + 12)}`; };
+    $('#samplerOctaveDown').onclick = () => shift(-12);
+    $('#samplerOctaveUp').onclick = () => shift(12);
+    new window.MutationObserver(decorate).observe($('#samplerKeyboard'), { childList: true });
+    document.addEventListener('keydown', (event) => { if (!samplerArmed || activeView !== 'audio' || event.ctrlKey || event.metaKey || event.altKey || ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target?.tagName))
+        return; const key = event.key.toLowerCase(); if (key === 'z' || key === 'x') {
+        if (!event.repeat)
+            shift(key === 'z' ? -12 : 12);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+    } const offset = samplerQwertyMap[key]; if (offset == null)
+        return; event.preventDefault(); event.stopImmediatePropagation(); const source = `sampler-qwerty-${key}`; if (!event.repeat && !samplerHeld.has(source)) {
+        const pitch = samplerQwertyBase + offset;
+        startSamplerPerformance(source, pitch, .86, $(`[data-sampler-pitch="${pitch}"]`));
+    } }, true);
+    document.addEventListener('keyup', (event) => { const key = event.key.toLowerCase(); if (samplerQwertyMap[key] == null)
+        return; const source = `sampler-qwerty-${key}`; if (!samplerHeld.has(source))
+        return; event.preventDefault(); event.stopImmediatePropagation(); endSamplerPerformance(source); }, true);
+    decorate();
+}
+function samplerNoteName(pitch) { return `${pitchNames[(pitch % 12 + 12) % 12]}${Math.floor(pitch / 12) - 1}`; }
+function drawSamplerWaveform() { const canvas = $('#samplerWaveform'), buffer = engine.samplerBuffer; if (!canvas)
+    return; const context = canvas.getContext('2d'); context.clearRect(0, 0, canvas.width, canvas.height); context.fillStyle = '#070b16'; context.fillRect(0, 0, canvas.width, canvas.height); if (!buffer) {
+    context.fillStyle = '#52607b';
+    context.font = '800 12px sans-serif';
+    context.textAlign = 'center';
+    context.fillText(L('LOAD A SAMPLE TO BEGIN', 'CARGA UN SAMPLE PARA EMPEZAR'), canvas.width / 2, canvas.height / 2 + 4);
+    return;
+} const data = buffer.getChannelData(0), step = Math.max(1, Math.floor(data.length / canvas.width)), middle = canvas.height / 2, gradient = context.createLinearGradient(0, 0, canvas.width, 0); gradient.addColorStop(0, '#2ee8ff'); gradient.addColorStop(.5, '#ff3bd4'); gradient.addColorStop(1, '#a7ff5b'); context.strokeStyle = gradient; context.lineWidth = 1.5; context.beginPath(); for (let x = 0; x < canvas.width; x++) {
+    let peak = 0;
+    for (let index = x * step; index < Math.min(data.length, (x + 1) * step); index++)
+        peak = Math.max(peak, Math.abs(data[index]));
+    const height = Math.max(1, peak * (canvas.height - 8));
+    context.moveTo(x, middle - height / 2);
+    context.lineTo(x, middle + height / 2);
+} context.stroke(); const settings = samplerSettings(); context.fillStyle = '#050914aa'; context.fillRect(0, 0, settings.trimStart * canvas.width, canvas.height); context.fillRect(settings.trimEnd * canvas.width, 0, (1 - settings.trimEnd) * canvas.width, canvas.height); }
+function startSamplerPerformance(source, pitch, velocity = .85, element) { if (!samplerSettings().assetId) {
+    toast(L('LOAD A SAMPLE FIRST', 'CARGA PRIMERO UN SAMPLE'));
+    return;
+} element?.classList.add('active', 'hit'); if (element) {
+    samplerHeld.set(source, element);
+    setTimeout(() => element.classList.remove('hit'), 260);
+} $('#samplerLab')?.classList.add('playing'); if ($('#samplerLiveStatus'))
+    $('#samplerLiveStatus').textContent = `LIVE · ${samplerNoteName(pitch)} · ${Math.round(velocity * 127)}`; engine.startSampler(source, pitch, velocity, samplerSettings()); }
+function endSamplerPerformance(source, element) { (element || samplerHeld.get(source))?.classList.remove('active'); samplerHeld.delete(source); engine.stopSampler(source); if (!samplerHeld.size) {
+    $('#samplerLab')?.classList.remove('playing');
+    if ($('#samplerLiveStatus'))
+        $('#samplerLiveStatus').textContent = 'READY';
+} }
+function renderSamplerKeyboard() { if (!$('#samplerKeyboard'))
+    return; const settings = samplerSettings(), keyboard = $('#samplerKeyboard'), black = new Set([1, 3, 6, 8, 10]); let whites = 0; const keys = []; for (let pitch = 48; pitch <= 72; pitch++) {
+    const dark = black.has(pitch % 12), left = dark ? whites * 72 - 24 : whites++ * 72, label = keyMap[samplerQwertyPitches.indexOf(pitch)]?.toUpperCase() || '';
+    keys.push(`<button class="sampler-key ${dark ? 'accidental' : 'natural'} ${pitch === settings.rootNote ? 'root' : ''}" style="--key-left:${left}px;--key-hue:${(pitch % 12) * 30}" data-sampler-pitch="${pitch}" aria-label="${samplerNoteName(pitch)}"><b>${samplerNoteName(pitch)}</b>${label ? `<span>${label}</span>` : ''}</button>`);
+} keyboard.style.width = `${whites * 72}px`; keyboard.innerHTML = keys.join(''); $$('[data-sampler-pitch]').forEach((key) => { const source = `sampler-pointer-${key.dataset.samplerPitch}`; key.onpointerdown = (event) => { event.preventDefault(); key.setPointerCapture?.(event.pointerId); startSamplerPerformance(source, +key.dataset.samplerPitch, .88, key); }; key.onpointerup = () => endSamplerPerformance(source, key); key.onpointercancel = () => endSamplerPerformance(source, key); }); $('#samplerName').textContent = settings.assetId ? settings.name : L('DROP A SOUND INTO THE CHROMATIC ENGINE', 'ARRASTRA UN SONIDO AL MOTOR CROMÁTICO'); $('#samplerMeta').textContent = settings.assetId ? `${settings.duration.toFixed(2)} s · ${samplerNoteName(settings.rootNote)} ROOT · ${settings.mode.toUpperCase()}` : L('WAV · MP3 · OGG · WEBM', 'WAV · MP3 · OGG · WEBM'); $('#samplerArm').disabled = !settings.assetId; $('#samplerArm').setAttribute('aria-pressed', String(samplerArmed)); $('#samplerArm').classList.toggle('active', samplerArmed); $('#samplerRemove').disabled = !settings.assetId; for (const [id, key] of [['#samplerRoot', 'rootNote'], ['#samplerMode', 'mode'], ['#samplerTune', 'tune'], ['#samplerGain', 'gain'], ['#samplerAttack', 'attack'], ['#samplerRelease', 'release'], ['#samplerFilter', 'filter'], ['#samplerTrimStart', 'trimStart'], ['#samplerTrimEnd', 'trimEnd'], ['#samplerPolyphony', 'polyphony']])
+    $(id).value = String(settings[key]); $('#samplerReverse').checked = settings.reverse; $('#samplerRootValue').textContent = samplerNoteName(settings.rootNote); $('#samplerTuneValue').textContent = `${settings.tune > 0 ? '+' : ''}${settings.tune} st`; $('#samplerGainValue').textContent = `${Math.round(settings.gain * 100)}%`; $('#samplerAttackValue').textContent = `${Math.round(settings.attack * 1000)} ms`; $('#samplerReleaseValue').textContent = `${Math.round(settings.release * 1000)} ms`; $('#samplerFilterValue').textContent = `${Math.round(settings.filter * 100)}%`; drawSamplerWaveform(); }
+async function loadSamplerAsset() { const settings = samplerSettings(); if (!settings.assetId) {
+    loadedSamplerAssetId = null;
+    engine.clearSamplerSample();
+    renderSamplerKeyboard();
+    return;
+} try {
+    const blob = await getAsset(settings.assetId);
+    if (!blob)
+        throw new Error('missing');
+    settings.duration = await engine.setSamplerSample(await blob.arrayBuffer(), settings.reverse);
+    loadedSamplerAssetId = settings.assetId;
+}
+catch {
+    loadedSamplerAssetId = null;
+    engine.clearSamplerSample();
+} renderSamplerKeyboard(); }
+function setupSamplerKeyboard() { if ($('#samplerLab'))
+    return; $('.audio-ruler').insertAdjacentHTML('beforebegin', '<section id="samplerLab" class="sampler-lab"><header><div><span class="eyebrow">CHROMATIC SAMPLE ENGINE</span><h2>PRISM KEYS</h2><p id="samplerName">NO SAMPLE LOADED</p><small id="samplerMeta">WAV · MP3 · OGG · WEBM</small></div><div class="sampler-actions"><label class="file-button">＋ LOAD SAMPLE<input id="samplerImport" type="file" accept="audio/*"></label><button id="samplerArm" aria-pressed="false" disabled>⌨ ARM QWERTY / MIDI</button><button id="samplerRemove" disabled>REMOVE</button></div></header><canvas id="samplerWaveform" width="1100" height="82" aria-label="Sampler waveform"></canvas><div class="sampler-controls"><label>ROOT <input id="samplerRoot" data-sampler-setting="rootNote" type="range" min="36" max="84" step="1"><output id="samplerRootValue"></output></label><label>MODE <select id="samplerMode" data-sampler-setting="mode"><option value="gate">GATE</option><option value="one-shot">ONE SHOT</option><option value="loop">LOOP</option></select></label><label>TUNE <input id="samplerTune" data-sampler-setting="tune" type="range" min="-24" max="24" step="1"><output id="samplerTuneValue"></output></label><label>LEVEL <input id="samplerGain" data-sampler-setting="gain" type="range" min="0" max="1.5" step=".01"><output id="samplerGainValue"></output></label><label>ATTACK <input id="samplerAttack" data-sampler-setting="attack" type="range" min=".001" max="2" step=".001"><output id="samplerAttackValue"></output></label><label>RELEASE <input id="samplerRelease" data-sampler-setting="release" type="range" min=".01" max="4" step=".01"><output id="samplerReleaseValue"></output></label><label>FILTER <input id="samplerFilter" data-sampler-setting="filter" type="range" min="0" max="1" step=".01"><output id="samplerFilterValue"></output></label><label>START <input id="samplerTrimStart" data-sampler-setting="trimStart" type="range" min="0" max=".99" step=".001"></label><label>END <input id="samplerTrimEnd" data-sampler-setting="trimEnd" type="range" min=".01" max="1" step=".001"></label><label>VOICES <input id="samplerPolyphony" data-sampler-setting="polyphony" type="number" min="1" max="24" step="1"></label><label class="switch"><input id="samplerReverse" data-sampler-setting="reverse" type="checkbox"><span>REVERSE</span></label></div><div class="sampler-keyboard-shell"><div id="samplerKeyboard" class="sampler-keyboard" role="application" aria-label="Chromatic sampler keyboard"></div></div><p class="sampler-hint">A S D F G H J K · velocity-sensitive MIDI · use Record Take to capture the live sampler performance.</p></section>'); $('#samplerImport').onchange = async (event) => { const file = event.target.files?.[0]; if (!file)
+    return; try {
+    const previous = samplerSettings().assetId, id = `sampler-${cryptoId()}`, duration = await engine.setSamplerSample(await file.arrayBuffer(), false);
+    await putAsset(id, file);
+    if (previous)
+        await deleteAsset(previous);
+    project.sampler = { ...samplerDefaults(), assetId: id, name: file.name, size: file.size, type: file.type, duration };
+    samplerArmed = true;
+    changed();
+    renderSamplerKeyboard();
+    toast(L('SAMPLER READY', 'SAMPLER LISTO'));
+}
+catch (error) {
+    toast(`${L('SAMPLE ERROR', 'ERROR DE SAMPLE')}: ${error instanceof Error ? error.message : String(error)}`);
+} event.target.value = ''; }; $('#samplerArm').onclick = () => { samplerArmed = !samplerArmed; renderSamplerKeyboard(); toast(samplerArmed ? L('SAMPLER INPUT ARMED', 'ENTRADA DEL SAMPLER ACTIVADA') : L('SAMPLER INPUT RELEASED', 'ENTRADA DEL SAMPLER DESACTIVADA')); }; $('#samplerRemove').onclick = async () => { const settings = samplerSettings(); if (settings.assetId)
+    await deleteAsset(settings.assetId); project.sampler = samplerDefaults(); samplerArmed = false; engine.clearSamplerSample(); changed(); renderSamplerKeyboard(); }; $$('[data-sampler-setting]').forEach((input) => input.onchange = async () => { const settings = samplerSettings(), key = input.dataset.samplerSetting; settings[key] = input.type === 'checkbox' ? input.checked : input.tagName === 'SELECT' ? input.value : +input.value; if (settings.trimEnd <= settings.trimStart)
+    settings.trimEnd = Math.min(1, settings.trimStart + .01); settings.polyphony = Math.max(1, Math.min(24, Math.round(settings.polyphony))); changed(); if (key === 'reverse')
+    await loadSamplerAsset();
+else
+    renderSamplerKeyboard(); }); loadSamplerAsset(); }
 function setupV6Studio() { const scale = localStorage.getItem('kiber-vengance-ui-scale-v1') || '1'; document.documentElement.style.setProperty('--ui-scale', scale); $('#uiScale').value = scale; $('#uiScale').onchange = () => { localStorage.setItem('kiber-vengance-ui-scale-v1', $('#uiScale').value); document.documentElement.style.setProperty('--ui-scale', $('#uiScale').value); }; $('#audioLaneBtn').onclick = () => { project.audioLanes.push(createAudioLane(`AUDIO ${project.audioLanes.length + 1}`, ['#2ee8ff', '#ff3bd4', '#a7ff5b', '#ff9f43'][project.audioLanes.length % 4])); changed(); renderAudioStudio(); }; $('#audioImport').onchange = async (event) => { for (const file of Array.from(event.target.files || []))
     await addAudioBlob(file); event.target.value = ''; }; $('#audioRecordBtn').onclick = async () => { const button = $('#audioRecordBtn'); if (inputRecorder?.state === 'recording') {
     inputRecorder.stop();
@@ -908,7 +1034,7 @@ function setupProjectTemplates() { if (!$('#projectTemplate'))
     next.title = 'Hybrid Session';
     next.audioLanes = [createAudioLane('RESAMPLE', '#ff3bd4'), createAudioLane('VOCALS', '#2ee8ff')];
 } replaceProject(next); toast(L('PROJECT TEMPLATE CREATED', 'PLANTILLA DE PROYECTO CREADA')); }; }
-function renderAll() { renderTracks(); renderInspector(); renderArp(); renderFx(); macroMarkup($('#macros')); macroMarkup($('#performMacros')); renderClipControls(); renderHarmony(); renderPiano(); renderAutomation(); renderKeyboard(); renderLauncher(); renderArrangement(); renderTempoMap(); renderMixer(); renderMixGroups(); renderAudioStudio(); renderPerformanceTakes(); renderLocators(); $('#title').value = project.title; $('#tempo').value = project.tempo; $('#meterSelect').value = `${project.meter.beats}/${project.meter.unit}`; $('#recordMode').value = project.editor.recordMode || 'quantized'; $('#swing').value = Math.round(project.swing * 100); $('#masterVolume').value = project.master; $('#masterValue').textContent = Math.round(project.master * 100); updateOrb(); installControlHelp(); }
+function renderAll() { renderTracks(); renderInspector(); renderArp(); renderFx(); macroMarkup($('#macros')); macroMarkup($('#performMacros')); renderClipControls(); renderHarmony(); renderPiano(); renderAutomation(); renderKeyboard(); renderLauncher(); renderArrangement(); renderTempoMap(); renderMixer(); renderMixGroups(); renderSamplerKeyboard(); renderAudioStudio(); renderPerformanceTakes(); renderLocators(); $('#title').value = project.title; $('#tempo').value = project.tempo; $('#meterSelect').value = `${project.meter.beats}/${project.meter.unit}`; $('#recordMode').value = project.editor.recordMode || 'quantized'; $('#swing').value = Math.round(project.swing * 100); $('#masterVolume').value = project.master; $('#masterValue').textContent = Math.round(project.master * 100); updateOrb(); installControlHelp(); }
 async function togglePlay(forceSong) { if (engine.playing) {
     engine.stop();
     $('#playBtn').textContent = '▶';
@@ -988,6 +1114,17 @@ async function importProjectFile(file) { if (file.name.toLowerCase().endsWith('.
         if (sample)
             await putAsset(asset.id, new Blob([await sample[1].arrayBuffer()], { type: asset.type }));
     }
+    if (next.sampler.assetId) {
+        const packed = [...files.entries()].find(([name]) => name.startsWith(`sampler/${next.sampler.assetId}-`));
+        if (packed) {
+            const blob = new Blob([await packed[1].arrayBuffer()], { type: next.sampler.type || 'audio/wav' });
+            await putAsset(next.sampler.assetId, blob);
+            try {
+                await engine.setSamplerSample(await blob.arrayBuffer(), next.sampler.reverse);
+            }
+            catch { }
+        }
+    }
     const audioIds = new Set();
     for (const lane of next.audioLanes)
         for (const region of lane.regions)
@@ -1023,13 +1160,17 @@ async function renderProjectBundle() { const files = [{ name: `${safeName()}.kib
     const blob = await getAsset(asset.id);
     if (blob)
         files.push({ name: `samples/${asset.slot}-${asset.name.replace(/[^a-z0-9._-]+/gi, '-')}`, data: blob });
+} if (project.sampler.assetId) {
+    const blob = await getAsset(project.sampler.assetId);
+    if (blob)
+        files.push({ name: `sampler/${project.sampler.assetId}-${project.sampler.name.replace(/[^a-z0-9._-]+/gi, '-')}`, data: blob });
 } const regionAssets = new Map(); for (const lane of project.audioLanes)
     for (const region of lane.regions)
         regionAssets.set(region.assetId, region.name); for (const [id, name] of regionAssets) {
     const blob = await getAsset(id);
     if (blob)
         files.push({ name: `audio/${id}-${name.replace(/[^a-z0-9._-]+/gi, '-')}`, data: blob });
-} files.push({ name: 'PACKAGE-README.txt', data: new Blob(['КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores project audio and sample assets into local browser storage.\n'], { type: 'text/plain' }) }); return zipFiles(files); }
+} files.push({ name: 'PACKAGE-README.txt', data: new Blob(['КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores sampler, audio-region and drum-sample assets into local browser storage.\n'], { type: 'text/plain' }) }); return zipFiles(files); }
 const exportMeta = { wav: { extension: '.wav', type: 'audio/wav', description: 'Wave audio' }, midi: { extension: '.mid', type: 'audio/midi', description: 'MIDI song' }, project: { extension: '.json', type: 'application/json', description: 'КИБЕР VENGANCE project' }, 'clip-wav': { extension: '.wav', type: 'audio/wav', description: 'Wave audio' }, 'clip-midi': { extension: '.mid', type: 'audio/midi', description: 'MIDI clips' }, stems: { extension: '.zip', type: 'application/zip', description: 'КИБЕР VENGANCE stems' }, bundle: { extension: '.zip', type: 'application/zip', description: 'КИБЕР VENGANCE project package' }, performance: { extension: '.webm', type: 'audio/webm', description: 'Live performance' } };
 function exportName(kind) { const suffix = { wav: '-song.wav', midi: '-song.mid', project: '.kiber.json', 'clip-wav': '-clips.wav', 'clip-midi': '-clips.mid', stems: '-stems.zip', bundle: '-project-package.zip', performance: '-performance.webm' }; return `${safeName()}${suffix[kind]}`; }
 async function performExport(kind, forcePicker = false) { if (kind === 'performance' && !performanceTake && activePerformanceTakeId) {
@@ -1107,8 +1248,10 @@ $('#clearAutomationBtn').onclick = () => { snapshot(); clip().automation[project
 $('#addSceneBtn').onclick = () => { snapshot(); addArrangementScene(project); changed(true); focusScene(project.arrangement.length - 1); };
 $('#autoArrangeBtn').onclick = () => { snapshot(); distributeArrangementPatterns(project); changed(true); toast('CLIPS DISTRIBUTED ACROSS SONG'); };
 function activateView(view) { activeView = view; $$('[data-view]').forEach(x => x.classList.toggle('active', x.dataset.view === view)); $$('.view').forEach(v => v.classList.toggle('active', v.id === `${view}View`)); engine.songMode = ['audio', 'arrange', 'mix'].includes(view); if (view === 'launch')
-    renderLauncher(); if (view === 'audio')
-    renderAudioStudio(); if (view === 'arrange') {
+    renderLauncher(); if (view === 'audio') {
+    renderAudioStudio();
+    renderSamplerKeyboard();
+} if (view === 'arrange') {
     renderArrangement();
     renderTempoMap();
 } if (view === 'mix') {
@@ -1342,6 +1485,8 @@ async function initMidi() { if (!navigator.requestMIDIAccess)
 catch {
     toast('MIDI ACCESS UNAVAILABLE');
 } }
+setupSamplerKeyboard();
+setupSamplerOctaveControls();
 const query = new URLSearchParams(location.search);
 loadQuickHandles();
 initWorkflowUi();
