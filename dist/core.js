@@ -1,4 +1,4 @@
-export const PROJECT_VERSION = 5;
+export const PROJECT_VERSION = 6;
 export const STEPS_PER_BAR = 16;
 export const STEPS = STEPS_PER_BAR;
 export const TRACKS = ['lead', 'guitar', 'bass', 'pad', 'drums'];
@@ -16,6 +16,9 @@ export function clipLengthSteps(clip) { return Math.max(1, clip.bars) * Math.max
 export function meterSteps(meter = { beats: 4, unit: 4 }) { return Math.max(1, meter.beats) * (meter.unit === 8 ? 2 : 4); }
 export function frequency(midi) { return 440 * 2 ** ((midi - 69) / 12); }
 export function secondsPerStep(tempo) { return 60 / tempo / 4; }
+export function tempoAtStep(project, step) { const events = [...(project.tempoMap || [])].sort((a, b) => a.step - b.step); if (!events.length)
+    return project.tempo; const rightIndex = events.findIndex(event => event.step > step), left = rightIndex < 0 ? events.at(-1) : events[Math.max(0, rightIndex - 1)]; if (left.curve !== 'linear' || rightIndex < 0)
+    return left.bpm; const right = events[rightIndex]; return left.bpm + (right.bpm - left.bpm) * Math.max(0, Math.min(1, (step - left.step) / (right.step - left.step))); }
 export function stepWithSwing(step, tempo, swing) { return step * secondsPerStep(tempo) + (step % 2 ? secondsPerStep(tempo) * swing : 0); }
 export function activeClip(project, track) { return project.clips.find(c => c.id === project.activeClipIds[track]) || project.clips.find(c => c.track === track); }
 export function clipsForTrack(project, track) { return project.clips.filter(c => c.track === track); }
@@ -34,11 +37,11 @@ export function characterDefaults(track) {
 }
 function trackDefaults() {
     return {
-        lead: { volume: .72, pan: .08, mute: false, solo: false, preset: 'Razor Choir', wave: 'sawtooth', osc2Wave: 'square', osc2Mix: .2, filterType: 'lowpass', cutoff: 4200, resonance: 4, attack: .015, decay: .11, sustain: .72, release: .22, glide: .04, unison: 2, detune: 7, preGainDb: 0, sendMode: 'post', color: '#ff3bd4' },
-        guitar: { volume: .7, pan: .12, mute: false, solo: false, preset: 'Chrome Strings', wave: 'triangle', osc2Wave: 'sawtooth', osc2Mix: .18, filterType: 'lowpass', cutoff: 5200, resonance: 2.4, attack: .003, decay: .24, sustain: .18, release: .38, glide: .015, unison: 1, detune: 4, preGainDb: 0, sendMode: 'post', color: '#ff9f43' },
-        bass: { volume: .82, pan: 0, mute: false, solo: false, preset: 'Foundry Pulse', wave: 'square', osc2Wave: 'sine', osc2Mix: .28, filterType: 'lowpass', cutoff: 900, resonance: 6, attack: .008, decay: .08, sustain: .78, release: .14, glide: .02, unison: 1, detune: 3, preGainDb: 0, sendMode: 'post', color: '#2ee8ff' },
-        pad: { volume: .52, pan: -.1, mute: false, solo: false, preset: 'Afterlight', wave: 'triangle', osc2Wave: 'sawtooth', osc2Mix: .18, filterType: 'lowpass', cutoff: 2400, resonance: 2, attack: .45, decay: .65, sustain: .8, release: 1.8, glide: 0, unison: 2, detune: 5, preGainDb: 0, sendMode: 'post', color: '#8b7cff' },
-        drums: { volume: .8, pan: 0, mute: false, solo: false, preset: 'Titan Frame', preGainDb: 0, sendMode: 'post', color: '#a7ff5b' }
+        lead: { volume: .72, pan: .08, mute: false, solo: false, preset: 'Razor Choir', wave: 'sawtooth', osc2Wave: 'square', osc2Mix: .2, filterType: 'lowpass', cutoff: 4200, resonance: 4, attack: .015, decay: .11, sustain: .72, release: .22, glide: .04, unison: 2, detune: 7, preGainDb: 0, sendMode: 'post', color: '#ff3bd4', groupId: 'music' },
+        guitar: { volume: .7, pan: .12, mute: false, solo: false, preset: 'Chrome Strings', wave: 'triangle', osc2Wave: 'sawtooth', osc2Mix: .18, filterType: 'lowpass', cutoff: 5200, resonance: 2.4, attack: .003, decay: .24, sustain: .18, release: .38, glide: .015, unison: 1, detune: 4, preGainDb: 0, sendMode: 'post', color: '#ff9f43', groupId: 'music' },
+        bass: { volume: .82, pan: 0, mute: false, solo: false, preset: 'Foundry Pulse', wave: 'square', osc2Wave: 'sine', osc2Mix: .28, filterType: 'lowpass', cutoff: 900, resonance: 6, attack: .008, decay: .08, sustain: .78, release: .14, glide: .02, unison: 1, detune: 3, preGainDb: 0, sendMode: 'post', color: '#2ee8ff', groupId: 'music' },
+        pad: { volume: .52, pan: -.1, mute: false, solo: false, preset: 'Afterlight', wave: 'triangle', osc2Wave: 'sawtooth', osc2Mix: .18, filterType: 'lowpass', cutoff: 2400, resonance: 2, attack: .45, decay: .65, sustain: .8, release: 1.8, glide: 0, unison: 2, detune: 5, preGainDb: 0, sendMode: 'post', color: '#8b7cff', groupId: 'music' },
+        drums: { volume: .8, pan: 0, mute: false, solo: false, preset: 'Titan Frame', preGainDb: 0, sendMode: 'post', color: '#a7ff5b', groupId: null }
     };
 }
 function buildDemoClips() {
@@ -81,7 +84,7 @@ function buildDemoClips() {
 }
 export function createProject() {
     const clips = buildDemoClips(), by = (track, index = 0) => clipsForTrack({ clips }, track)[index].id, section = (name, indexes = {}, repeats = 1) => ({ id: cryptoId(), name, clipIds: Object.fromEntries(TRACKS.map(track => [track, by(track, indexes[track] || 0)])), repeats });
-    return { version: PROJECT_VERSION, id: cryptoId(), title: 'Chrome Requiem', modifiedAt: Date.now(), tempo: 132, swing: .08, meter: { beats: 4, unit: 4 }, key: 'C', scale: 'minor', master: .78, tracks: trackDefaults(), clips, activeClipIds: Object.fromEntries(TRACKS.map(track => [track, by(track)])), arrangement: [section('IGNITION'), section('ASCENT', { guitar: 1, bass: 1, pad: 1 }), section('IMPACT', { lead: 1, guitar: 1, bass: 1, pad: 1, drums: 1 }, 2), section('AFTERMATH')], editor: { snap: 1, zoom: 32, pitchLow: 36, pitchHigh: 96, automationParam: 'cutoff', recordMode: 'quantized', arrangeZoom: 1 }, markers: [], loop: { enabled: false, start: 0, end: 64, punch: false }, launcher: { quantization: 16 }, performanceTakes: [], samples: [], masterSettings: { bypass: false } };
+    return { version: PROJECT_VERSION, id: cryptoId(), title: 'Chrome Requiem', modifiedAt: Date.now(), tempo: 132, swing: .08, meter: { beats: 4, unit: 4 }, key: 'C', scale: 'minor', master: .78, tracks: trackDefaults(), clips, activeClipIds: Object.fromEntries(TRACKS.map(track => [track, by(track)])), arrangement: [section('IGNITION'), section('ASCENT', { guitar: 1, bass: 1, pad: 1 }), section('IMPACT', { lead: 1, guitar: 1, bass: 1, pad: 1, drums: 1 }, 2), section('AFTERMATH')], editor: { snap: 1, zoom: 32, pitchLow: 36, pitchHigh: 96, automationParam: 'cutoff', recordMode: 'quantized', arrangeZoom: 1 }, markers: [], loop: { enabled: false, start: 0, end: 64, punch: false }, launcher: { quantization: 16 }, performanceTakes: [], samples: [], audioLanes: [], automationLanes: [], modulationRoutes: [], mixerGroups: [{ id: 'music', name: 'MUSIC BUS', color: '#8b7cff', volume: 1, mute: false, solo: false, sidechainSource: 'drums', sidechainAmount: .18 }], tempoMap: [{ id: cryptoId(), step: 0, bpm: 132, curve: 'jump' }], meterMap: [{ id: cryptoId(), step: 0, beats: 4, unit: 4 }], midiMappings: [], masterSettings: { bypass: false, targetLufs: -14, ceilingDb: -1, monoCheck: false, referenceLevel: -12 } };
 }
 export function createEmptyProject() { const project = createProject(), clips = TRACKS.map(track => createClip(track, `${TRACK_META[track].label} 1`, 2)), clipIds = Object.fromEntries(clips.map(c => [c.track, c.id])); return { ...project, id: cryptoId(), title: 'Untitled Signal', modifiedAt: Date.now(), clips, activeClipIds: { ...clipIds }, arrangement: [{ id: cryptoId(), name: 'INTRO', clipIds: { ...clipIds }, repeats: 1 }] }; }
 function normalizeClip(input, fallback) { const bars = Math.max(1, Math.min(8, +input.bars || 1)), stepsPerBar = Math.max(1, +input.stepsPerBar || STEPS_PER_BAR), automation = { cutoff: {}, volume: {}, pan: {}, ...input.automation }, base = fallback || characterDefaults(input.track), own = input.character || {}, character = { arp: { ...base.arp, ...own.arp }, lfo: { ...base.lfo, ...own.lfo }, fx: { ...base.fx, ...own.fx }, macros: { ...base.macros, ...own.macros } }; const notes = (Array.isArray(input.notes) ? input.notes : []).map((n) => ({ id: n.id || cryptoId(), step: Math.max(0, +n.step || 0), pitch: +n.pitch || 0, length: Math.max(.01, +n.length || 1), velocity: Math.max(.01, Math.min(1, +n.velocity || .8)), offset: Math.max(-.49, Math.min(.49, +n.offset || 0)), expression: { pressure: n.expression?.pressure ?? n.velocity ?? .8, timbre: n.expression?.timbre ?? .5, bend: n.expression?.bend ?? 0 } })); return { ...input, id: input.id, name: input.name, track: input.track, bars, stepsPerBar, notes, automation, character }; }
@@ -108,7 +111,47 @@ export function migrateProject(value) { if (!value || typeof value !== 'object')
     if (!clips.some(c => c.track === track))
         clips.push(createClip(track, `${TRACK_META[track].label} 1`, 2, meterSteps(source.meter || base.meter))); const activeClipIds = { ...base.activeClipIds, ...source.activeClipIds }; for (const track of TRACKS)
     if (!clips.some(c => c.id === activeClipIds[track] && c.track === track))
-        activeClipIds[track] = clips.find(c => c.track === track).id; const arrangement = (source.arrangement?.length ? source.arrangement : base.arrangement).map((s) => ({ id: s.id || cryptoId(), name: s.name || 'SECTION', clipIds: { ...activeClipIds, ...('clipIds' in s ? s.clipIds : {}) }, repeats: Math.max(1, Math.min(16, +s.repeats || 1)) })), { macros: _macros, ...cleanSource } = source; const duration = arrangement.reduce((sum, scene) => sum + Math.max(...TRACKS.map(track => clipLengthSteps(clips.find(c => c.id === scene.clipIds[track]) || clips.find(c => c.track === track)))) * scene.repeats, 0); return { ...base, ...cleanSource, version: PROJECT_VERSION, modifiedAt: Date.now(), meter: { ...base.meter, ...source.meter }, tracks, clips, activeClipIds, arrangement, editor: { ...base.editor, ...source.editor }, markers: Array.isArray(source.markers) ? source.markers : [], loop: { ...base.loop, ...source.loop, end: source.loop?.end || Math.min(64, duration) }, launcher: { ...base.launcher, ...source.launcher }, performanceTakes: Array.isArray(source.performanceTakes) ? source.performanceTakes : [], samples: Array.isArray(source.samples) ? source.samples : [], masterSettings: { ...base.masterSettings, ...source.masterSettings } }; }
+        activeClipIds[track] = clips.find(c => c.track === track).id; const arrangement = (source.arrangement?.length ? source.arrangement : base.arrangement).map((s) => ({ id: s.id || cryptoId(), name: s.name || 'SECTION', clipIds: { ...activeClipIds, ...('clipIds' in s ? s.clipIds : {}) }, repeats: Math.max(1, Math.min(16, +s.repeats || 1)) })), { macros: _macros, ...cleanSource } = source; const duration = arrangement.reduce((sum, scene) => sum + Math.max(...TRACKS.map(track => clipLengthSteps(clips.find(c => c.id === scene.clipIds[track]) || clips.find(c => c.track === track)))) * scene.repeats, 0), audioLanes = Array.isArray(source.audioLanes) ? source.audioLanes.map((lane) => ({ ...createAudioLane(lane.name, lane.color), ...lane, regions: Array.isArray(lane.regions) ? lane.regions.map((region) => ({ ...createAudioRegion(region.assetId, region.name, region.startStep, region.lengthSteps, region.durationSeconds), ...region })) : [] })) : []; return { ...base, ...cleanSource, version: PROJECT_VERSION, modifiedAt: Date.now(), meter: { ...base.meter, ...source.meter }, tracks, clips, activeClipIds, arrangement, editor: { ...base.editor, ...source.editor }, markers: Array.isArray(source.markers) ? source.markers : [], loop: { ...base.loop, ...source.loop, end: source.loop?.end || Math.min(64, duration) }, launcher: { ...base.launcher, ...source.launcher }, performanceTakes: Array.isArray(source.performanceTakes) ? source.performanceTakes : [], samples: Array.isArray(source.samples) ? source.samples : [], audioLanes, automationLanes: Array.isArray(source.automationLanes) ? source.automationLanes : [], modulationRoutes: Array.isArray(source.modulationRoutes) ? source.modulationRoutes : [], mixerGroups: Array.isArray(source.mixerGroups) && source.mixerGroups.length ? source.mixerGroups : base.mixerGroups, tempoMap: Array.isArray(source.tempoMap) && source.tempoMap.length ? source.tempoMap : [{ id: cryptoId(), step: 0, bpm: +source.tempo || base.tempo, curve: 'jump' }], meterMap: Array.isArray(source.meterMap) && source.meterMap.length ? source.meterMap : [{ id: cryptoId(), step: 0, beats: source.meter?.beats || 4, unit: source.meter?.unit || 4 }], midiMappings: Array.isArray(source.midiMappings) ? source.midiMappings : [], masterSettings: { ...base.masterSettings, ...source.masterSettings } }; }
+export function createAudioLane(name = 'AUDIO 1', color = '#2ee8ff') { return { id: cryptoId(), name, color, volume: 1, pan: 0, mute: false, solo: false, groupId: 'music', regions: [] }; }
+export function createAudioRegion(assetId, name = 'AUDIO REGION', startStep = 0, lengthSteps = 16, durationSeconds = 0) { return { id: cryptoId(), assetId, name, startStep: Math.max(0, startStep), lengthSteps: Math.max(.25, lengthSteps), offsetSeconds: 0, durationSeconds: Math.max(0, durationSeconds), gainDb: 0, fadeInSteps: 0, fadeOutSteps: 0, pitch: 0, sourceBpm: 120, warp: false, warpMode: 'repitch', reverse: false }; }
+export function audioRegionRate(region, tempo) { const pitch = 2 ** (region.pitch / 12), warp = region.warp ? Math.max(.1, tempo / Math.max(20, region.sourceBpm)) : 1; return pitch * warp; }
+export function createAutomationLane(target = 'master.volume', name = 'MASTER VOLUME', min = 0, max = 1) { return { id: cryptoId(), name, target, min, max, enabled: true, writeMode: 'read', points: [] }; }
+export function evaluateAutomationLane(lane, step, fallback = .5) { const points = [...lane.points].sort((a, b) => a.step - b.step); if (!lane.enabled || !points.length)
+    return fallback; if (step <= points[0].step)
+    return points[0].value; if (step >= points.at(-1).step)
+    return points.at(-1).value; const rightIndex = points.findIndex(point => point.step >= step), left = points[rightIndex - 1], right = points[rightIndex]; if (left.curve === 'step')
+    return left.value; let t = (step - left.step) / (right.step - left.step); if (left.curve === 'smooth')
+    t = t * t * (3 - 2 * t);
+else if (left.curve === 'exponential')
+    t = t * t; return left.value + (right.value - left.value) * t; }
+export function detectTransientSlices(samples, count = 8) { if (samples.length < 2)
+    return [0, 1]; const window = Math.max(32, Math.floor(samples.length / 1024)), energies = []; for (let i = 0; i < samples.length; i += window) {
+    let sum = 0;
+    for (let j = i; j < Math.min(samples.length, i + window); j++)
+        sum += Math.abs(samples[j]);
+    energies.push(sum / window);
+} const candidates = energies.map((energy, index) => ({ index, delta: energy - (energies[index - 1] || 0) })).filter(item => item.index > 1).sort((a, b) => b.delta - a.delta), minimum = Math.max(1, Math.floor(energies.length / Math.max(2, count * 2))), chosen = [0]; for (const candidate of candidates)
+    if (chosen.every(index => Math.abs(index - candidate.index) >= minimum) && chosen.push(candidate.index) >= count)
+        break; return chosen.sort((a, b) => a - b).map(index => Math.min(1, index * window / samples.length)).concat(1).filter((value, index, list) => index === 0 || value > list[index - 1]); }
+export function transformNotes(clip, mode, amount = .5) { const length = clipLengthSteps(clip), center = clip.notes.length ? clip.notes.reduce((sum, n) => sum + n.pitch, 0) / clip.notes.length : 60; for (const note of clip.notes) {
+    if (mode === 'retrograde')
+        note.step = Math.max(0, length - note.step - note.length);
+    else if (mode === 'invert')
+        note.pitch = Math.round(center - (note.pitch - center));
+    else if (mode === 'double') {
+        note.step = Math.min(length - .25, note.step * 2);
+        note.length = Math.max(.25, note.length * 2);
+    }
+    else if (mode === 'half') {
+        note.step = Math.max(0, note.step / 2);
+        note.length = Math.max(.25, note.length / 2);
+    }
+    else {
+        const seed = (note.pitch * 31 + Math.round(note.step * 17)) % 97 / 97 - .5;
+        note.offset = Math.max(-.49, Math.min(.49, note.offset + seed * .4 * amount));
+        note.velocity = Math.max(.05, Math.min(1, note.velocity + seed * .2 * amount));
+    }
+} clip.notes.sort((a, b) => a.step - b.step); }
 export function dbToGain(db) { return db <= -60 ? 0 : 10 ** (db / 20); }
 export function gainToDb(gain) { return gain <= .001 ? -60 : 20 * Math.log10(gain); }
 export function createPerformanceTake(name, durationSteps, events = []) { return { id: cryptoId(), name, createdAt: Date.now(), durationSteps: Math.max(1, durationSteps), trimStart: 0, trimEnd: Math.max(1, durationSteps), events: events.map(event => ({ ...event, id: event.id || cryptoId() })) }; }

@@ -1,4 +1,4 @@
-import { createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, clipLengthSteps, meterSteps, setProjectMeter, makeNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, generateClip, generateBacking, encodeMidi, playbackEvents, History, TRACKS, TRACK_META, DRUM_NAMES, SCALES, KEYS, addArrangementScene, duplicateArrangementScene, moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake, quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, gainToDb } from './core.js';
+import { createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, clipLengthSteps, meterSteps, setProjectMeter, makeNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, generateClip, generateBacking, encodeMidi, playbackEvents, History, TRACKS, TRACK_META, DRUM_NAMES, SCALES, KEYS, addArrangementScene, duplicateArrangementScene, moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake, quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, gainToDb, createAudioLane, createAudioRegion, createAutomationLane, detectTransientSlices, transformNotes, cryptoId } from './core.js';
 import { AudioEngine, renderWav } from './audio.js';
 window.__kvErrors = [];
 function reportError(message) { window.__kvErrors.push(String(message)); const el = document.getElementById('toast'); if (el) {
@@ -7,8 +7,8 @@ function reportError(message) { window.__kvErrors.push(String(message)); const e
 } }
 window.addEventListener('error', e => reportError(e.message));
 window.addEventListener('unhandledrejection', e => reportError(String(e.reason?.message || e.reason)));
-const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)], STORAGE = 'kiber-vengance-project-v5', LEGACY_V4 = 'kiber-vengance-project-v4', LEGACY_V3 = 'kiber-vengance-project-v3', LEGACY = 'kiber-vengance-project-v2', VERSIONS = 'kiber-vengance-versions-v1', UI_STORAGE = 'kiber-vengance-ui-v1', LANGUAGE_STORAGE = 'kiber-vengance-language-v1';
-let project = loadProject(), selectedTrack = 'lead', selectedNotes = new Set(), currentStep = -1, currentScene = -1, transportPosition = 0, globalStartStep = 0, draggedScene = -1, recordArmed = false, metronome = false, saveTimer, animation = 0, clipboard = [], recording = new Map(), rollScroll = {}, activeView = 'forge', commandIndex = 0, pendingDeleteClipId = null, suppressSequencerClick = false, scratchBuffer = null, scratchAnimation = 0, scratchAngle = 0, scratchLastFrame = performance.now(), scratchStuttering = false, performanceTake = null, performanceStarted = 0, performanceTimer = null, mixerReference = null, mixerComparing = false, activePerformanceTakeId = null, performanceEvents = null, exportController = null, launcherCapturing = false, launcherSnapshots = [], selectedScenes = new Set(), sceneClipboard = [], mixerPeaks = {};
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)], STORAGE = 'kiber-vengance-project-v6', LEGACY_V5 = 'kiber-vengance-project-v5', LEGACY_V4 = 'kiber-vengance-project-v4', LEGACY_V3 = 'kiber-vengance-project-v3', LEGACY = 'kiber-vengance-project-v2', VERSIONS = 'kiber-vengance-versions-v1', UI_STORAGE = 'kiber-vengance-ui-v1', LANGUAGE_STORAGE = 'kiber-vengance-language-v1';
+let project = loadProject(), selectedTrack = 'lead', selectedNotes = new Set(), currentStep = -1, currentScene = -1, transportPosition = 0, globalStartStep = 0, draggedScene = -1, recordArmed = false, metronome = false, saveTimer, animation = 0, clipboard = [], recording = new Map(), rollScroll = {}, activeView = 'forge', commandIndex = 0, pendingDeleteClipId = null, suppressSequencerClick = false, scratchBuffer = null, scratchAnimation = 0, scratchAngle = 0, scratchLastFrame = performance.now(), scratchStuttering = false, performanceTake = null, performanceStarted = 0, performanceTimer = null, mixerReference = null, mixerComparing = false, activePerformanceTakeId = null, performanceEvents = null, exportController = null, launcherCapturing = false, launcherSnapshots = [], selectedScenes = new Set(), sceneClipboard = [], mixerPeaks = {}, lastRecovery = 0;
 const clipStartSteps = new Map();
 let language = localStorage.getItem(LANGUAGE_STORAGE) === 'es' ? 'es' : 'en', tutorialStep = 0, helpMode = false;
 const L = (en, es) => language === 'es' ? es : en;
@@ -26,7 +26,7 @@ window.__kvDiagnostics = () => engine.diagnostics();
 engine.onScratchGesture = (target, value) => recordPerformanceEvent('scratch', target, value);
 const presets = { lead: ['Razor Choir', 'Neon Talon', 'Solar Vengeance'], guitar: ['Chrome Strings', 'Voltage Chug', 'Glass Horizon'], bass: ['Foundry Pulse', 'Black Reactor', 'Grind Theory'], pad: ['Afterlight', 'Frozen Cathedral', 'Signal Ghost'], drums: ['Titan Frame', 'Riot Assembly', 'Chrome Bones'] };
 const keyMap = 'asdfghjk', pitchNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
-function loadProject() { for (const key of [STORAGE, LEGACY_V4, LEGACY_V3, LEGACY])
+function loadProject() { for (const key of [STORAGE, LEGACY_V5, LEGACY_V4, LEGACY_V3, LEGACY])
     try {
         const value = localStorage.getItem(key);
         if (value)
@@ -35,7 +35,12 @@ function loadProject() { for (const key of [STORAGE, LEGACY_V4, LEGACY_V3, LEGAC
     catch { } return createProject(); }
 function esc(v) { return String(v).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
 function snapshot() { history.push(project); }
-function changed(render = false) { project.modifiedAt = Date.now(); $('#saveState').textContent = L('SAVING…', 'GUARDANDO…'); clearTimeout(saveTimer); saveTimer = setTimeout(() => { localStorage.setItem(STORAGE, JSON.stringify(project)); $('#saveState').textContent = L('SAVED LOCALLY', 'GUARDADO LOCAL'); }, 350); engine.setProject(project); if (render)
+function changed(render = false) { project.modifiedAt = Date.now(); $('#saveState').textContent = L('SAVING…', 'GUARDANDO…'); clearTimeout(saveTimer); saveTimer = setTimeout(() => { if (Date.now() - lastRecovery > 60000) {
+    const list = loadVersions();
+    list.unshift({ id: cryptoId(), label: `AUTO RECOVERY · ${project.title}`, date: Date.now(), project: structuredClone(project) });
+    localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
+    lastRecovery = Date.now();
+} localStorage.setItem(STORAGE, JSON.stringify(project)); $('#saveState').textContent = L('SAVED LOCALLY', 'GUARDADO LOCAL'); }, 350); engine.setProject(project); if (render)
     renderAll(); }
 function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1900); }
 function download(data, name, type = 'application/octet-stream') { const blob = data instanceof Blob ? data : new Blob([data], { type }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
@@ -798,7 +803,112 @@ catch {
 } }
 function saveVersion() { const label = prompt(L('Snapshot name', 'Nombre de la instantánea'), `${project.title} · ${new Date().toLocaleTimeString(language)}`); if (!label)
     return; const list = loadVersions(); list.unshift({ id: crypto.randomUUID(), label, date: Date.now(), project: structuredClone(project) }); localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20))); renderVersions(); toast(L('VERSION SNAPSHOT CREATED', 'INSTANTÁNEA CREADA')); }
-function renderAll() { renderTracks(); renderInspector(); renderArp(); renderFx(); macroMarkup($('#macros')); macroMarkup($('#performMacros')); renderClipControls(); renderHarmony(); renderPiano(); renderAutomation(); renderKeyboard(); renderLauncher(); renderArrangement(); renderMixer(); renderPerformanceTakes(); renderLocators(); $('#title').value = project.title; $('#tempo').value = project.tempo; $('#meterSelect').value = `${project.meter.beats}/${project.meter.unit}`; $('#recordMode').value = project.editor.recordMode || 'quantized'; $('#swing').value = Math.round(project.swing * 100); $('#masterVolume').value = project.master; $('#masterValue').textContent = Math.round(project.master * 100); updateOrb(); installControlHelp(); }
+let inputRecorder = null, inputStream = null, inputChunks = [], midiLearnTarget = null;
+function applyMidiMapping(mapping, normalized) { const value = mapping.min + (mapping.max - mapping.min) * normalized; if (mapping.target === 'master.volume')
+    project.master = Math.max(0, Math.min(1, value));
+else {
+    const match = /^track\.([^.]+)\.(volume|pan|cutoff)$/.exec(mapping.target);
+    if (match && TRACKS.includes(match[1]))
+        project.tracks[match[1]][match[2]] = match[2] === 'cutoff' ? 120 + value * 11880 : match[2] === 'pan' ? value * 2 - 1 : value;
+} engine.setProject(project); renderMixer(); renderMixGroups(); }
+function audioBufferWav(buffer) { const channels = Math.min(2, buffer.numberOfChannels), frames = buffer.length, bytes = 44 + frames * channels * 2, array = new ArrayBuffer(bytes), view = new DataView(array), write = (offset, text) => [...text].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0))); write(0, 'RIFF'); view.setUint32(4, bytes - 8, true); write(8, 'WAVEfmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, channels, true); view.setUint32(24, buffer.sampleRate, true); view.setUint32(28, buffer.sampleRate * channels * 2, true); view.setUint16(32, channels * 2, true); view.setUint16(34, 16, true); write(36, 'data'); view.setUint32(40, frames * channels * 2, true); let offset = 44; for (let frame = 0; frame < frames; frame++)
+    for (let channel = 0; channel < channels; channel++) {
+        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[frame]));
+        view.setInt16(offset, sample < 0 ? sample * 32768 : sample * 32767, true);
+        offset += 2;
+    } return new Blob([array], { type: 'audio/wav' }); }
+async function addAudioBlob(blob, name = '', lane) { await engine.init(); const resolvedName = name || blob.name || 'Recorded signal.wav', id = `audio-${cryptoId()}`, duration = await engine.setAudioAsset(id, await blob.arrayBuffer()); await putAsset(id, blob); const targetLane = lane || project.audioLanes[0] || (project.audioLanes[0] = createAudioLane()), steps = Math.max(1, Math.round(duration / (60 / project.tempo / 4) * 4) / 4), end = Math.max(0, ...targetLane.regions.map((region) => region.startStep + region.lengthSteps)); targetLane.regions.push(createAudioRegion(id, resolvedName, end, steps, duration)); changed(); renderAudioStudio(); toast(L('AUDIO REGION READY', 'REGIÓN DE AUDIO LISTA')); }
+async function loadAudioAssets() { const ids = new Set(); for (const lane of project.audioLanes || [])
+    for (const region of lane.regions)
+        ids.add(region.assetId); for (const id of ids)
+    try {
+        const blob = await getAsset(id);
+        if (blob)
+            await engine.setAudioAsset(id, await blob.arrayBuffer());
+    }
+    catch { } renderAudioStudio(); }
+function renderAudioStudio() { const root = $('#audioLanes'); if (!root)
+    return; root.innerHTML = project.audioLanes.length ? project.audioLanes.map((lane) => `<article class="audio-lane" data-audio-lane="${lane.id}" style="--lane:${lane.color}"><header class="audio-lane-head"><input data-lane-name type="text" value="${esc(lane.name)}" aria-label="Lane name"><button data-lane-solo class="${lane.solo ? 'on' : ''}" aria-pressed="${lane.solo}">S</button><button data-lane-mute class="${lane.mute ? 'on' : ''}" aria-pressed="${lane.mute}">M</button><label>VOL<input data-lane-value="volume" type="range" min="0" max="1.5" step=".01" value="${lane.volume}"><output>${Math.round(lane.volume * 100)}</output></label><label>PAN<input data-lane-value="pan" type="range" min="-1" max="1" step=".01" value="${lane.pan}"><output>${Math.round(lane.pan * 100)}</output></label><button data-lane-delete>DELETE LANE</button></header><div class="audio-track">${lane.regions.map((region) => `<article class="audio-region" data-audio-region="${region.id}" style="--length:${region.lengthSteps}"><header><b>${esc(region.name)}</b><button data-region-delete title="Delete region">×</button></header><div class="mini-wave"></div><div class="audio-region-controls"><label>START<input data-region-key="startStep" type="number" min="0" step=".25" value="${region.startStep}"></label><label>LENGTH<input data-region-key="lengthSteps" type="number" min=".25" step=".25" value="${region.lengthSteps}"></label><label>OFFSET<input data-region-key="offsetSeconds" type="number" min="0" step=".01" value="${region.offsetSeconds.toFixed(2)}"></label><label>GAIN<input data-region-key="gainDb" type="number" min="-60" max="18" step=".5" value="${region.gainDb}"></label><label>FADE IN<input data-region-key="fadeInSteps" type="number" min="0" step=".25" value="${region.fadeInSteps}"></label><label>FADE OUT<input data-region-key="fadeOutSteps" type="number" min="0" step=".25" value="${region.fadeOutSteps}"></label><label>PITCH<input data-region-key="pitch" type="number" min="-24" max="24" step="1" value="${region.pitch}"></label><label>BPM<input data-region-key="sourceBpm" type="number" min="20" max="300" step=".1" value="${region.sourceBpm}"></label><label class="wide">WARP<select data-region-key="warp"><option value="0" ${!region.warp ? 'selected' : ''}>OFF</option><option value="1" ${region.warp ? 'selected' : ''}>TEMPO LOCK</option></select></label><label class="wide">MODE<select data-region-key="warpMode"><option value="repitch" ${region.warpMode === 'repitch' ? 'selected' : ''}>REPITCH</option><option value="stretch" ${region.warpMode === 'stretch' ? 'selected' : ''}>STRETCH PREVIEW</option></select></label></div></article>`).join('') || '<div class="audio-empty">DROP OR IMPORT AUDIO TO THIS LANE</div>'}</div></article>`).join('') : '<div class="audio-empty">IMPORT AUDIO OR CREATE A LANE TO START THE HYBRID ARRANGEMENT</div>'; $$('[data-audio-lane]').forEach(row => { const lane = project.audioLanes.find((item) => item.id === row.dataset.audioLane); row.querySelector('[data-lane-name]').onchange = (event) => { lane.name = event.target.value || lane.name; changed(); }; row.querySelector('[data-lane-solo]').onclick = () => { lane.solo = !lane.solo; changed(); renderAudioStudio(); }; row.querySelector('[data-lane-mute]').onclick = () => { lane.mute = !lane.mute; changed(); renderAudioStudio(); }; row.querySelectorAll('[data-lane-value]').forEach((input) => input.oninput = () => { lane[input.dataset.laneValue] = +input.value; input.closest('label').querySelector('output').textContent = Math.round(+input.value * 100); engine.setProject(project); }); row.querySelectorAll('[data-lane-value]').forEach((input) => input.onchange = () => changed()); row.querySelector('[data-lane-delete]').onclick = () => { if (!confirm(L('Delete this audio lane?', '¿Borrar esta pista de audio?')))
+    return; snapshot(); project.audioLanes = project.audioLanes.filter((item) => item.id !== lane.id); changed(); renderAudioStudio(); }; row.querySelectorAll('[data-audio-region]').forEach((card) => { const region = lane.regions.find((item) => item.id === card.dataset.audioRegion); card.querySelectorAll('[data-region-key]').forEach((input) => input.onchange = () => { const key = input.dataset.regionKey; region[key] = key === 'warp' ? input.value === '1' : key === 'warpMode' ? input.value : +input.value; if (region.offsetSeconds >= region.durationSeconds)
+    region.offsetSeconds = Math.max(0, region.durationSeconds - .01); changed(); renderAudioStudio(); }); card.querySelector('[data-region-delete]').onclick = async () => { snapshot(); lane.regions = lane.regions.filter((item) => item.id !== region.id); const used = project.audioLanes.some((item) => item.regions.some((candidate) => candidate.assetId === region.assetId)); if (!used) {
+    engine.clearAudioAsset(region.assetId);
+    await deleteAsset(region.assetId);
+} changed(); renderAudioStudio(); }; }); }); renderGlobalAutomation(); }
+function renderGlobalAutomation() { const root = $('#globalAutomation'); if (!root)
+    return; root.innerHTML = [...(project.automationLanes || []).map((lane) => `<article class="automation-card" data-global-auto="${lane.id}"><b>${esc(lane.name)}</b><button data-auto-delete>×</button><small>${lane.target} · ${lane.points.length} POINTS · ${lane.writeMode.toUpperCase()}</small><button data-auto-point>＋ POINT</button></article>`), ...(project.modulationRoutes || []).map((route) => `<article class="modulation-card" data-mod-route="${route.id}"><b>${route.source.toUpperCase()} → ${esc(route.target)}</b><button data-mod-delete>×</button><small>AMOUNT ${Math.round(route.amount * 100)}% · ${route.rate.toFixed(2)} Hz</small><input data-mod-amount type="range" min="-1" max="1" step=".01" value="${route.amount}"></article>`)].join('') || '<small>NO GLOBAL AUTOMATION OR MODULATION ROUTES</small>'; $$('[data-global-auto]').forEach(card => { const lane = project.automationLanes.find((item) => item.id === card.dataset.globalAuto); card.querySelector('[data-auto-delete]').onclick = () => { project.automationLanes = project.automationLanes.filter((item) => item.id !== lane.id); changed(); renderGlobalAutomation(); }; card.querySelector('[data-auto-point]').onclick = () => { const step = +(prompt(L('Step', 'Paso'), '0') || '0'), value = +(prompt(L('Value 0–1', 'Valor 0–1'), '0.5') || '.5'); lane.points.push({ id: cryptoId(), step: Math.max(0, step), value: Math.max(0, Math.min(1, value)), curve: 'smooth' }); changed(); renderGlobalAutomation(); }; }); $$('[data-mod-route]').forEach(card => { const route = project.modulationRoutes.find((item) => item.id === card.dataset.modRoute); card.querySelector('[data-mod-delete]').onclick = () => { project.modulationRoutes = project.modulationRoutes.filter((item) => item.id !== route.id); changed(); renderGlobalAutomation(); }; card.querySelector('[data-mod-amount]').oninput = (event) => { route.amount = +event.target.value; engine.setProject(project); }; card.querySelector('[data-mod-amount]').onchange = () => { changed(); renderGlobalAutomation(); }; }); }
+function renderMixGroups() { const root = $('#mixGroups'); if (!root)
+    return; root.innerHTML = (project.mixerGroups || []).map((group) => `<article class="mix-group" data-mix-group="${group.id}" style="--group:${group.color}"><b>${esc(group.name)}</b><label>BUS LEVEL<input data-group-volume type="range" min="0" max="1.5" step=".01" value="${group.volume}"></label><label>SIDECHAIN<input data-group-duck type="range" min="0" max=".9" step=".01" value="${group.sidechainAmount}"></label></article>`).join(''); $$('[data-mix-group]').forEach(card => { const group = project.mixerGroups.find((item) => item.id === card.dataset.mixGroup); card.querySelector('[data-group-volume]').oninput = (event) => { group.volume = +event.target.value; engine.setProject(project); }; card.querySelector('[data-group-duck]').oninput = (event) => group.sidechainAmount = +event.target.value; card.querySelectorAll('input').forEach((input) => input.onchange = () => changed()); }); $$('[data-mix-track]').forEach(channel => { const track = channel.dataset.mixTrack, select = document.createElement('select'); select.dataset.trackGroup = ''; select.innerHTML = '<option value="">MASTER</option>' + project.mixerGroups.map((group) => `<option value="${group.id}" ${project.tracks[track].groupId === group.id ? 'selected' : ''}>${esc(group.name)}</option>`).join(''); const label = document.createElement('label'); label.dataset.precision = ''; label.innerHTML = '<span>GROUP</span>'; label.append(select); channel.insertBefore(label, channel.lastElementChild); select.onchange = () => { project.tracks[track].groupId = select.value || null; changed(); }; }); $('#masterTargetLufs').value = project.masterSettings.targetLufs; $('#masterTargetValue').textContent = `${project.masterSettings.targetLufs}`; $('#masterCeiling').value = project.masterSettings.ceilingDb; $('#masterCeilingValue').textContent = project.masterSettings.ceilingDb.toFixed(1); $('#monoCheckBtn').setAttribute('aria-pressed', String(project.masterSettings.monoCheck)); }
+function renderTempoMap() { const root = $('#arrangeMarkers'); if (!root)
+    return; for (const event of project.tempoMap || []) {
+    const badge = document.createElement('button');
+    badge.className = 'arrange-marker';
+    badge.style.setProperty('--marker', '#2ee8ff');
+    badge.textContent = `${event.step} · ${event.bpm} BPM`;
+    badge.title = 'Tempo map';
+    root.append(badge);
+} for (const event of (project.meterMap || []).slice(1)) {
+    const badge = document.createElement('button');
+    badge.className = 'arrange-marker';
+    badge.style.setProperty('--marker', '#8b7cff');
+    badge.textContent = `${event.step} · ${event.beats}/${event.unit}`;
+    root.append(badge);
+} }
+function setupV6Studio() { const scale = localStorage.getItem('kiber-vengance-ui-scale-v1') || '1'; document.documentElement.style.setProperty('--ui-scale', scale); $('#uiScale').value = scale; $('#uiScale').onchange = () => { localStorage.setItem('kiber-vengance-ui-scale-v1', $('#uiScale').value); document.documentElement.style.setProperty('--ui-scale', $('#uiScale').value); }; $('#audioLaneBtn').onclick = () => { project.audioLanes.push(createAudioLane(`AUDIO ${project.audioLanes.length + 1}`, ['#2ee8ff', '#ff3bd4', '#a7ff5b', '#ff9f43'][project.audioLanes.length % 4])); changed(); renderAudioStudio(); }; $('#audioImport').onchange = async (event) => { for (const file of Array.from(event.target.files || []))
+    await addAudioBlob(file); event.target.value = ''; }; $('#audioRecordBtn').onclick = async () => { const button = $('#audioRecordBtn'); if (inputRecorder?.state === 'recording') {
+    inputRecorder.stop();
+    button.classList.remove('active');
+    button.textContent = '● RECORD INPUT';
+    return;
+} try {
+    inputStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    inputChunks = [];
+    inputRecorder = new MediaRecorder(inputStream);
+    inputRecorder.ondataavailable = event => { if (event.data.size)
+        inputChunks.push(event.data); };
+    inputRecorder.onstop = async () => { inputStream?.getTracks().forEach(track => track.stop()); await addAudioBlob(new Blob(inputChunks, { type: inputRecorder?.mimeType || 'audio/webm' }), `Input ${new Date().toLocaleTimeString()}.webm`); };
+    inputRecorder.start(250);
+    button.classList.add('active');
+    button.textContent = '■ STOP INPUT';
+}
+catch (error) {
+    toast(`${L('INPUT UNAVAILABLE', 'ENTRADA NO DISPONIBLE')}: ${error instanceof Error ? error.message : String(error)}`);
+} }; $('#audioScratchBtn').onclick = async () => { if (!scratchBuffer) {
+    toast(L('CAPTURE THE SCRATCH DECK FIRST', 'CAPTURA PRIMERO EL PLATO'));
+    return;
+} await addAudioBlob(audioBufferWav(scratchBuffer), 'Scratch resample.wav'); }; $('#automationLaneBtn').onclick = () => { const target = $('#automationTarget').value, lane = createAutomationLane(target, target.replace(/[._]/g, ' ').toUpperCase()); lane.writeMode = $('#automationWriteMode').value; lane.points = [{ id: cryptoId(), step: 0, value: .5, curve: 'smooth' }, { id: cryptoId(), step: 64, value: .8, curve: 'smooth' }]; project.automationLanes.push(lane); changed(); renderGlobalAutomation(); }; $('#modulationBtn').onclick = () => { project.modulationRoutes.push({ id: cryptoId(), source: 'lfo-1', target: $('#automationTarget').value, amount: .25, bipolar: true, rate: .5 }); changed(); renderGlobalAutomation(); }; $('#monoCheckBtn').onclick = () => { project.masterSettings.monoCheck = !project.masterSettings.monoCheck; changed(); renderMixer(); renderMixGroups(); }; for (const id of ['masterTargetLufs', 'masterCeiling'])
+    $(`#${id}`).onchange = () => { project.masterSettings[id === 'masterTargetLufs' ? 'targetLufs' : 'ceilingDb'] = +$(`#${id}`).value; changed(); engine.setProject(project); renderMixGroups(); }; const tools = $('.generators'); if (tools && !$('#transformNotes'))
+    tools.insertAdjacentHTML('beforeend', '<span id="transformNotes"><button data-transform="retrograde">REVERSE</button><button data-transform="invert">INVERT</button><button data-transform="double">×2</button><button data-transform="half">÷2</button><button data-transform="humanize">HUMANIZE</button></span>'); $$('[data-transform]').forEach(button => button.onclick = () => { snapshot(); transformNotes(clip(), button.dataset.transform, .65); changed(); renderPiano(); toast(`TRANSFORM · ${button.dataset.transform.toUpperCase()}`); }); const toolbar = $('.arrange-toolbar'); if (toolbar && !$('#tempoEventBtn'))
+    toolbar.insertAdjacentHTML('beforeend', '<button id="tempoEventBtn">＋ TEMPO</button><button id="meterEventBtn">＋ METER</button>'); $('#tempoEventBtn').onclick = () => { const step = +(prompt('Step', '0') || 0), bpm = +(prompt('BPM', String(project.tempo)) || project.tempo); project.tempoMap.push({ id: cryptoId(), step: Math.max(0, step), bpm: Math.max(30, Math.min(300, bpm)), curve: 'jump' }); changed(); renderArrangement(); renderTempoMap(); }; $('#meterEventBtn').onclick = () => { const step = +(prompt('Step', '0') || 0), meter = (prompt('Meter', '4/4') || '4/4').split('/').map(Number); project.meterMap.push({ id: cryptoId(), step: Math.max(0, step), beats: Math.max(1, Math.min(12, meter[0] || 4)), unit: meter[1] === 8 ? 8 : 4 }); changed(); renderArrangement(); renderTempoMap(); }; loadAudioAssets(); }
+function setupMidiLearnUi() { if (!$('#midiLearnBtn'))
+    $('#globalAutomation').insertAdjacentHTML('beforebegin', '<button id="midiLearnBtn">MIDI LEARN</button>'); $('#midiLearnBtn').onclick = () => { midiLearnTarget = $('#automationTarget').value; $('#midiLearnBtn').textContent = 'MOVE A MIDI CC…'; toast(L('MIDI LEARN ARMED', 'MIDI LEARN ARMADO')); }; }
+function setupV6Copy() { const sync = () => { const projectCopy = $('.export-choice:nth-child(3) span'), bundleCopy = $('.export-choice:nth-child(6) span'); if (projectCopy)
+    projectCopy.textContent = L('Portable v6 backup', 'Copia portátil v6'); if (bundleCopy)
+    bundleCopy.textContent = L('Project JSON + local audio assets', 'JSON del proyecto + audio local'); }; sync(); $('#languageSelect').addEventListener('change', sync); $('#menuLanguageSelect').addEventListener('change', sync); }
+function setupV6Safety() { const syncScale = () => $('#app').classList.toggle('ui-scaled', Math.abs(+$('#uiScale').value - 1) > .001); syncScale(); $('#uiScale').addEventListener('change', syncScale); $('#audioLanes').addEventListener('change', (event) => { const input = event.target; if (!input.matches('[data-region-key]'))
+    return; event.stopImmediatePropagation(); const card = input.closest('[data-audio-region]'), row = input.closest('[data-audio-lane]'), lane = project.audioLanes.find((item) => item.id === row.dataset.audioLane), region = lane?.regions.find((item) => item.id === card.dataset.audioRegion); if (!region)
+    return; const key = input.dataset.regionKey; region[key] = key === 'warp' ? input.value === '1' : key === 'warpMode' ? input.value : +input.value; if (region.offsetSeconds >= region.durationSeconds)
+    region.offsetSeconds = Math.max(0, region.durationSeconds - .01); changed(); setTimeout(renderAudioStudio, 0); }, true); }
+function setupSampleSlicing() { const decorate = () => $$('[data-sample-slot]').forEach(row => { const slot = +row.dataset.sampleSlot, asset = project.samples.find((item) => item.slot === slot); if (!asset || row.querySelector('[data-slice-sample]'))
+    return; const button = document.createElement('button'); button.dataset.sliceSample = ''; button.textContent = asset.slices?.length ? `${asset.slices.length} SLICES` : 'AUTO SLICE'; button.onclick = async () => { const blob = await getAsset(asset.id); if (!blob)
+    return; await engine.init(); const buffer = await engine.ctx.decodeAudioData(await blob.arrayBuffer()), count = Math.max(2, Math.min(16, +(prompt(L('Number of slices', 'Número de cortes'), '8') || 8))), points = detectTransientSlices(buffer.getChannelData(0), count), pairs = points.slice(0, -1).map((start, index) => ({ start, end: points[index + 1] })), empty = DRUM_NAMES.map((_, index) => index).filter(index => !project.samples.some((sample) => sample.slot === index) || index === slot); asset.slices = pairs.map((pair, index) => ({ id: cryptoId(), name: `${asset.name} ${index + 1}`, start: pair.start, end: pair.end, rootNote: 36 + index })); for (let index = 0; index < Math.min(pairs.length, empty.length); index++) {
+    const target = empty[index], pair = pairs[index], id = index === 0 ? asset.id : `sample-${cryptoId()}`;
+    if (index > 0)
+        await putAsset(id, blob);
+    const sliced = { ...structuredClone(asset), id, slot: target, name: `${asset.name} · ${index + 1}`, trimStart: pair.start, trimEnd: pair.end, slices: [] };
+    project.samples = project.samples.filter((sample) => sample.slot !== target);
+    project.samples.push(sliced);
+} changed(); await loadLocalSamples(); renderSampleSlots(); toast(`${pairs.length} ${L('TRANSIENT SLICES DETECTED', 'CORTES TRANSITORIOS DETECTADOS')}`); }; row.append(button); }); new window.MutationObserver(decorate).observe($('#sampleSlots'), { childList: true }); decorate(); }
+function setupProjectTemplates() { if (!$('#projectTemplate'))
+    $('#newBtn').insertAdjacentHTML('beforebegin', '<label class="ui-scale-control"><span>PROJECT TEMPLATE</span><select id="projectTemplate"><option value="cinematic">CINEMATIC DEMO</option><option value="minimal">MINIMAL SIGNAL</option><option value="performance">PERFORMANCE RIG</option><option value="audio">AUDIO / RESAMPLE</option></select><button id="applyTemplateBtn">CREATE</button></label>'); $('#applyTemplateBtn').onclick = () => { const type = $('#projectTemplate').value, next = type === 'cinematic' ? createProject() : createEmptyProject(); if (type === 'performance') {
+    next.title = 'Live Voltage';
+    for (const track of TRACKS)
+        activeClip(next, track).bars = 4;
+    next.loop = { enabled: true, start: 0, end: 64, punch: false };
+} if (type === 'audio') {
+    next.title = 'Hybrid Session';
+    next.audioLanes = [createAudioLane('RESAMPLE', '#ff3bd4'), createAudioLane('VOCALS', '#2ee8ff')];
+} replaceProject(next); toast(L('PROJECT TEMPLATE CREATED', 'PLANTILLA DE PROYECTO CREADA')); }; }
+function renderAll() { renderTracks(); renderInspector(); renderArp(); renderFx(); macroMarkup($('#macros')); macroMarkup($('#performMacros')); renderClipControls(); renderHarmony(); renderPiano(); renderAutomation(); renderKeyboard(); renderLauncher(); renderArrangement(); renderTempoMap(); renderMixer(); renderMixGroups(); renderAudioStudio(); renderPerformanceTakes(); renderLocators(); $('#title').value = project.title; $('#tempo').value = project.tempo; $('#meterSelect').value = `${project.meter.beats}/${project.meter.unit}`; $('#recordMode').value = project.editor.recordMode || 'quantized'; $('#swing').value = Math.round(project.swing * 100); $('#masterVolume').value = project.master; $('#masterValue').textContent = Math.round(project.master * 100); updateOrb(); installControlHelp(); }
 async function togglePlay(forceSong) { if (engine.playing) {
     engine.stop();
     $('#playBtn').textContent = '▶';
@@ -819,7 +929,7 @@ function animateMeter() { cancelAnimationFrame(animation); const loop = () => { 
     engine.draw($('#meter'));
     animation = requestAnimationFrame(loop);
 } }; loop(); }
-function wavOptions() { const useRegion = Boolean($('#wavRegion').checked) && project.loop.end > project.loop.start; return { bitDepth: (+$('#wavDepth').value === 32 ? 32 : 16), normalize: Boolean($('#wavNormalize').checked), sampleRate: (+$('#wavSampleRate').value || 48000), tailSeconds: +$('#wavTail').value || 0, dither: Boolean($('#wavDither').checked), dry: $('#wavFx').value === 'dry', region: useRegion ? { start: project.loop.start, end: project.loop.end } : undefined, signal: exportController?.signal, drumSamples: engine.drumSamples }; }
+function wavOptions() { const useRegion = Boolean($('#wavRegion').checked) && project.loop.end > project.loop.start; return { bitDepth: (+$('#wavDepth').value === 32 ? 32 : 16), normalize: Boolean($('#wavNormalize').checked), sampleRate: (+$('#wavSampleRate').value || 48000), tailSeconds: +$('#wavTail').value || 0, dither: Boolean($('#wavDither').checked), dry: $('#wavFx').value === 'dry', region: useRegion ? { start: project.loop.start, end: project.loop.end } : undefined, signal: exportController?.signal, drumSamples: engine.drumSamples, audioAssets: engine.audioAssets }; }
 function setExportProgress(value, status) { $('#exportProgress').value = Math.max(0, Math.min(100, value)); if (status)
     $('#renderStatus').textContent = status; }
 async function exportWav(song, target) { const st = $('#renderStatus'), buttons = $$('#exportDialog button'); exportController = new AbortController(); buttons.forEach(button => { if (button.id !== 'cancelExportBtn')
@@ -878,6 +988,21 @@ async function importProjectFile(file) { if (file.name.toLowerCase().endsWith('.
         if (sample)
             await putAsset(asset.id, new Blob([await sample[1].arrayBuffer()], { type: asset.type }));
     }
+    const audioIds = new Set();
+    for (const lane of next.audioLanes)
+        for (const region of lane.regions)
+            audioIds.add(region.assetId);
+    for (const id of audioIds) {
+        const entry = [...files.entries()].find(([name]) => name.startsWith(`audio/${id}-`));
+        if (!entry)
+            continue;
+        const blob = new Blob([await entry[1].arrayBuffer()], { type: 'audio/wav' });
+        await putAsset(id, blob);
+        try {
+            await engine.setAudioAsset(id, await blob.arrayBuffer());
+        }
+        catch { }
+    }
     return next;
 } return migrateProject(JSON.parse(await file.text())); }
 async function renderStems() { const files = [], base = safeName(), selected = new Set($$('[data-stem]:checked').map(input => input.dataset.stem)), jobs = (selected.has('master') ? 1 : 0) + TRACKS.filter(track => selected.has(track)).length; exportController = new AbortController(); $('#cancelExportBtn').disabled = false; let done = 0; if (selected.has('master')) {
@@ -898,7 +1023,13 @@ async function renderProjectBundle() { const files = [{ name: `${safeName()}.kib
     const blob = await getAsset(asset.id);
     if (blob)
         files.push({ name: `samples/${asset.slot}-${asset.name.replace(/[^a-z0-9._-]+/gi, '-')}`, data: blob });
-} files.push({ name: 'PACKAGE-README.txt', data: new Blob(['КИБЕР VENGANCE v5 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores the project and packaged samples into local browser storage.\n'], { type: 'text/plain' }) }); return zipFiles(files); }
+} const regionAssets = new Map(); for (const lane of project.audioLanes)
+    for (const region of lane.regions)
+        regionAssets.set(region.assetId, region.name); for (const [id, name] of regionAssets) {
+    const blob = await getAsset(id);
+    if (blob)
+        files.push({ name: `audio/${id}-${name.replace(/[^a-z0-9._-]+/gi, '-')}`, data: blob });
+} files.push({ name: 'PACKAGE-README.txt', data: new Blob(['КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores project audio and sample assets into local browser storage.\n'], { type: 'text/plain' }) }); return zipFiles(files); }
 const exportMeta = { wav: { extension: '.wav', type: 'audio/wav', description: 'Wave audio' }, midi: { extension: '.mid', type: 'audio/midi', description: 'MIDI song' }, project: { extension: '.json', type: 'application/json', description: 'КИБЕР VENGANCE project' }, 'clip-wav': { extension: '.wav', type: 'audio/wav', description: 'Wave audio' }, 'clip-midi': { extension: '.mid', type: 'audio/midi', description: 'MIDI clips' }, stems: { extension: '.zip', type: 'application/zip', description: 'КИБЕР VENGANCE stems' }, bundle: { extension: '.zip', type: 'application/zip', description: 'КИБЕР VENGANCE project package' }, performance: { extension: '.webm', type: 'audio/webm', description: 'Live performance' } };
 function exportName(kind) { const suffix = { wav: '-song.wav', midi: '-song.mid', project: '.kiber.json', 'clip-wav': '-clips.wav', 'clip-midi': '-clips.mid', stems: '-stems.zip', bundle: '-project-package.zip', performance: '-performance.webm' }; return `${safeName()}${suffix[kind]}`; }
 async function performExport(kind, forcePicker = false) { if (kind === 'performance' && !performanceTake && activePerformanceTakeId) {
@@ -975,10 +1106,14 @@ $('#automationParam').onchange = () => { project.editor.automationParam = $('#au
 $('#clearAutomationBtn').onclick = () => { snapshot(); clip().automation[project.editor.automationParam] = {}; changed(); renderAutomation(); };
 $('#addSceneBtn').onclick = () => { snapshot(); addArrangementScene(project); changed(true); focusScene(project.arrangement.length - 1); };
 $('#autoArrangeBtn').onclick = () => { snapshot(); distributeArrangementPatterns(project); changed(true); toast('CLIPS DISTRIBUTED ACROSS SONG'); };
-function activateView(view) { activeView = view; $$('[data-view]').forEach(x => x.classList.toggle('active', x.dataset.view === view)); $$('.view').forEach(v => v.classList.toggle('active', v.id === `${view}View`)); engine.songMode = ['arrange', 'mix'].includes(view); if (view === 'launch')
-    renderLauncher(); if (view === 'arrange')
-    renderArrangement(); if (view === 'mix') {
+function activateView(view) { activeView = view; $$('[data-view]').forEach(x => x.classList.toggle('active', x.dataset.view === view)); $$('.view').forEach(v => v.classList.toggle('active', v.id === `${view}View`)); engine.songMode = ['audio', 'arrange', 'mix'].includes(view); if (view === 'launch')
+    renderLauncher(); if (view === 'audio')
+    renderAudioStudio(); if (view === 'arrange') {
+    renderArrangement();
+    renderTempoMap();
+} if (view === 'mix') {
     renderMixer();
+    renderMixGroups();
     requestAnimationFrame(animateMixer);
 } if (view === 'perform')
     renderPerformanceTakes(); }
@@ -1173,9 +1308,21 @@ async function initMidi() { if (!navigator.requestMIDIAccess)
         if (rec)
             rec.note.expression.pressure = data2 / 127;
         return;
-    } if (command === 0xb0 && data1 === 74) {
-        s.timbre = data2 / 127;
-        updateHeld(channel, 'timbre', s.timbre);
+    } if (command === 0xb0) {
+        if (midiLearnTarget) {
+            project.midiMappings = project.midiMappings.filter((mapping) => mapping.target !== midiLearnTarget);
+            project.midiMappings.push({ id: cryptoId(), channel, controller: data1, target: midiLearnTarget, min: 0, max: 1 });
+            midiLearnTarget = null;
+            $('#midiLearnBtn').textContent = 'MIDI LEARN';
+            changed();
+            toast(L('MIDI CONTROL MAPPED', 'CONTROL MIDI ASIGNADO'));
+        }
+        for (const mapping of project.midiMappings.filter((item) => item.channel === channel && item.controller === data1))
+            applyMidiMapping(mapping, data2 / 127);
+        if (data1 === 74) {
+            s.timbre = data2 / 127;
+            updateHeld(channel, 'timbre', s.timbre);
+        }
         return;
     } if (command === 0x90 && data2) {
         if (activeView === 'launch' && data1 >= 36 && data1 < 64) {
@@ -1205,6 +1352,12 @@ setupPrecisionControls();
 setupArrangeTools();
 setupLauncher();
 setupLibraries();
+setupV6Studio();
+setupMidiLearnUi();
+setupV6Safety();
+setupV6Copy();
+setupSampleSlicing();
+setupProjectTemplates();
 renderAll();
 applyLanguage();
 loadLocalSamples();

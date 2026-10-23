@@ -21,6 +21,7 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 11. Studio Workflow: localizadores de clip/canción, timeline navegable, mesa de mezcla con medidores y A/B, grabación del master en directo, Export/Export As, gestión de destinos, WAV 16/32-bit, normalización y stems ZIP.
 12. Performance Studio v5: Clip Launcher cuantizado y capturable, edición avanzada del arreglo, mezcla de precisión, tomas con eventos editables, Preset Vault, samples locales, Project Package y exportación profesional configurable.
 13. Signal Core Identity: nombre oficial `КИБЕР VENGANCE`, wordmark cirílico/latino, monograma К/V original, icono PWA renovado y animación de señal accesible con reducción de movimiento.
+14. Hybrid Studio v6: pistas y regiones de audio no destructivas, importación/micrófono/resampling del plato, edición de offset/fades/pitch/warp, slicing por transitorios, automatización y modulación globales, MIDI Learn, mapas de tempo/compás, transformaciones musicales, routing/sidechain, mastering, plantillas, recuperación automática y escala de interfaz 80–120%.
 
 ## Decisiones técnicas
 
@@ -30,7 +31,8 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 - `OfflineAudioContext` comparte el modelo de eventos de la reproducción y renderiza el arreglo entero, no una captura en tiempo real.
 - Todo el runtime (`core`, `audio`, `app` y modelo) nace de TypeScript estricto y se compila a módulos ES estáticos en `dist/`.
 - La grabación libre conserva offset y duración sub-step. Web MIDI registra y reproduce pressure, CC74/timbre y pitch bend por canal, y actualiza voces sostenidas en vivo.
-- El modelo v5 separa los metadatos serializables de tomas y samples de sus blobs binarios en IndexedDB. Project Package los reúne en un ZIP portátil sin introducir servidor ni servicios remotos.
+- El modelo v6 separa los metadatos serializables de tomas, samples y regiones de audio de sus blobs binarios en IndexedDB. Project Package reúne JSON y assets locales en un ZIP portátil sin introducir servidor ni servicios remotos.
+- Las regiones de Audio Studio usan el mismo scheduler y master que los instrumentos y participan en WAV offline. El warp nativo es por velocidad y, por tanto, cambia también el tono; no se presenta como time-stretch independiente de pitch.
 - Los faders actúan sobre buses persistentes y no sobre la velocity de cada nota: volumen, pre-gain, panorama, solo/mute y sends pre/post responden también mientras una voz está sostenida.
 - El producto es instalable como PWA y ofrece un informe de compatibilidad/diagnóstico exportable sin enviar datos fuera del dispositivo.
 - La publicación es un directorio `dist/` estático. Selenium/Firefox, Playwright/Chromium y axe-core son solo dependencias de desarrollo.
@@ -56,8 +58,8 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 - [x] Carácter independiente por clip: arpegiador, LFO, cadena de efectos y seis macros, con migración v2/v3 y render WAV por clip.
 - [x] Autosave, proyecto vacío/demo, duplicado, snapshots, restauración e import/export JSON.
 - [x] WAV y MIDI de arreglo completo o clips activos.
-- [x] Manejo visible de errores, estados de render y migración v2/v3/v4→v5 sin alterar el material musical.
-- [x] Build estático/PWA, runtime TypeScript estricto, 25 pruebas unitarias y 8 flujos de navegador: Firefox con audio/WAV/MPE sostenido y Chromium responsive/a11y/PWA/Scratch Deck/exportación persistente/Launcher/Arrange/mezcla/librerías.
+- [x] Manejo visible de errores, estados de render y migración v2/v3/v4/v5→v6 sin alterar el material musical.
+- [x] Build estático/PWA, runtime TypeScript estricto, 26 pruebas unitarias y 9 flujos de navegador: Firefox con audio/WAV/MPE sostenido y Chromium responsive/a11y/PWA/Scratch Deck/exportación persistente/Launcher/Arrange/Audio Studio/mezcla/librerías.
 - [x] Verificación visual de escritorio y móvil sin solapamiento ni scroll horizontal global.
 - [x] Inglés por defecto, español persistente, tutorial guiado y descripciones contextuales accesibles para todos los controles.
 - [x] Atajos sin colisión: `Shift+S` Solo, `Shift+M` Mute y `Shift+V` Mutation; escritura aislada en diálogos y campos.
@@ -71,10 +73,14 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 - [x] Clip Launcher de cinco pistas con cola beat/bar, stop por pista, control MIDI, captura de escenas y commit al arreglo.
 - [x] Arrange avanzado con selección múltiple, copy/paste/duplicate/delete, fills, zoom, marcadores, cursor exacto, región de loop y punch-in.
 - [x] Mezcla de precisión con pre-gain, faders en dB, medidores estéreo RMS/peak, peak hold, LUFS momentáneo aproximado, sends pre/post, colores, master bypass y A/B compensado.
-- [x] Tomas persistentes con audio en IndexedDB y eventos v5 editables: trim, cuantización, retiming, valores, borrado y reproducción.
+- [x] Tomas persistentes con audio en IndexedDB y eventos v6 editables: trim, cuantización, retiming, valores, borrado y reproducción.
 - [x] Preset Vault con búsqueda, tags, favoritos, presets de usuario e import/export de bancos JSON.
 - [x] Siete slots de samples locales con trim, afinación, envolvente y reverse, coherentes en reproducción y render offline.
 - [x] Exportación profesional con 44.1/48/96 kHz, dither TPDF, cola FX, dry/wet, región de loop, stems seleccionables, progreso/cancelación y Project Package.
+- [x] Audio Studio con lanes/regiones, importación múltiple, grabación de micrófono, resampling del Scratch Deck y edición no destructiva de posición, offset, longitud, ganancia, fades, pitch y warp por velocidad.
+- [x] Automatización global serializable, rutas de modulación audibles, MIDI Learn persistente, mapas de tempo/compás y transformaciones retrograde/invert/double/half/humanize.
+- [x] Routing por grupos, sidechain disparado por kick, target LUFS, ceiling, mono check, plantillas de proyecto y puntos automáticos de recuperación.
+- [x] Auditoría de densidad con escala 80–120%, breakpoints específicos de 1550/1320/900/760 px y scroll local en subsistemas anchos.
 
 ## Dependencias externas inevitables y exclusiones deliberadas
 
@@ -89,6 +95,6 @@ La guitarra incluida es un modelo de cuerda pulsada deliberadamente sintético, 
 - File System Access no está presente en todos los navegadores. Sin él, Export/Export As usan descargas normales; con él, el navegador puede volver a pedir permiso de escritura entre sesiones.
 - La grabación de interpretación depende de MediaRecorder y utiliza el contenedor de audio que ofrece el navegador, normalmente WebM/Opus. La exportación determinista de composición y stems continúa usando WAV.
 - MediaRecorder entrega una forma de onda ya comprimida. Editar los eventos de una toma modifica su reproducción de controles sobre el audio exacto capturado, pero no vuelve a sintetizar retroactivamente esa grabación.
-- Los blobs de samples y tomas viven en IndexedDB y pueden desaparecer al limpiar los datos del sitio. JSON conserva sus metadatos; para trasladar un proyecto con samples se debe usar Project Package.
+- Los blobs de samples, regiones de audio y tomas viven en IndexedDB y pueden desaparecer al limpiar los datos del sitio. JSON conserva sus metadatos; para trasladar un proyecto con audio se debe usar Project Package.
 - `OfflineAudioContext` no ofrece cancelación a mitad de una operación ya iniciada. El panel puede abortar antes o después de cada render y entre stems, evitando escrituras posteriores, pero no interrumpir el DSP interno de un stem en curso.
 - La tipografía usa fallbacks del sistema para mantener el funcionamiento offline; puede variar ligeramente entre plataformas.

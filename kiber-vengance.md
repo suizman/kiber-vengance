@@ -251,20 +251,22 @@ Esta sección actualiza el encargo original con el diseño real alcanzado. El re
 
 ### Concepto de experiencia
 
-КИБЕР VENGANCE se articula como un **cockpit de composición cyberpunk**: rápido para tocar y generar ideas, profundo para editar clips y suficientemente estructurado para terminar una canción. La complejidad se organiza en cinco espacios:
+КИБЕР VENGANCE se articula como un **cockpit de composición cyberpunk**: rápido para tocar y generar ideas, profundo para editar clips y audio, y suficientemente estructurado para terminar una canción. La complejidad se organiza en seis espacios:
 
 1. **Forge** — diseño del instrumento y del clip: piano roll, automatización, síntesis, movimiento, efectos, macros y ayudas armónicas.
 2. **Launch** — interpretación no lineal: matriz de clips, lanzamiento cuantizado, stop por pista y captura de escenas.
-3. **Arrange** — construcción de la canción: secciones, selección y edición múltiple, fills, marcadores, loop, punch-in y navegación exacta.
-4. **Mix** — acabado técnico: ganancia, faders, panorama, envíos pre/post, medición estéreo, LUFS aproximado y comparación A/B.
-5. **Perform** — interpretación inmediata: teclado, MIDI, macros expresivos, Scratch Deck y grabación de tomas.
+3. **Audio** — producción híbrida: importación, grabación, resampling, regiones no destructivas, fades, pitch, warp por velocidad, automatización, modulación y MIDI Learn.
+4. **Arrange** — construcción de la canción: secciones, selección y edición múltiple, fills, marcadores, mapas de tempo/compás, loop, punch-in y navegación exacta.
+5. **Mix** — acabado técnico: ganancia, faders, panorama, routing, sidechain, medición estéreo, LUFS/ceiling, mono y comparación A/B.
+6. **Perform** — interpretación inmediata: teclado, MIDI, macros expresivos, Scratch Deck y grabación de tomas.
 
 Perform añade además un **Scratch Deck** diseñado como instrumento táctil: captura
 una mezcla masterizada de los clips activos en memoria y permite recorrerla en
 ambas direcciones mediante un AudioWorklet, con crossfader, filtro, sincronía,
 freno, spinback, stutter y feedback de forma de onda. La captura de deck es
 temporal y no destructiva. Record Take conserva el audio en IndexedDB y guarda
-en el proyecto v5 un registro editable de eventos de interpretación.
+en el proyecto v6 un registro editable de eventos de interpretación. `Resample Deck`
+convierte explícitamente el búfer temporal en una región persistente de Audio Studio.
 
 Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl/Cmd+K` permite ejecutar acciones sin abandonar el teclado.
 
@@ -276,17 +278,17 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 - Tipografía condensada para identidad y titulares, sans técnica para parámetros y microcopy.
 - Bordes luminosos contenidos, geometría recortada, indicadores de presión y movimiento únicamente cuando comunican estado.
 - Jerarquía compacta de estudio: transporte y exportación arriba, pistas a la izquierda, contexto musical en el centro y estado global al pie.
-- Responsive centrado en móvil táctil: diales con −/+, pistas horizontales, paneles plegables y scroll local para controles densos.
+- Responsive centrado en móvil táctil: diales con −/+, pistas horizontales, paneles plegables, escala de interfaz 80–120% y scroll local para controles densos. Los breakpoints se auditan también a 1366×768, no solo en pantallas grandes.
 
 ### Modelo musical construido
 
-- Proyecto serializable v5 con cinco pistas: lead, guitarra, bass, pad y drums.
+- Proyecto serializable v6 con cinco pistas generadas —lead, guitarra, bass, pad y drums— y un número abierto de pistas de audio.
 - Cada pista puede contener múltiples clips de 1–8 compases. Cada sección del arreglo referencia un clip distinto por pista.
 - Cada clip posee notas, automatización y carácter independiente: arpegiador, LFO, cinco efectos más tone/EQ y seis macros.
 - El arreglo completo, los loops de clips de distinta longitud y las repeticiones alimentan el mismo modelo de eventos usado por reproducción, WAV y MIDI.
 - Solo es exclusivo y Mute es independiente. Ambos afectan a reproducción y render exportado.
-- El proyecto añade colores, pre-gain y modo de envío por pista; marcadores, región de loop/punch, zoom, cuantización del launcher, tomas y referencias a assets locales.
-- Los samples binarios y el audio de tomas se guardan fuera del JSON en IndexedDB. El formato Project Package reúne JSON y samples para transportarlos juntos.
+- El proyecto añade colores, pre-gain, grupos y modo de envío por pista; marcadores, tempo/meter maps, loop/punch, zoom, launcher, tomas, automatización global, modulación y MIDI mappings.
+- Las regiones de audio conservan start/length/offset/gain/fades/pitch/source BPM/warp. Los samples, audio de regiones y tomas se guardan fuera del JSON en IndexedDB; Project Package reúne JSON y assets disponibles.
 
 ### Flujo de creación construido
 
@@ -295,17 +297,18 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 3. Editar en el piano roll con drag/resize, selección rectangular, velocity, duración, cuantización y automatización.
 4. Dar carácter por clip con síntesis, arpegiador, LFO, efectos y macros.
 5. Improvisar en Launch con cola cuantizada y convertir la interpretación en nuevas secciones del arreglo.
-6. Construir y editar secciones en Arrange, generar una base que preserve guitarra y lead, colocar marcadores y definir loop/punch.
-7. Mezclar cinco canales con pre-gain, faders dB, panorama, sends pre/post, medidores estéreo, LUFS aproximado y comparación A/B compensada.
-8. Interpretar y grabar con metrónomo, count-in, swing, timing cuantizado/libre y Scratch Deck; editar después los eventos de la toma.
-9. Elegir el punto de inicio del clip o de la canción con localizadores musicales y navegar a una posición exacta desde la línea temporal.
-10. Exportar canción, región o clips a WAV/MIDI, generar stems seleccionados, guardar JSON o crear un Project Package. La cabecera separa claramente Export de Export As.
+6. Importar o grabar audio, remezclar el plato, cortar transitorios en pads y editar regiones no destructivas en Audio Studio.
+7. Construir y editar secciones en Arrange, generar una base que preserve guitarra y lead, colocar marcadores, tempo/compás y definir loop/punch.
+8. Mezclar canales y lanes con pre-gain, grupos, sidechain, faders dB, panorama, sends, medidores, mastering/mono y comparación A/B.
+9. Interpretar y grabar con metrónomo, count-in, swing, timing cuantizado/libre y Scratch Deck; editar después los eventos de la toma.
+10. Elegir el punto de inicio del clip o de la canción con localizadores musicales y navegar a una posición exacta desde la línea temporal.
+11. Exportar canción, región o clips a WAV/MIDI, generar stems seleccionados, guardar JSON o crear un Project Package. La cabecera separa claramente Export de Export As.
 
 ### Persistencia y significado de exportar
 
 - Los cambios se guardan automáticamente en `localStorage` tras una breve espera.
-- Los snapshots nombrados permiten restaurar estados locales.
-- JSON es el formato portátil para el material musical. Project Package es la copia transportable recomendada cuando existen samples locales.
+- Los snapshots nombrados y puntos automáticos de recuperación permiten restaurar estados locales; las plantillas cubren demo, minimal, performance y sesión híbrida.
+- JSON es el formato portátil para estructura y edición. Project Package es la copia transportable recomendada cuando existen samples o regiones de audio locales.
 - `Export` actualiza el último archivo vinculado; `Export As` permite elegir explícitamente formato y destino. `Ctrl/Cmd+E` y `Ctrl/Cmd+Shift+E` reproducen esa distinción.
 - En navegadores compatibles, cada tipo de exportación conserva su handle localmente. Project Core muestra esos destinos y permite olvidarlos.
 - Si File System Access no está disponible, se descarga una instantánea nueva. El navegador también puede volver a pedir permiso de escritura entre sesiones.
@@ -326,10 +329,10 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 - `model` define contratos; `core` concentra lógica musical pura; `audio` contiene Web Audio y render offline; `app` coordina UI y persistencia.
 - Scheduling anticipado basado en el reloj de audio, buses FX persistentes y liberación explícita de voces evitan cortes y crecimiento del grafo.
 - Aplicación estática instalable como PWA, sin secretos, telemetría ni dependencias de ejecución.
-- Migraciones v2/v3/v4→v5 preservan proyectos, trasladan el antiguo carácter de pista a cada clip y añaden los nuevos estados con valores seguros.
+- Migraciones v2/v3/v4/v5→v6 preservan proyectos, trasladan el antiguo carácter de pista a cada clip y añaden audio/routing/automation con valores seguros.
 
 ### Calidad y estado de aceptación
 
-La puerta de calidad actual es `npm run check:full`: TypeScript, build, ESLint, 25 pruebas unitarias y 8 recorridos de navegador. Chromium cubre escritorio, móvil, accesibilidad, PWA, selección, clips, atajos, Export/Export As, Launcher, Arrange avanzado, mezcla, librerías locales, grabación de performance y Scratch Deck táctil; Firefox cubre el flujo musical completo, audio sostenido, expresión y WAV.
+La puerta de calidad actual es `npm run check:full`: TypeScript, build, ESLint, pruebas unitarias y recorridos reales en Chromium/Firefox. La cobertura incluye escritorio, móvil y 1366×768, accesibilidad, PWA, Audio Studio, edición de regiones, automatización, routing/mastering, Export/Export As, Launcher, Arrange, librerías, performance y Scratch Deck.
 
-Las limitaciones externas permanecen explícitas: Web MIDI y File System Access dependen del navegador/permiso; MediaRecorder decide el contenedor de las tomas y sus eventos editados no re-sintetizan la forma de onda comprimida; los blobs locales requieren Project Package para viajar con el proyecto; Safari e iOS requieren hardware Apple para certificación física; y `OfflineAudioContext` solo permite cancelar antes/después de cada render, no interrumpir el DSP interno ya iniciado. La persistencia es local y no existe backend, nube, colaboración remota ni plugins nativos.
+Las limitaciones externas permanecen explícitas: Web MIDI, micrófono y File System Access dependen del navegador/permiso; MediaRecorder decide el contenedor; el warp actual se basa en playback-rate y cambia pitch y tempo juntos; los blobs locales requieren Project Package; Safari/iOS requieren hardware Apple; y `OfflineAudioContext` no interrumpe DSP ya iniciado. La persistencia es local y no existe backend, nube, colaboración remota ni plugins nativos.

@@ -2,7 +2,7 @@
 
 The complete specification is in [`kiber-vengance.md`](kiber-vengance.md), the product status is in [`PRODUCT_PLAN.md`](PRODUCT_PLAN.md), and persistent memory for future sessions is in [`PROJECT_MEMORY.md`](PROJECT_MEMORY.md).
 
-КИБЕР VENGANCE is a cinematic electro-rock composition instrument that runs entirely in the browser. `КИБЕР` is intentionally written in Cyrillic and `VENGANCE` in Latin characters. It combines five music engines—lead, modeled guitar, bass, pad, and a seven-piece drum kit—with independent clips, a multi-octave piano roll, arranger, automation, performance, recording, Web MIDI, and full-song export.
+КИБЕР VENGANCE is a cinematic electro-rock composition instrument that runs entirely in the browser. `КИБЕР` is intentionally written in Cyrillic and `VENGANCE` in Latin characters. Its v6 hybrid engine combines five generated instruments with non-destructive audio lanes, slicing, arrangement, automation/modulation, performance, recording, Web MIDI Learn, routing, mastering checks, and full-song export.
 
 ## Installation and use
 
@@ -21,7 +21,7 @@ To validate the complete product:
 npm run check:full
 ```
 
-`check:full` compiles the entire runtime with strict TypeScript, runs lint, 25 unit tests, the static build, a real Firefox flow with audio, sustained voices, and WAV, and eight browser flows covering accessibility, responsive design, launcher, arrangement, precision mixing, local libraries, exports, performance recording, and Scratch Deck capture.
+`check:full` compiles the entire runtime with strict TypeScript, runs lint and unit tests, builds the static PWA, and executes real Firefox and Chromium workflows covering audio, accessibility, responsive design, launcher, arrangement, hybrid audio, precision mixing, local libraries, exports, performance recording, and Scratch Deck capture.
 
 ## Creating a song
 
@@ -34,6 +34,10 @@ npm run check:full
 7. Use `Backing` to create two to six sections of bass, pad, and drums in cinematic, driving, or dark styles while preserving your guitar and lead clips. In Arrange, you can later reassign any clip, set repeats, and reorder sections with buttons or drag-and-drop.
 8. Set the clip or song locator to start playback at any step. The Arrange timeline also jumps the global song locator to a section.
 9. Use `Export` to update the last linked destination or `Export As` to choose a format and new file. The panel supports WAV/MIDI, JSON/package backups, 16/32-bit depth, three sample rates, dither, normalization, dry/wet output, tail/region control, and selected stems.
+
+Audio Studio adds any number of local audio lanes beside the generated instruments. Files and microphone takes are stored privately in IndexedDB and become non-destructive regions with start, length, source offset, gain, fades, pitch, source BPM and tempo-rate warp. The Scratch Deck buffer can be committed as a region. Song WAV and Project Package include loaded audio; plain JSON contains metadata only. Tempo-rate warp currently changes playback rate, so it also changes pitch—the browser-native engine does not claim independent pitch-preserving time stretch.
+
+The global Automation Lab stores curve points for master or track parameters, offers Read/Touch/Latch/Write metadata, and supports LFO modulation routes. MIDI Learn binds incoming CC messages to these targets. Arrange stores tempo and meter events, while the note transform strip provides retrograde, inversion, double/half time and deterministic humanization.
 
 Launch provides a five-track clip matrix for improvisation. Queue on beats or bars, stop tracks independently, control visible cells with MIDI notes 36–63, and capture the result as arrangement sections. Arrange adds multi-selection, copy/paste, fills, zoom, markers, exact timeline navigation, loop regions, and punch-in limits.
 
@@ -72,19 +76,19 @@ with interpolated forward and reverse playback, a smooth motor return, waveform
 and playhead feedback, equal-power crossfading against the live program, a deck
 low-pass filter, beat sync, brake, spinback, and tempo-derived stutter.
 
-Scratch capture is intentionally non-destructive: it does not modify the v5
+Scratch capture is intentionally non-destructive until `Resample Deck` is used: it does not modify the v6
 project or its clips. The temporary buffer lives in memory and is cleared when
 the page is reloaded. WAV/MIDI project export renders the composition itself;
 it does not record a live Scratch Deck performance. Use **Record Take** in
 Perform to capture the audible master—including scratching—and save that
 real-time take. The browser normally records it as WebM/Opus. Take audio persists
-in IndexedDB; v5 serializes its editable event log. Events can be trimmed,
+in IndexedDB; v6 serializes its editable event log. Events can be trimmed,
 quantized, retimed, changed, deleted, and replayed over the captured audio.
 Editing events does not re-synthesize the already recorded waveform.
 
 ### Presets and local samples
 
-Preset Vault searches and tags factory/user sounds, remembers favorites, saves the current instrument and clip character, and imports or exports JSON banks. Impact Sample Slots accepts local audio for all seven drum voices, with trim, tuning, attack, release, and reverse. Samples participate in live and offline rendering. Project Package exports/imports the v5 JSON and available sample assets together.
+Preset Vault searches and tags factory/user sounds, remembers favorites, saves the current instrument and clip character, and imports or exports JSON banks. Impact Sample Slots accepts local audio for all seven drum voices, with trim, tuning, attack, release, reverse, transient detection and automatic distribution of slices across free pads. Samples participate in live and offline rendering. Project Package exports the v6 JSON plus available sample and Audio Studio assets.
 
 ### Mix Console and locators
 
@@ -92,7 +96,7 @@ The global locator selects an exact start step across arrangement scenes and
 repeats. Each active clip also retains a session start position. Mix provides
 stereo RMS/peak meters, peak hold, approximate momentary LUFS, dB faders,
 pre-gain, pan, pre/post sends, track colors, Solo/Mute, master FX bypass, and a
-loudness-matched A/B comparison. Bus-level faders affect sustained voices.
+loudness-matched A/B comparison. v6 adds group assignment, kick-triggered sidechain ducking, target LUFS/ceiling controls, and a mono check. Bus-level faders affect sustained voices.
 
 Every clip preserves its own **character**: the Motion Engine arpeggiator and LFO, Signal Processing bypass and complete effect chain, and the six Vector Control macros. When switching clips, all three racks restore their independent values; duplicating or mutating a clip copies its character, while creating a new one starts from the active character. The base synthesizer and channel volume/pan remain instrument/track settings.
 
@@ -112,12 +116,12 @@ The interface starts in English and can switch to Spanish using the `EN/ES` sele
 
 ## Projects and recovery
 
-Versioned autosave is stored in `localStorage`. The project menu can create a demo, start from an empty project, duplicate the project, create up to 20 named snapshots, restore them, export/import JSON or a project package, and inspect or forget linked export destinations. The v5 migration converts v2/v3/v4 projects without changing their musical material.
+Versioned autosave is stored in `localStorage`. The project menu provides cinematic, minimal, performance and hybrid-audio templates; it can also duplicate a project, create named snapshots, restore automatic recovery points, export/import JSON or a project package, and inspect or forget linked export destinations. The v6 migration converts v2–v5 projects without changing their musical material. Interface scale is selectable from 80–120% and complements responsive/compact layouts.
 
 ## Architecture
 
-- `src/core.ts`: v5 model, migrations, performance data, launcher capture, arrangement, generators, history, and expressive MIDI.
-- `src/audio.ts`: look-ahead scheduler, polyphonic and sustained/MPE dual-oscillator voices, plucked-string guitar, drum synth, five persistent FX buses, master, analyzer, and offline WAV.
+- `src/core.ts`: v6 model logic, migrations, audio/automation primitives, transforms, performance data, launcher capture, arrangement, generators, history, and expressive MIDI.
+- `src/audio.ts`: look-ahead scheduler, hybrid audio regions, global automation/modulation, polyphonic and sustained/MPE voices, guitar, drum synth, persistent FX buses, routing, master, analyzer, and offline WAV.
 - `src/scratch-worklet.ts`: real-time bidirectional scratch playback, interpolation, looping, stutter, and position reporting off the UI thread.
 - `src/app.ts`: UI state, piano roll, free/quantized recording, MIDI, versions, diagnostics, export, and editing flows.
 - `src/model.ts`: strict serializable contract. `npm run build` compiles the runtime modules into `dist/`.
