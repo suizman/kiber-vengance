@@ -1,13 +1,13 @@
 # Persistent project memory
 
-This file is the operational memory for Kiber Vengance. It must be read alongside `kiber-vengance.md` before development continues. It records the product's actual state, established decisions, and user expectations; it does not replace the code or tests as the ultimate source of truth.
+This file is the operational memory for КИБЕР VENGANCE. It must be read alongside `kiber-vengance.md` before development continues. It records the product's actual state, established decisions, and user expectations; it does not replace the code or tests as the ultimate source of truth.
 
 Last updated: 2026-10-23.
 
 ## Product intent
 
-- Kiber Vengance is a professional music-composition workstation for cinematic electro-rock, industrial, synthwave, darksynth, and hybrid cyberpunk styles.
-- The official spelling is exactly **Kiber Vengance** and must not be corrected.
+- КИБЕР VENGANCE is a professional music-composition workstation for cinematic electro-rock, industrial, synthwave, darksynth, and hybrid cyberpunk styles.
+- The official display spelling is exactly **КИБЕР VENGANCE**: `КИБЕР` uses Cyrillic characters and `VENGANCE` uses Latin characters. Technical filenames and legacy storage keys retain `kiber-vengance` for compatibility.
 - It should feel like a complete creative instrument, not a dashboard or musical toy.
 - The default language is English; Spanish is available and the preference persists.
 - The interface prioritizes speed, clarity, an aggressive character, and practical desktop use while retaining a functional mobile experience.
@@ -24,6 +24,8 @@ Last updated: 2026-10-23.
 - Section-based arrangement with five clips, repeats, names, duplication, deletion, reordering, and automatic distribution.
 - Key, scales, chords, riffs, bass lines, beats, Mutation, and a backing generator with 2–6 sections.
 - The backing generator creates bass, pad, and drums in cinematic, driving, or dark styles while preserving guitar and lead.
+- The v5 arrangement supports multi-selection, copy/paste/duplicate/delete, generated one-bar fills, zoom, named markers, exact timeline cursor placement, loop regions, and punch-in recording limits.
+- Launch is a dedicated five-track clip matrix. Launches are beat/bar quantized, can stop one track independently, accept MIDI notes 36–63, and can be captured as new arrangement sections.
 
 ### Sound and performance
 
@@ -36,6 +38,7 @@ Last updated: 2026-10-23.
 - The arpeggiator, LFO, effects, and macros belong to the clip rather than globally to the track. Every clip preserves and exports its own character.
 - Visual keyboard and QWERTY `A S D F G H J K`, quantized or free recording, metronome, count-in, swing, and 4/4, 3/4, and 6/8 time signatures.
 - Web MIDI supports note-on/off, velocity, pitch bend, channel/poly pressure, and CC74/timbre when supported by the browser.
+- Perform includes a dedicated Scratch Deck. It renders the active mix into a temporary 1/2/4/8-bar buffer and provides sample-interpolated bidirectional touch/mouse/keyboard scratching, waveform feedback, crossfader, filter, sync, brake, spinback, and tempo-derived stutter through an `AudioWorklet`.
 
 ### Mixing and isolation
 
@@ -44,19 +47,36 @@ Last updated: 2026-10-23.
 - `Shift+M` toggles Mute on the active track.
 - Mutation was reassigned to `Shift+V` to avoid colliding with Mute.
 - Typing in fields or in the `Ctrl/Cmd+K` palette never triggers notes or mixing shortcuts.
+- Mix is a dedicated five-channel console with stereo RMS/peak metering, peak hold, approximate momentary LUFS, dB faders, pre-gain, pan, pre/post delay/reverb sends, Solo/Mute, customizable track colors, master FX bypass, and loudness-matched in-memory A/B comparison. Faders act at the persistent bus, so sustained voices respond immediately. Mixer edits participate in project undo/autosave.
+
+### Transport and performance capture
+
+- The global song locator and active-clip locator select an exact musical start position. Playback begins from the selected scene/repeat/step rather than always returning to zero; the Arrange timeline also sets the global locator.
+- `Perform` records the audible master in real time, including live notes, macros, mixer changes, launcher actions, and Scratch Deck output. Audio is persisted locally in IndexedDB, while the v5 project stores take metadata and an editable, quantizable event log.
+- Takes can be trimmed, renamed, replayed, exported, or deleted. Individual automation events expose editable time/value and deletion; replay applies those edited events over the exact captured audio.
+
+### Presets and local samples
+
+- Preset Vault provides search, tags, favorites, user presets, and JSON bank import/export alongside the factory bank.
+- Each of the seven drum voices accepts a private local audio sample with trim, semitone tuning, attack, release, and reverse. Blobs remain in IndexedDB; missing assets are reported and fall back to the synthesized kit.
+- Project Package exports/imports an uncompressed ZIP containing the v5 JSON and available local sample assets.
 
 ### Projects and export
 
-- Local autosave with v2/v3-to-v4 project migration, demo and empty projects, duplication, named snapshots, restoration, and JSON import/export.
+- Local autosave with v2/v3/v4-to-v5 project migration, demo and empty projects, duplication, named snapshots, restoration, and JSON/package import/export.
 - Autosave updates `localStorage`; it does not modify previously downloaded files.
-- Stereo WAV at 44.1 kHz and type 1 MIDI can export the full song or the active clips. WAV and MIDI respect the arrangement, repeats, arpeggiators, automation, expression, and independent character of every clip.
-- The header provides quick full-song WAV/MIDI exports and a JSON project copy. `EXPORT` retains the advanced options.
-- Every quick export creates a file from the current state. The browser may add a suffix if a file already exists; automatic overwriting of the previous file is not promised.
+- Stereo WAV at 44.1, 48, or 96 kHz and type 1 MIDI can export the full song or the active clips. WAV and MIDI respect the arrangement, repeats, arpeggiators, automation, expression, and independent character of every clip.
+- The header separates `EXPORT` from `EXPORT AS`: Export repeats the last recipe into its linked file, while Export As opens the format/destination dialog. `Ctrl/Cmd+E` exports and `Ctrl/Cmd+Shift+E` opens Export As.
+- In browsers with the File System Access API, Export asks for a destination when none is linked and subsequently updates it. Export As always asks for a new destination. Handles can be inspected or forgotten in Project Core and are stored locally in IndexedDB.
+- WAV supports 16-bit PCM or 32-bit float, 44.1/48/96 kHz, optional TPDF dither and peak normalization, configurable FX tail, dry rendering, and loop-region export. The cancellable stems queue exports any selected master/tracks plus a manifest and reports progress.
+- Browsers without that API retain the safe download fallback and may add a suffix when a filename already exists.
 
 ### UX, identity, and accessibility
 
-- Professional cyberpunk visual remaster with a multicolor palette, an original KV vector logo, technical typography, high contrast, and a music-studio hierarchy.
-- Forge, Arrange, and Perform views; Focus mode; collapsible racks with persistent state; command palette; contextual help for each control; manual; and interactive tutorial.
+- Professional cyberpunk visual remaster with a multicolor palette, an original К/V signal-core vector emblem, Cyrillic/Latin wordmark, technical typography, high contrast, and a music-studio hierarchy.
+- The emblem uses an open mechanical hexagon, fused К/V geometry, and an audio-signal incision. Header, boot, about, Performance Deck, Scratch Deck, favicon, and PWA icon share the same mark. Motion is restrained and honors `prefers-reduced-motion`.
+- Forge, Launch, Arrange, Mix, and Perform views; Focus mode; collapsible racks with persistent state; command palette; contextual help for each control; manual; and interactive tutorial.
+- Launch and Mix complete the five-workspace flow. Compact workspace density and track colors persist without changing musical data.
 - Mobile knobs with −/+ buttons and large touch targets.
 - Responsive layout without global horizontal scrolling; wide subsystems deliberately use local scrolling.
 - Focus, hover, active, disabled, loading, and error states; automated auditing with axe-core.
@@ -73,6 +93,10 @@ Last updated: 2026-10-23.
 - `Shift+V`: Mutation on the active clip.
 - `Shift+F`: Focus mode.
 - `Shift+G/A/P`: Forge/Arrange/Perform.
+- `Shift+L`: Clip Launcher.
+- `Shift+X`: Mix Console.
+- `Ctrl/Cmd+E`: repeat the last export into its current destination.
+- `Ctrl/Cmd+Shift+E`: open Export As to choose format and destination.
 - `Shift+N/D/Q`: new clip, duplicate, and quantize.
 - `Ctrl/Cmd+A/C/V`: select all, copy, and paste notes.
 - Arrow keys: move selection; `Alt+←/→`: resize; `Delete/Backspace`: delete.
@@ -80,9 +104,10 @@ Last updated: 2026-10-23.
 
 ## Current architecture
 
-- `src/model.ts`: serializable v4 project contracts.
+- `src/model.ts`: serializable v5 project contracts.
 - `src/core.ts`: music model, migrations, clips, arrangement, generators, playback, and MIDI.
 - `src/audio.ts`: Web Audio engine, voices, buses, scheduling, and offline WAV rendering.
+- `src/scratch-worklet.ts`: off-main-thread bidirectional scratch buffer processor with interpolation, stutter, and live position reporting.
 - `src/app.ts`: interaction, UI rendering, persistence, accessibility, commands, and export.
 - `dist/`: distributable static application/PWA.
 - No runtime dependencies or remote services. TypeScript, ESLint, Playwright, Selenium/geckodriver, and axe-core are development tools.
@@ -91,15 +116,15 @@ Last updated: 2026-10-23.
 
 - The application source, build/test tooling, configuration, and generated application code are GPL-3.0-or-later; the full text and scope are in `LICENSE`.
 - Musical works and project files in `projects/`, currently including **The Arrival**, are excluded from the software licence and use CC BY-NC-ND 4.0 under `projects/LICENSE.md`.
-- The CC licence permits attributed, non-commercial redistribution of an unmodified project. Commercial use, remixes, adaptations, stems, synchronization, and altered distribution require prior written permission from Kiber Vengance.
-- The Kiber Vengance name, logo, and other trademarks are not licensed by either file. Music created independently by application users remains outside this policy.
+- The CC licence permits attributed, non-commercial redistribution of an unmodified project. Commercial use, remixes, adaptations, stems, synchronization, and altered distribution require prior written permission from КИБЕР VENGANCE.
+- The КИБЕР VENGANCE name, logo, and other trademarks are not licensed by either file. Music created independently by application users remains outside this policy.
 
 ## Current validation
 
 - `npm run check:full` is the mandatory quality gate.
-- Known state when this memory was created: 20 unit tests and 4 browser suites/flows passing.
+- Known state when this memory was updated: 25 unit tests and 8 browser suites/flows passing.
 - Coverage includes migration, serialization, editing, generators, arrangement, a ten-minute scheduler run, Solo, buses, metronome, MIDI export, Firefox with audio/WAV, and Chromium responsive/a11y/PWA behavior.
-- Quick MIDI/JSON buttons are tested as real downloads; WAV uses the full renderer already covered by the Firefox flow.
+- Export/Export As, reusable file handles, fallback downloads, local/global seek, the five-channel mixer, performance capture, Scratch Deck, and the full Firefox WAV workflow are covered.
 
 ## Deliberate and honest limitations
 
@@ -109,7 +134,11 @@ Last updated: 2026-10-23.
 - Safari/iOS requires physical verification on Apple hardware.
 - The guitar is an expressive synthetic instrument, not a multisampled acoustic library.
 - There are no VST/AU plugins or commercial samples.
-- Quick export downloads a current revision; it cannot silently overwrite a previous file because of the browser security model.
+- Reusable export destinations require File System Access support. Unsupported browsers download a new revision; supported browsers may ask to renew write permission after a restart or browser-data cleanup.
+- Scratch buffers remain temporary, but recorded performance audio persists in IndexedDB and its event data is serialized in v5. Editing events changes event replay; it does not retroactively re-synthesize the already captured compressed audio.
+- MediaRecorder container/codec support is browser-dependent. Performance capture is normally WebM/Opus in Chromium; deterministic composition, local samples, and stem exports use WAV.
+- Sample blobs are device-local and are not embedded in plain JSON. Project Package is required to move them; if an asset is missing, КИБЕР VENGANCE reports it and keeps the synthesized drum fallback usable.
+- `OfflineAudioContext` cannot interrupt DSP already in progress. Export cancellation is observed before and after each render and between selected stems, and prevents subsequent file writes; an individual stem already rendering must finish first.
 
 ## User collaboration preferences
 
@@ -122,4 +151,4 @@ Last updated: 2026-10-23.
 
 ## Rule for future sessions
 
-Before modifying Kiber Vengance, read this file, `kiber-vengance.md`, `PRODUCT_PLAN.md`, and the current test state. If the code contradicts this memory, verify the behavior and update the documentation; do not perpetuate stale information.
+Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PRODUCT_PLAN.md`, and the current test state. If the code contradicts this memory, verify the behavior and update the documentation; do not perpetuate stale information.

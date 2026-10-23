@@ -4,11 +4,12 @@ import {
   PROJECT_VERSION, TRACKS, createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, meterSteps, setProjectMeter,
   makeNote, toggleNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, notesAtStep,
   generateClip, generateBacking, sceneLengthSteps, playbackEvents, encodeMidi, addArrangementScene, duplicateArrangementScene,
-  moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, History
+  moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake,
+  quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, dbToGain, gainToDb, History
 } from '../dist/core.js';
 import { AudioEngine } from '../dist/audio.js';
 
-test('v4 demo is a complete serializable multi-clip song with per-clip character', () => {
+test('v5 demo is a complete serializable multi-clip song with studio workflow state', () => {
   const p=createProject();
   assert.equal(p.version,PROJECT_VERSION);
   assert.deepEqual(Object.keys(p.activeClipIds),TRACKS);
@@ -17,6 +18,7 @@ test('v4 demo is a complete serializable multi-clip song with per-clip character
   assert.ok(playbackEvents(p,{song:true}).durationSteps>64);
   assert.equal(JSON.parse(JSON.stringify(p)).title,'Chrome Requiem');
   assert.ok(p.clips.every(c=>c.character?.arp&&c.character?.lfo&&c.character?.fx&&c.character?.macros));
+  assert.ok(p.tracks.lead.color);assert.equal(p.tracks.lead.sendMode,'post');assert.deepEqual(p.performanceTakes,[]);assert.ok(p.loop.end>p.loop.start);
 });
 
 test('empty projects and musical meters retain a complete five-track structure', () => {
@@ -28,7 +30,7 @@ test('empty projects and musical meters retain a complete five-track structure',
 test('legacy v2 patterns migrate into independent per-track clips', () => {
   const legacy={version:2,title:'Legacy Signal',tempo:118,macros:{energy:.4},tracks:{lead:{drive:.7}},patterns:[{id:'p1',name:'Old Pattern',bars:2,notes:{lead:[{step:0,pitch:60,length:2,velocity:.8}],bass:[],pad:[],drums:[]}}],activePatternId:'p1',arrangement:[{id:'s1',name:'INTRO',patternId:'p1',repeats:2}]};
   const p=migrateProject(legacy);
-  assert.equal(p.version,4);
+  assert.equal(p.version,5);
   assert.equal(p.clips.length,5);
   assert.equal(activeClip(p,'lead').notes[0].pitch,60);
   assert.equal(activeClip(p,'lead').character.fx.distortion,.7);
@@ -38,8 +40,16 @@ test('legacy v2 patterns migrate into independent per-track clips', () => {
 
 test('v3 track character migrates into every existing clip without losing its sound',()=>{
   const legacy=createProject();legacy.version=3;legacy.macros={energy:.21,darkness:.32,tension:.43,aggression:.54,space:.65,complexity:.76};legacy.tracks.lead.arp={enabled:true,mode:'down',octaves:3,rate:2};legacy.tracks.lead.lfo={enabled:true,target:'pitch',rate:7,depth:.4};legacy.tracks.lead.fx={bypass:false,distortion:.81,saturation:.7,chorus:.2,delay:.3,reverb:.4,tone:.5};legacy.clips.forEach(c=>delete c.character);
-  const migrated=migrateProject(JSON.parse(JSON.stringify(legacy))),lead=clipsForTrack(migrated,'lead');assert.equal(migrated.version,4);assert.ok(lead.every(c=>c.character.arp.mode==='down'&&c.character.fx.distortion===.81&&c.character.macros.space===.65));assert.equal(migrated.macros,undefined);assert.equal(migrated.tracks.lead.fx,undefined);
+  const migrated=migrateProject(JSON.parse(JSON.stringify(legacy))),lead=clipsForTrack(migrated,'lead');assert.equal(migrated.version,5);assert.ok(lead.every(c=>c.character.arp.mode==='down'&&c.character.fx.distortion===.81&&c.character.macros.space===.65));assert.equal(migrated.macros,undefined);assert.equal(migrated.tracks.lead.fx,undefined);
 });
+
+test('v4 projects migrate to v5 without changing musical material',()=>{const old=createProject(),notes=playbackEvents(old,{song:true}).events.map(event=>[event.track,event.step,event.pitch,event.clipId]);old.version=4;delete old.markers;delete old.loop;delete old.launcher;delete old.performanceTakes;delete old.samples;delete old.masterSettings;delete old.editor.arrangeZoom;for(const track of TRACKS){delete old.tracks[track].preGainDb;delete old.tracks[track].sendMode;delete old.tracks[track].color}const migrated=migrateProject(JSON.parse(JSON.stringify(old)));assert.equal(migrated.version,5);assert.deepEqual(playbackEvents(migrated,{song:true}).events.map(event=>[event.track,event.step,event.pitch,event.clipId]),notes);assert.equal(migrated.tracks.lead.preGainDb,0);assert.ok(migrated.editor.arrangeZoom)});
+
+test('v5 studio metadata survives a portable JSON round trip',()=>{const p=createProject();p.markers.push({id:'marker-1',step:12.5,name:'DROP',color:'#ff3bd4'});p.loop={enabled:true,start:8,end:40,punch:true};p.launcher.quantization=4;p.masterSettings.bypass=true;p.samples.push({id:'sample-1',name:'impact.wav',slot:0,size:2048,type:'audio/wav',trimStart:.1,trimEnd:.8,tune:-3,attack:.01,release:.2,reverse:true});p.tracks.lead.preGainDb=2.5;p.tracks.lead.sendMode='pre';const restored=migrateProject(JSON.parse(JSON.stringify(p)));assert.deepEqual(restored.markers,p.markers);assert.deepEqual(restored.loop,p.loop);assert.equal(restored.launcher.quantization,4);assert.equal(restored.masterSettings.bypass,true);assert.deepEqual(restored.samples,p.samples);assert.equal(restored.tracks.lead.preGainDb,2.5);assert.equal(restored.tracks.lead.sendMode,'pre')});
+
+test('performance takes, launcher capture and multi-scene editing are serializable',()=>{const p=createProject(),take=createPerformanceTake('Pressure Take',16,[{id:'e1',step:1.31,kind:'macro',target:'energy',value:.8},{id:'e2',step:8.76,kind:'scratch',target:'speed',value:-1.4}]);quantizePerformanceTake(take,1);assert.deepEqual(take.events.map(event=>event.step),[1,9]);p.performanceTakes.push(take);const before=p.arrangement.length,captured=captureLauncherScenes(p,[{name:'LIVE A',clipIds:{...p.activeClipIds}},{name:'LIVE B',clipIds:{...p.activeClipIds},repeats:2}]);assert.equal(captured.length,2);assert.equal(p.arrangement.length,before+2);const copies=duplicateArrangementSelection(p,[0,1]);assert.equal(copies.length,2);assert.ok(removeArrangementSelection(p,[0,1]));assert.equal(migrateProject(JSON.parse(JSON.stringify(p))).performanceTakes[0].events.length,2)});
+
+test('mixer decibel conversion is stable across silence and unity',()=>{assert.equal(dbToGain(-60),0);assert.equal(dbToGain(0),1);assert.ok(Math.abs(gainToDb(dbToGain(-12))+12)<1e-9);assert.equal(gainToDb(0),-60)});
 
 test('clip editing covers toggling, duplication, resizing and quantization', () => {
   const p=createProject(),c=activeClip(p,'lead'),before=c.notes.length;
@@ -130,3 +140,5 @@ test('solo schedules only the isolated instrument',()=>{const p=createProject();
 test('diagnostics keep the effects graph at exactly five persistent buses', () => {const e=new AudioEngine();e.buses={lead:{},guitar:{},bass:{},pad:{},drums:{}};assert.equal(e.diagnostics().effectBuses,5)});
 
 test('metronome emits accented bar clicks while music is scheduled', () => {const p=createProject();TRACKS.forEach(t=>p.tracks[t].mute=true);const e=new AudioEngine();e.project=p;e.position=0;e.songMode=false;e.metronome=true;let accents=[];e.click=(_time,accent)=>accents.push(accent);e.scheduleMusicStep(0);e.position=4;e.scheduleMusicStep(.1);assert.deepEqual(accents,[true,false])});
+
+test('transport seeks to exact clip and global arrangement positions',()=>{const p=createProject(),e=new AudioEngine();e.project=p;assert.equal(e.seek(9,false),9);const firstLength=sceneLengthSteps(p,p.arrangement[0]);assert.equal(e.seek(firstLength+5,true),firstLength+5);assert.ok(e.sceneIndex>0||e.sceneRepeat>0);assert.equal(e.sceneStep,5);assert.equal(e.seek(playbackEvents(p,{song:true}).durationSteps,true),0)});

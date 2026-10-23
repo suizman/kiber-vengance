@@ -1,4 +1,4 @@
-import { activeClip, automationValue, clipLengthSteps, frequency, meterSteps, notesAtStep, playbackEvents, sceneLengthSteps, secondsPerStep, stepWithSwing, TRACKS } from './core.js';
+import { activeClip, automationValue, clipLengthSteps, dbToGain, frequency, meterSteps, notesAtStep, playbackEvents, sceneLengthSteps, secondsPerStep, stepWithSwing, TRACKS } from './core.js';
 const STANDARD_WAVES = new Set(['sine', 'square', 'sawtooth', 'triangle']);
 function applyWave(context, oscillator, wave = 'sawtooth') { if (STANDARD_WAVES.has(wave)) {
     oscillator.type = wave;
@@ -24,6 +24,11 @@ export class AudioEngine {
     lastFrequency = {};
     metronome = false;
     liveVoices = new Map();
+    launchQueue = new Map();
+    launcherStopped = new Set();
+    onLaunch = null;
+    onScratchGesture = null;
+    drumSamples = new Map();
     constructor(onStep = () => { }) { this.project = null; this.onStep = onStep; }
     async init() {
         if (!this.ctx) {
@@ -32,7 +37,11 @@ export class AudioEngine {
             this.masterTone = this.ctx.createBiquadFilter();
             this.compressor = this.ctx.createDynamicsCompressor();
             this.limiter = this.ctx.createDynamicsCompressor();
+            this.programGain = this.ctx.createGain();
+            this.scratchFilter = this.ctx.createBiquadFilter();
+            this.scratchGain = this.ctx.createGain();
             this.analyser = this.ctx.createAnalyser();
+            this.captureDestination = this.ctx.createMediaStreamDestination();
             this.masterTone.type = 'highshelf';
             this.masterTone.frequency.value = 5200;
             this.masterTone.gain.value = 1.2;
@@ -47,23 +56,81 @@ export class AudioEngine {
             this.limiter.attack.value = .001;
             this.limiter.release.value = .08;
             this.analyser.fftSize = 256;
-            this.master.connect(this.masterTone).connect(this.compressor).connect(this.limiter).connect(this.analyser).connect(this.ctx.destination);
+            this.scratchFilter.type = 'lowpass';
+            this.scratchFilter.frequency.value = 20000;
+            this.scratchGain.gain.value = 0;
+            this.master.connect(this.masterTone).connect(this.compressor).connect(this.limiter).connect(this.programGain).connect(this.analyser);
+            this.analyser.connect(this.ctx.destination);
+            this.analyser.connect(this.captureDestination);
+            this.scratchFilter.connect(this.scratchGain).connect(this.analyser);
             this.createEffectBuses();
+            await this.initScratchDeck();
         }
         if (this.ctx.state === 'suspended')
             await this.ctx.resume();
         return this.ctx;
     }
+    async initScratchDeck() { if (this.scratchNode || !this.ctx?.audioWorklet)
+        return; try {
+        await this.ctx.audioWorklet.addModule('./scratch-worklet.js');
+        this.scratchNode = new AudioWorkletNode(this.ctx, 'kv-scratch-deck', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2], parameterData: { speed: 1 } });
+        this.scratchNode.connect(this.scratchFilter);
+        this.scratchNode.port.onmessage = (event) => { if (event.data.type === 'ready') {
+            this.scratchReady = true;
+            this.scratchPlaying = true;
+            this.pendingScratchReady?.();
+            this.pendingScratchReady = null;
+        }
+        else if (event.data.type === 'position') {
+            this.scratchPosition = event.data.frame;
+            this.scratchSpeed = event.data.speed;
+            this.scratchPlaying = event.data.playing;
+            this.onScratchPosition?.(event.data);
+        } };
+    }
+    catch (error) {
+        this.scratchError = error instanceof Error ? error.message : String(error);
+    } }
+    async loadScratchBuffer(buffer) { await this.init(); if (!this.scratchNode)
+        throw new Error(this.scratchError || 'Scratch AudioWorklet unavailable'); const left = new Float32Array(buffer.getChannelData(0)), right = new Float32Array(buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left); this.scratchFrames = left.length; this.scratchSampleRate = buffer.sampleRate; this.scratchReady = false; const ready = new Promise((resolve, reject) => { const timeout = setTimeout(() => reject(new Error('Scratch processor did not acknowledge the buffer')), 3000); this.pendingScratchReady = () => { clearTimeout(timeout); resolve(); }; }); this.scratchNode.port.postMessage({ type: 'load', left, right }, [left.buffer, right.buffer]); await ready; this.setScratchSpeed(1, 0); this.setScratchMix(.72); }
+    setScratchPlaying(value) { if (!this.scratchNode)
+        return; this.scratchPlaying = value; this.scratchNode.port.postMessage({ type: 'play', value }); this.onScratchGesture?.('playing', value); }
+    setScratchSpeed(value, ramp = .025) { if (!this.scratchNode || !this.ctx)
+        return; const speed = this.scratchNode.parameters.get('speed'), now = this.ctx.currentTime, target = Math.max(-6, Math.min(6, value)); if (!speed)
+        return; speed.cancelScheduledValues(now); speed.setValueAtTime(speed.value, now); if (ramp > 0)
+        speed.linearRampToValueAtTime(target, now + ramp);
+    else
+        speed.setValueAtTime(target, now); this.scratchSpeed = target; this.onScratchGesture?.('speed', target); }
+    setScratchMix(value) { if (!this.ctx || !this.programGain || !this.scratchGain)
+        return; const mix = Math.max(0, Math.min(1, value)), now = this.ctx.currentTime; this.scratchMix = mix; this.programGain.gain.setTargetAtTime(Math.cos(mix * Math.PI / 2), now, .018); this.scratchGain.gain.setTargetAtTime(Math.sin(mix * Math.PI / 2), now, .018); this.onScratchGesture?.('mix', mix); }
+    setScratchFilter(value) { if (!this.ctx || !this.scratchFilter)
+        return; const normalized = Math.max(0, Math.min(1, value)), frequency = 120 * Math.pow(20000 / 120, normalized); this.scratchFilter.frequency.setTargetAtTime(frequency, this.ctx.currentTime, .018); this.onScratchGesture?.('filter', normalized); }
+    setScratchStutter(frames) { this.scratchNode?.port.postMessage({ type: 'stutter', frames }); this.onScratchGesture?.('stutter', frames > 0); }
+    syncScratch(beatFrames) { this.scratchNode?.port.postMessage({ type: 'sync', beatFrames }); this.setScratchSpeed(1, .08); }
     setProject(project) { this.project = project; if (this.master) {
+        const bypass = Boolean(project.masterSettings?.bypass);
         this.master.gain.setTargetAtTime(project.master, this.ctx.currentTime, .02);
+        this.masterTone.gain.setTargetAtTime(bypass ? 0 : 1.2, this.ctx.currentTime, .02);
+        this.compressor.ratio.setTargetAtTime(bypass ? 1 : 3, this.ctx.currentTime, .02);
+        this.limiter.ratio.setTargetAtTime(bypass ? 1 : 20, this.ctx.currentTime, .02);
         for (const id of TRACKS)
             this.updateEffectBus(id, project.tracks[id], activeClip(project, id).character);
     } }
+    queueClip(track, clipId, quantization = 16) { if (!this.project.clips.some(clip => clip.id === clipId && clip.track === track))
+        return false; this.launchQueue ??= new Map(); this.launchQueue.set(track, { clipId, quantization: Math.max(1, Math.round(quantization)) }); return true; }
+    stopLauncherTrack(track, stopped = true) { this.launcherStopped ??= new Set(); if (stopped)
+        this.launcherStopped.add(track);
+    else
+        this.launcherStopped.delete(track); return stopped; }
+    async setDrumSample(kind, data, settings = {}) { await this.init(); const buffer = await this.ctx.decodeAudioData(data.slice(0)); if (settings.reverse)
+        for (let channel = 0; channel < buffer.numberOfChannels; channel++)
+            buffer.getChannelData(channel).reverse(); this.drumSamples.set(kind, { buffer, trimStart: settings.trimStart ?? 0, trimEnd: settings.trimEnd ?? 1, tune: settings.tune ?? 0, attack: settings.attack ?? .002, release: settings.release ?? .08, reverse: settings.reverse ?? false }); return buffer.duration; }
+    clearDrumSample(kind) { this.drumSamples.delete(kind); }
     createEffectBuses() {
         this.buses = {};
         const impulse = this.reverbImpulse();
         for (const id of TRACKS) {
-            const input = this.ctx.createGain(), tone = this.ctx.createBiquadFilter(), saturation = this.ctx.createWaveShaper(), shape = this.ctx.createWaveShaper(), dry = this.ctx.createGain(), chorus = this.ctx.createDelay(.05), chorusWet = this.ctx.createGain(), lfo = this.ctx.createOscillator(), depth = this.ctx.createGain(), delay = this.ctx.createDelay(.8), feedback = this.ctx.createGain(), delayWet = this.ctx.createGain(), reverb = this.ctx.createConvolver(), reverbWet = this.ctx.createGain(), output = this.ctx.createGain();
+            const input = this.ctx.createGain(), tone = this.ctx.createBiquadFilter(), saturation = this.ctx.createWaveShaper(), shape = this.ctx.createWaveShaper(), dry = this.ctx.createGain(), chorus = this.ctx.createDelay(.05), chorusWet = this.ctx.createGain(), lfo = this.ctx.createOscillator(), depth = this.ctx.createGain(), delay = this.ctx.createDelay(.8), feedback = this.ctx.createGain(), delayWet = this.ctx.createGain(), reverb = this.ctx.createConvolver(), reverbWet = this.ctx.createGain(), output = this.ctx.createGain(), sendOutput = this.ctx.createGain(), analyser = this.ctx.createAnalyser();
             tone.type = 'highshelf';
             tone.frequency.value = 1800;
             saturation.oversample = '4x';
@@ -76,25 +143,46 @@ export class AudioEngine {
             delayWet.gain.value = 0;
             reverbWet.gain.value = 0;
             reverb.buffer = impulse;
+            analyser.fftSize = 64;
             input.connect(tone).connect(saturation).connect(shape);
             shape.connect(dry).connect(output);
             shape.connect(chorus).connect(chorusWet).connect(output);
             lfo.connect(depth).connect(chorus.delayTime);
             shape.connect(delay);
             delay.connect(feedback).connect(delay);
-            delay.connect(delayWet).connect(output);
-            shape.connect(reverb).connect(reverbWet).connect(output);
-            output.connect(this.master);
+            delay.connect(delayWet).connect(sendOutput);
+            shape.connect(reverb).connect(reverbWet).connect(sendOutput);
+            output.connect(analyser);
+            sendOutput.connect(analyser);
+            analyser.connect(this.master);
             lfo.start();
-            this.buses[id] = { input, tone, saturation, shape, dry, chorus, chorusWet, lfo, depth, delay, feedback, delayWet, reverbWet, output };
+            this.buses[id] = { input, tone, saturation, shape, dry, chorus, chorusWet, lfo, depth, delay, feedback, delayWet, reverbWet, output, sendOutput, analyser };
         }
     }
     updateEffectBus(id, cfg, character, time = this.ctx.currentTime) { const bus = this.buses?.[id]; if (!bus)
-        return; const fx = character.fx || {}, macros = character.macros, bypass = fx.bypass, space = .55 + macros.space * .75, energy = .78 + macros.energy * .25 + (macros.aggression || 0) * .32, soloActive = TRACKS.some(track => this.project.tracks[track].solo), audible = !cfg.mute && (!soloActive || cfg.solo), smooth = (p, v) => p.setTargetAtTime(v, Math.max(this.ctx.currentTime, time), .025); bus.saturation.curve = this.saturationCurve(bypass ? 0 : (fx.saturation || 0) * energy); bus.shape.curve = this.distortionCurve(bypass ? 0 : (fx.distortion || 0) * energy); smooth(bus.tone.gain, bypass ? 0 : ((fx.tone ?? .5) - .5) * 18 - macros.darkness * 2); smooth(bus.dry.gain, bypass ? 1 : .82); smooth(bus.chorusWet.gain, bypass ? 0 : (fx.chorus || 0) * .4); smooth(bus.lfo.frequency, .18 + (fx.chorus || 0) * .8); smooth(bus.depth.gain, .002 + (fx.chorus || 0) * .006); smooth(bus.delay.delayTime, .16 + (fx.delay || 0) * .22); smooth(bus.feedback.gain, bypass ? 0 : Math.min(.55, .1 + (fx.delay || 0) * .4)); smooth(bus.delayWet.gain, bypass ? 0 : (fx.delay || 0) * .34 * space); smooth(bus.reverbWet.gain, bypass ? 0 : (fx.reverb || 0) * .42 * space); smooth(bus.output.gain, audible ? 1 : 0); }
-    async start(project, { countInBars = 0 } = {}) { await this.init(); this.setProject(project); if (this.playing)
-        return; this.playing = true; this.nextTime = this.ctx.currentTime + .06; this.position = 0; this.sceneIndex = 0; this.sceneStep = 0; this.sceneRepeat = 0; this.countInRemaining = Math.max(0, countInBars * meterSteps(project.meter)); this.countingIn = this.countInRemaining > 0; this.sequenceStartTime = this.nextTime + this.countInRemaining * secondsPerStep(project.tempo); this.timer = setInterval(() => this.schedule(), 25); this.schedule(); }
+        return; const fx = character.fx || {}, macros = character.macros, bypass = fx.bypass, space = .55 + macros.space * .75, energy = .78 + macros.energy * .25 + (macros.aggression || 0) * .32, soloActive = TRACKS.some(track => this.project.tracks[track].solo), audible = !cfg.mute && (!soloActive || cfg.solo) && !this.launcherStopped?.has(id), smooth = (p, v) => p.setTargetAtTime(v, Math.max(this.ctx.currentTime, time), .025), fader = Math.max(0, Math.min(2, cfg.volume ?? 1)) * dbToGain(cfg.preGainDb ?? 0); bus.saturation.curve = this.saturationCurve(bypass ? 0 : (fx.saturation || 0) * energy); bus.shape.curve = this.distortionCurve(bypass ? 0 : (fx.distortion || 0) * energy); smooth(bus.tone.gain, bypass ? 0 : ((fx.tone ?? .5) - .5) * 18 - macros.darkness * 2); smooth(bus.dry.gain, bypass ? 1 : .82); smooth(bus.chorusWet.gain, bypass ? 0 : (fx.chorus || 0) * .4); smooth(bus.lfo.frequency, .18 + (fx.chorus || 0) * .8); smooth(bus.depth.gain, .002 + (fx.chorus || 0) * .006); smooth(bus.delay.delayTime, .16 + (fx.delay || 0) * .22); smooth(bus.feedback.gain, bypass ? 0 : Math.min(.55, .1 + (fx.delay || 0) * .4)); smooth(bus.delayWet.gain, bypass ? 0 : (fx.delay || 0) * .34 * space); smooth(bus.reverbWet.gain, bypass ? 0 : (fx.reverb || 0) * .42 * space); smooth(bus.output.gain, audible ? fader : 0); smooth(bus.sendOutput.gain, audible ? (cfg.sendMode === 'pre' ? dbToGain(cfg.preGainDb ?? 0) : fader) : 0); }
+    async start(project, { countInBars = 0, startStep = 0 } = {}) { await this.init(); this.setProject(project); if (this.playing)
+        return; this.playing = true; this.nextTime = this.ctx.currentTime + .06; this.sceneIndex = 0; this.sceneStep = 0; this.sceneRepeat = 0; this.seek(startStep, this.songMode); this.countInRemaining = Math.max(0, countInBars * meterSteps(project.meter)); this.countingIn = this.countInRemaining > 0; this.sequenceStartTime = this.nextTime - this.position * secondsPerStep(project.tempo) + this.countInRemaining * secondsPerStep(project.tempo); this.timer = setInterval(() => this.schedule(), 25); this.schedule(); }
     stop() { this.playing = false; this.countingIn = false; if (this.timer)
         clearInterval(this.timer); this.timer = null; this.onStep(-1, 0, -1, { stopped: true }); }
+    seek(step, songMode = this.songMode) { if (!this.project)
+        return; const requested = Math.max(0, Math.floor(step)); if (!songMode) {
+        const length = Math.max(...TRACKS.map(track => clipLengthSteps(activeClip(this.project, track))));
+        this.position = requested % Math.max(1, length);
+        return this.position;
+    } const { durationSteps } = playbackEvents(this.project, { song: true }), target = requested % Math.max(1, durationSteps); let cursor = 0; for (let sceneIndex = 0; sceneIndex < this.project.arrangement.length; sceneIndex++) {
+        const scene = this.project.arrangement[sceneIndex], length = sceneLengthSteps(this.project, scene);
+        for (let repeat = 0; repeat < scene.repeats; repeat++) {
+            if (target < cursor + length) {
+                this.position = target;
+                this.sceneIndex = sceneIndex;
+                this.sceneRepeat = repeat;
+                this.sceneStep = target - cursor;
+                return target;
+            }
+            cursor += length;
+        }
+    } this.position = 0; this.sceneIndex = 0; this.sceneRepeat = 0; this.sceneStep = 0; return 0; }
     schedule() { if (!this.playing || !this.project)
         return; if (this.nextTime < this.ctx.currentTime - .1)
         this.nextTime = this.ctx.currentTime + .03; while (this.nextTime < this.ctx.currentTime + .12) {
@@ -121,11 +209,11 @@ export class AudioEngine {
         for (const track of TRACKS) {
             const clip = scene ? this.project.clips.find(c => c.id === scene.clipIds[track]) || activeClip(this.project, track) : activeClip(this.project, track), local = (this.songMode ? this.sceneStep : this.position) % clipLengthSteps(clip), cfg = this.project.tracks[track], character = clip.character;
             this.updateEffectBus(track, cfg, character, time);
-            if (cfg.mute || (soloActive && !cfg.solo))
+            if (cfg.mute || (soloActive && !cfg.solo) || this.launcherStopped?.has(track))
                 continue;
             const volume = automationValue(clip, 'volume', local, 1);
             for (const n of notesAtStep(this.project, clip, track, local)) {
-                const expression = n.expression || {}, velocity = n.velocity * cfg.volume * volume * (.65 + (expression.pressure ?? n.velocity) * .35), noteTime = Math.max(this.ctx.currentTime + .001, time + (n.offset || 0) * secondsPerStep(this.project.tempo)), cutoff = Math.max(0, Math.min(1, automationValue(clip, 'cutoff', local, .5) + (expression.timbre ?? .5) - .5));
+                const expression = n.expression || {}, velocity = n.velocity * volume * (.65 + (expression.pressure ?? n.velocity) * .35), noteTime = Math.max(this.ctx.currentTime + .001, time + (n.offset || 0) * secondsPerStep(this.project.tempo)), cutoff = Math.max(0, Math.min(1, automationValue(clip, 'cutoff', local, .5) + (expression.timbre ?? .5) - .5));
                 if (track === 'drums')
                     this.drum(n.pitch, noteTime, velocity, cfg);
                 else
@@ -134,10 +222,20 @@ export class AudioEngine {
         }
         this.onStep(this.songMode ? this.sceneStep : this.position, time, this.songMode ? this.sceneIndex : -1, { sceneStep: this.sceneStep, position: this.position });
     }
-    advanceTransport() { this.position++; if (!this.songMode)
+    advanceTransport() { this.position++; if (!this.songMode && this.launchQueue?.size) {
+        for (const [track, launch] of this.launchQueue)
+            if (this.position % launch.quantization === 0) {
+                this.project.activeClipIds[track] = launch.clipId;
+                this.launchQueue.delete(track);
+                this.launcherStopped?.delete(track);
+                this.onLaunch?.(track, launch.clipId, this.position);
+            }
+    } if (this.project.loop?.enabled && this.position >= this.project.loop.end) {
+        this.seek(this.project.loop.start, this.songMode);
+        return;
+    } if (!this.songMode)
         return; const scene = this.project.arrangement[this.sceneIndex]; if (!scene) {
-        this.sceneIndex = 0;
-        this.sceneStep = 0;
+        this.seek(0, true);
         return;
     } this.sceneStep++; if (this.sceneStep >= sceneLengthSteps(this.project, scene)) {
         this.sceneStep = 0;
@@ -145,6 +243,8 @@ export class AudioEngine {
         if (this.sceneRepeat >= scene.repeats) {
             this.sceneRepeat = 0;
             this.sceneIndex = (this.sceneIndex + 1) % this.project.arrangement.length;
+            if (this.sceneIndex === 0)
+                this.position = 0;
         }
     } }
     recordPosition(track, { quantized = true } = {}) { if (!this.ctx || !this.playing || this.countingIn)
@@ -219,7 +319,7 @@ export class AudioEngine {
             this.drum(pitch, now, velocity, cfg);
             return;
         }
-        const filter = this.ctx.createBiquadFilter(), gain = this.ctx.createGain(), pan = this.ctx.createStereoPanner(), oscillators = [], unison = Math.max(1, Math.min(3, cfg.unison || 1)), pressure = expression.pressure ?? velocity, timbre = expression.timbre ?? .5, bend = expression.bend ?? 0, peak = Math.max(.001, velocity * (.65 + pressure * .35) * cfg.volume * .23 / Math.sqrt(unison));
+        const filter = this.ctx.createBiquadFilter(), gain = this.ctx.createGain(), pan = this.ctx.createStereoPanner(), oscillators = [], unison = Math.max(1, Math.min(3, cfg.unison || 1)), pressure = expression.pressure ?? velocity, timbre = expression.timbre ?? .5, bend = expression.bend ?? 0, peak = Math.max(.001, velocity * (.65 + pressure * .35) * .23 / Math.sqrt(unison));
         filter.type = cfg.filterType || 'lowpass';
         filter.Q.value = cfg.resonance || 1;
         filter.frequency.value = Math.max(120, (cfg.cutoff || 1800) * (.35 + timbre * 1.1) * (1 - macros.darkness * .35));
@@ -244,7 +344,7 @@ export class AudioEngine {
         this.liveVoices.set(id, { id, track, pitch, velocity, channel, cfg, macros, filter, gain, pan, oscillators, expression: { pressure, timbre, bend } });
     }
     updateLive(id, expression) { const voice = this.liveVoices.get(id); if (!voice || !this.ctx)
-        return; Object.assign(voice.expression, expression); const now = this.ctx.currentTime, { pressure, timbre, bend } = voice.expression; voice.oscillators.forEach(({ node, ratio }) => node.frequency.setTargetAtTime(frequency(voice.pitch + bend) * ratio, now, .008)); voice.filter.frequency.setTargetAtTime(Math.max(120, (voice.cfg.cutoff || 1800) * (.35 + timbre * 1.1) * (1 - voice.macros.darkness * .35)), now, .012); voice.gain.gain.setTargetAtTime(Math.max(.001, voice.velocity * (.65 + pressure * .35) * voice.cfg.volume * .23 * (voice.cfg.sustain ?? .72) / Math.sqrt(Math.max(1, voice.cfg.unison || 1))), now, .012); }
+        return; Object.assign(voice.expression, expression); const now = this.ctx.currentTime, { pressure, timbre, bend } = voice.expression; voice.oscillators.forEach(({ node, ratio }) => node.frequency.setTargetAtTime(frequency(voice.pitch + bend) * ratio, now, .008)); voice.filter.frequency.setTargetAtTime(Math.max(120, (voice.cfg.cutoff || 1800) * (.35 + timbre * 1.1) * (1 - voice.macros.darkness * .35)), now, .012); voice.gain.gain.setTargetAtTime(Math.max(.001, voice.velocity * (.65 + pressure * .35) * .23 * (voice.cfg.sustain ?? .72) / Math.sqrt(Math.max(1, voice.cfg.unison || 1))), now, .012); }
     updateLiveChannel(channel, expression) { for (const [id, voice] of this.liveVoices)
         if (voice.channel === channel)
             this.updateLive(id, expression); }
@@ -256,7 +356,19 @@ export class AudioEngine {
         catch { } setTimeout(() => { for (const { node } of voice.oscillators)
         node.disconnect(); voice.filter.disconnect(); voice.gain.disconnect(); voice.pan.disconnect(); }, Math.ceil((release + .05) * 1000)); }
     drum(kind, time, velocity, cfg = this.project.tracks.drums) { if (!this.ctx)
-        return; const g = this.ctx.createGain(), pan = this.ctx.createStereoPanner(); pan.pan.value = cfg.pan || 0; g.connect(pan).connect(this.buses.drums.input); if (kind === 0 || kind === 4) {
+        return; const custom = this.drumSamples.get(kind), g = this.ctx.createGain(), pan = this.ctx.createStereoPanner(); pan.pan.value = cfg.pan || 0; g.connect(pan).connect(this.buses.drums.input); if (custom) {
+        const source = this.ctx.createBufferSource(), start = Math.max(0, Math.min(.98, custom.trimStart)) * custom.buffer.duration, end = Math.max(start + .001, Math.min(1, custom.trimEnd)) * custom.buffer.duration, duration = end - start, rate = 2 ** (custom.tune / 12), audibleDuration = duration / rate, attack = Math.min(audibleDuration * .4, Math.max(.001, custom.attack)), release = Math.min(audibleDuration * .7, Math.max(.005, custom.release));
+        source.buffer = custom.buffer;
+        source.playbackRate.value = rate;
+        g.gain.setValueAtTime(.0001, time);
+        g.gain.linearRampToValueAtTime(Math.max(.001, velocity), time + attack);
+        g.gain.setValueAtTime(Math.max(.001, velocity), Math.max(time + attack, time + audibleDuration - release));
+        g.gain.linearRampToValueAtTime(.0001, time + audibleDuration);
+        source.connect(g);
+        source.onended = () => { source.disconnect(); g.disconnect(); pan.disconnect(); };
+        source.start(time, start, duration);
+        return;
+    } if (kind === 0 || kind === 4) {
         const o = this.ctx.createOscillator(), start = kind === 0 ? 145 : kind === 4 ? 125 : 180, end = kind === 0 ? 42 : 72, len = kind === 0 ? .2 : .28;
         o.type = kind === 4 ? 'triangle' : 'sine';
         o.frequency.setValueAtTime(start, time);
@@ -294,7 +406,7 @@ export class AudioEngine {
         return this.impulse; const length = this.ctx.sampleRate * 1.8, buffer = this.ctx.createBuffer(2, length, this.ctx.sampleRate); for (let ch = 0; ch < 2; ch++) {
         const data = buffer.getChannelData(ch);
         for (let i = 0; i < length; i++)
-            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.4);
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2.4);
     } return this.impulse = buffer; }
     async preview(track, pitch, velocity = .8) { await this.init(); this.setProject(this.project); if (track === 'drums')
         this.drum(pitch, this.ctx.currentTime, velocity);
@@ -302,7 +414,25 @@ export class AudioEngine {
         this.voice(track, pitch, this.ctx.currentTime, .22, velocity, this.project.tracks[track], activeClip(this.project, track).character); }
     draw(canvas) { if (!this.analyser)
         return; const c = canvas.getContext('2d'), data = new Uint8Array(this.analyser.frequencyBinCount); this.analyser.getByteFrequencyData(data); c.clearRect(0, 0, canvas.width, canvas.height); const gradient = c.createLinearGradient(0, canvas.height, 0, 0); gradient.addColorStop(0, '#9d5b28'); gradient.addColorStop(1, '#ffcf67'); c.fillStyle = gradient; const w = canvas.width / data.length; data.forEach((v, i) => c.fillRect(i * w, canvas.height, Math.max(1, w - 1), -v / 255 * canvas.height)); }
-    diagnostics() { return { effectBuses: Object.keys(this.buses || {}).length, liveVoices: this.liveVoices.size, schedulerActive: Boolean(this.timer), contextState: this.ctx?.state || 'uninitialized', sampleRate: this.ctx?.sampleRate || null, countingIn: this.countingIn }; }
+    trackLevel(track) { const analyser = this.buses?.[track]?.analyser; if (!analyser)
+        return 0; const data = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(data); let energy = 0; for (const value of data) {
+        const sample = (value - 128) / 128;
+        energy += sample * sample;
+    } return Math.min(1, Math.sqrt(energy / data.length) * 3.2); }
+    trackMeter(track) { const analyser = this.buses?.[track]?.analyser; if (!analyser)
+        return { rms: 0, peak: 0, left: 0, right: 0 }; const data = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(data); let energy = 0, peak = 0; for (const value of data) {
+        const sample = (value - 128) / 128;
+        energy += sample * sample;
+        peak = Math.max(peak, Math.abs(sample));
+    } const rms = Math.min(1, Math.sqrt(energy / data.length) * 3.2), p = Math.min(1, peak * 1.8); return { rms, peak: p, left: Math.min(1, rms * (1 - Math.min(0, this.project.tracks[track].pan || 0) * .45)), right: Math.min(1, rms * (1 + Math.max(0, this.project.tracks[track].pan || 0) * .45)) }; }
+    async startPerformanceCapture() { await this.init(); if (this.performanceRecorder?.state === 'recording')
+        return; const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'].find(value => MediaRecorder.isTypeSupported(value)) || '', chunks = []; this.performanceRecorder = new MediaRecorder(this.captureDestination.stream, type ? { mimeType: type } : undefined); this.performanceChunks = chunks; this.performanceRecorder.ondataavailable = (event) => { if (event.data.size)
+        chunks.push(event.data); }; this.performanceRecorder.start(250); return type || this.performanceRecorder.mimeType; }
+    stopPerformanceCapture() { return new Promise((resolve, reject) => { const recorder = this.performanceRecorder; if (!recorder || recorder.state !== 'recording') {
+        reject(new Error('No performance capture is active'));
+        return;
+    } recorder.onerror = () => reject(new Error('Performance capture failed')); recorder.onstop = () => resolve(new Blob(this.performanceChunks || [], { type: recorder.mimeType || 'audio/webm' })); recorder.stop(); }); }
+    diagnostics() { return { effectBuses: Object.keys(this.buses || {}).length, liveVoices: this.liveVoices.size, schedulerActive: Boolean(this.timer), contextState: this.ctx?.state || 'uninitialized', sampleRate: this.ctx?.sampleRate || null, countingIn: this.countingIn, position: Number(this.position || 0), sceneIndex: Number(this.sceneIndex || 0), songMode: Boolean(this.songMode), performanceRecording: this.performanceRecorder?.state === 'recording', scratchReady: Boolean(this.scratchReady), scratchFrames: this.scratchFrames || 0, scratchPlaying: Boolean(this.scratchPlaying), scratchSpeed: Number(this.scratchSpeed || 0), scratchMix: Number(this.scratchMix || 0) }; }
 }
 function makeCurve(amount) { const c = new Float32Array(256), k = amount * 180; for (let i = 0; i < c.length; i++) {
     const x = i * 2 / c.length - 1;
@@ -312,14 +442,22 @@ function makeSaturationCurve(amount) { const c = new Float32Array(256), drive = 
     const x = i * 2 / (c.length - 1) - 1;
     c[i] = amount < .005 ? x : Math.tanh(x * drive) / norm;
 } return c; }
-function wavBlob(buffer) { const len = 44 + buffer.length * 4, ab = new ArrayBuffer(len), v = new DataView(ab), str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0))); str(0, 'RIFF'); v.setUint32(4, len - 8, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, buffer.sampleRate, true); v.setUint32(28, buffer.sampleRate * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, len - 44, true); let off = 44; for (let i = 0; i < buffer.length; i++)
+function wavBlob(buffer, bitDepth = 16, normalize = false, dither = false) { const bytes = bitDepth / 8, block = bytes * 2, len = 44 + buffer.length * block, ab = new ArrayBuffer(len), v = new DataView(ab), str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0))); let peak = 0; if (normalize)
+    for (let ch = 0; ch < 2; ch++)
+        for (const sample of buffer.getChannelData(ch))
+            peak = Math.max(peak, Math.abs(sample)); const gain = normalize && peak > 0 ? Math.min(8, .988 / peak) : 1; str(0, 'RIFF'); v.setUint32(4, len - 8, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, bitDepth === 32 ? 3 : 1, true); v.setUint16(22, 2, true); v.setUint32(24, buffer.sampleRate, true); v.setUint32(28, buffer.sampleRate * block, true); v.setUint16(32, block, true); v.setUint16(34, bitDepth, true); str(36, 'data'); v.setUint32(40, len - 44, true); let off = 44; for (let i = 0; i < buffer.length; i++)
     for (let ch = 0; ch < 2; ch++) {
-        const x = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-        v.setInt16(off, x < 0 ? x * 32768 : x * 32767, true);
-        off += 2;
+        const noise = dither && bitDepth === 16 ? (Math.random() - Math.random()) / 65536 : 0, x = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i] * gain + noise));
+        if (bitDepth === 32)
+            v.setFloat32(off, x, true);
+        else
+            v.setInt16(off, x < 0 ? x * 32768 : x * 32767, true);
+        off += bytes;
     } return new Blob([ab], { type: 'audio/wav' }); }
-export async function renderWav(project, { song = true } = {}) {
-    const { events, durationSteps } = playbackEvents(project, { song }), sr = 44100, duration = stepWithSwing(durationSteps, project.tempo, project.swing) + 3, ctx = new OfflineAudioContext(2, Math.ceil(duration * sr), sr), master = ctx.createGain(), tone = ctx.createBiquadFilter(), comp = ctx.createDynamicsCompressor(), limiter = ctx.createDynamicsCompressor();
+export async function renderWav(project, { song = true, bitDepth = 16, normalize = false, sampleRate = 44100, tailSeconds = 3, dither = false, region, signal, dry = false, drumSamples } = {}) {
+    if (signal?.aborted)
+        throw new DOMException('Export cancelled', 'AbortError');
+    const playback = playbackEvents(project, { song }), regionStart = Math.max(0, region?.start || 0), regionEnd = Math.max(regionStart + 1, Math.min(playback.durationSteps, region?.end || playback.durationSteps)), events = playback.events.filter(event => event.step < regionEnd && event.step + event.length > regionStart).map(event => { const clippedStart = Math.max(event.step, regionStart), clippedEnd = Math.min(event.step + event.length, regionEnd); return { ...event, step: clippedStart - regionStart, length: clippedEnd - clippedStart }; }), durationSteps = regionEnd - regionStart, sr = sampleRate, duration = stepWithSwing(durationSteps, project.tempo, project.swing) + Math.max(0, Math.min(12, tailSeconds)), ctx = new OfflineAudioContext(2, Math.ceil(duration * sr), sr), master = ctx.createGain(), tone = ctx.createBiquadFilter(), comp = ctx.createDynamicsCompressor(), limiter = ctx.createDynamicsCompressor();
     master.gain.value = project.master * .78;
     tone.type = 'highshelf';
     tone.frequency.value = 5200;
@@ -328,7 +466,10 @@ export async function renderWav(project, { song = true } = {}) {
     comp.ratio.value = 3;
     limiter.threshold.value = -1.5;
     limiter.ratio.value = 20;
-    master.connect(tone).connect(comp).connect(limiter).connect(ctx.destination);
+    if (project.masterSettings?.bypass)
+        master.connect(ctx.destination);
+    else
+        master.connect(tone).connect(comp).connect(limiter).connect(ctx.destination);
     let impulse;
     const getImpulse = () => { if (impulse)
         return impulse; impulse = ctx.createBuffer(2, Math.floor(sr * 1.8), sr); for (let ch = 0; ch < 2; ch++) {
@@ -336,41 +477,41 @@ export async function renderWav(project, { song = true } = {}) {
         for (let i = 0; i < d.length; i++)
             d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.4);
     } return impulse; };
-    const buses = {};
+    const buses = {}, soloActive = TRACKS.some(track => project.tracks[track].solo), trackOutputs = Object.fromEntries(TRACKS.map(track => { const output = ctx.createGain(), cfg = project.tracks[track], audible = !cfg.mute && (!soloActive || cfg.solo); output.gain.value = audible ? cfg.volume * dbToGain(cfg.preGainDb ?? 0) : 0; output.connect(master); return [track, output]; })), preSendOutputs = Object.fromEntries(TRACKS.map(track => { const output = ctx.createGain(), cfg = project.tracks[track], audible = !cfg.mute && (!soloActive || cfg.solo); output.gain.value = audible ? dbToGain(cfg.preGainDb ?? 0) : 0; output.connect(master); return [track, output]; }));
     for (const clip of project.clips) {
-        const { fx, macros } = clip.character, input = ctx.createGain(), eq = ctx.createBiquadFilter(), saturation = ctx.createWaveShaper(), shape = ctx.createWaveShaper(), dry = ctx.createGain(), chorus = ctx.createDelay(.05), chorusWet = ctx.createGain(), chorusLfo = ctx.createOscillator(), chorusDepth = ctx.createGain(), delay = ctx.createDelay(.8), feedback = ctx.createGain(), delayWet = ctx.createGain(), reverb = ctx.createConvolver(), reverbWet = ctx.createGain(), space = .55 + macros.space * .75, drive = .78 + macros.energy * .25 + (macros.aggression || 0) * .32;
+        const { fx, macros } = clip.character, input = ctx.createGain(), eq = ctx.createBiquadFilter(), saturation = ctx.createWaveShaper(), shape = ctx.createWaveShaper(), dryGain = ctx.createGain(), chorus = ctx.createDelay(.05), chorusWet = ctx.createGain(), chorusLfo = ctx.createOscillator(), chorusDepth = ctx.createGain(), delay = ctx.createDelay(.8), feedback = ctx.createGain(), delayWet = ctx.createGain(), reverb = ctx.createConvolver(), reverbWet = ctx.createGain(), space = .55 + macros.space * .75, drive = .78 + macros.energy * .25 + (macros.aggression || 0) * .32, bypassed = dry || fx.bypass, trackOutput = trackOutputs[clip.track], sendTarget = project.tracks[clip.track].sendMode === 'pre' ? preSendOutputs[clip.track] : trackOutput;
         eq.type = 'highshelf';
         eq.frequency.value = 1800;
-        eq.gain.value = fx.bypass ? 0 : ((fx.tone ?? .5) - .5) * 18 - macros.darkness * 2;
-        saturation.curve = makeSaturationCurve(fx.bypass ? 0 : (fx.saturation || 0) * drive);
+        eq.gain.value = bypassed ? 0 : ((fx.tone ?? .5) - .5) * 18 - macros.darkness * 2;
+        saturation.curve = makeSaturationCurve(bypassed ? 0 : (fx.saturation || 0) * drive);
         saturation.oversample = '4x';
-        shape.curve = makeCurve(fx.bypass ? 0 : (fx.distortion || 0) * drive);
+        shape.curve = makeCurve(bypassed ? 0 : (fx.distortion || 0) * drive);
         shape.oversample = '2x';
-        dry.gain.value = fx.bypass ? 1 : .82;
+        dryGain.gain.value = bypassed ? 1 : .82;
         chorus.delayTime.value = .018;
-        chorusWet.gain.value = fx.bypass ? 0 : (fx.chorus || 0) * .4;
+        chorusWet.gain.value = bypassed ? 0 : (fx.chorus || 0) * .4;
         chorusLfo.frequency.value = .18 + (fx.chorus || 0) * .8;
         chorusDepth.gain.value = .002 + (fx.chorus || 0) * .006;
         delay.delayTime.value = .16 + (fx.delay || 0) * .22;
-        feedback.gain.value = fx.bypass ? 0 : Math.min(.55, .1 + (fx.delay || 0) * .4);
-        delayWet.gain.value = fx.bypass ? 0 : (fx.delay || 0) * .34 * space;
+        feedback.gain.value = bypassed ? 0 : Math.min(.55, .1 + (fx.delay || 0) * .4);
+        delayWet.gain.value = bypassed ? 0 : (fx.delay || 0) * .34 * space;
         reverb.buffer = getImpulse();
-        reverbWet.gain.value = fx.bypass ? 0 : (fx.reverb || 0) * .42 * space;
+        reverbWet.gain.value = bypassed ? 0 : (fx.reverb || 0) * .42 * space;
         input.connect(eq).connect(saturation).connect(shape);
-        shape.connect(dry).connect(master);
-        shape.connect(chorus).connect(chorusWet).connect(master);
+        shape.connect(dryGain).connect(trackOutput);
+        shape.connect(chorus).connect(chorusWet).connect(trackOutput);
         chorusLfo.connect(chorusDepth).connect(chorus.delayTime);
         chorusLfo.start(0);
         chorusLfo.stop(duration);
         shape.connect(delay);
         delay.connect(feedback).connect(delay);
-        delay.connect(delayWet).connect(master);
-        shape.connect(reverb).connect(reverbWet).connect(master);
+        delay.connect(delayWet).connect(sendTarget);
+        shape.connect(reverb).connect(reverbWet).connect(sendTarget);
         buses[clip.id] = input;
     }
-    const guitarEvent = (e, cfg) => { const start = stepWithSwing(e.step, project.tempo, project.swing), noteDuration = e.length * secondsPerStep(project.tempo), end = start + Math.max(.12, noteDuration) + Math.max(.12, cfg.release || .35), clip = project.clips.find(c => c.id === e.clipId), macros = clip.character.macros, cut = automationValue(clip, 'cutoff', e.localStep, .5), vol = automationValue(clip, 'volume', e.localStep, 1), target = frequency(e.pitch), filter = ctx.createBiquadFilter(), body = ctx.createBiquadFilter(), gain = ctx.createGain(), pan = ctx.createStereoPanner(), peak = Math.max(.002, Math.min(.24, e.velocity * cfg.volume * vol * .22)); filter.type = 'lowpass'; filter.frequency.value = Math.max(900, (cfg.cutoff || 5200) * (.45 + cut * .75) * (1 - macros.darkness * .28)); filter.Q.value = cfg.resonance || 2; body.type = 'peaking'; body.frequency.value = 190 + target * .28; body.Q.value = 1.2; body.gain.value = 4; pan.pan.value = Math.max(-1, Math.min(1, (automationValue(clip, 'pan', e.localStep, .5) - .5) * 1.3 + (cfg.pan || 0))); gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(peak, start + .004); gain.gain.exponentialRampToValueAtTime(Math.max(.001, peak * .34), Math.min(end - .02, start + .16)); gain.gain.exponentialRampToValueAtTime(.0001, end); filter.connect(body).connect(gain).connect(pan).connect(buses[e.clipId]); [1, 2, 3, 4].forEach((ratio, index) => { const osc = ctx.createOscillator(), level = ctx.createGain(); osc.type = index === 0 ? 'triangle' : 'sine'; osc.frequency.value = target * ratio; osc.detune.value = (index % 2 ? .7 : -.7) * (cfg.detune || 3); level.gain.value = [1, .34, .16, .07][index]; osc.connect(level).connect(filter); osc.start(start); osc.stop(end + .02); }); const pickLength = .018, buffer = ctx.createBuffer(1, Math.ceil(sr * pickLength), sr), data = buffer.getChannelData(0); for (let i = 0; i < data.length; i++)
+    const guitarEvent = (e, cfg) => { const start = stepWithSwing(e.step, project.tempo, project.swing), noteDuration = e.length * secondsPerStep(project.tempo), end = start + Math.max(.12, noteDuration) + Math.max(.12, cfg.release || .35), clip = project.clips.find(c => c.id === e.clipId), macros = clip.character.macros, cut = automationValue(clip, 'cutoff', e.localStep, .5), vol = automationValue(clip, 'volume', e.localStep, 1), target = frequency(e.pitch), filter = ctx.createBiquadFilter(), body = ctx.createBiquadFilter(), gain = ctx.createGain(), pan = ctx.createStereoPanner(), peak = Math.max(.002, Math.min(.24, e.velocity * vol * .22)); filter.type = 'lowpass'; filter.frequency.value = Math.max(900, (cfg.cutoff || 5200) * (.45 + cut * .75) * (1 - macros.darkness * .28)); filter.Q.value = cfg.resonance || 2; body.type = 'peaking'; body.frequency.value = 190 + target * .28; body.Q.value = 1.2; body.gain.value = 4; pan.pan.value = Math.max(-1, Math.min(1, (automationValue(clip, 'pan', e.localStep, .5) - .5) * 1.3 + (cfg.pan || 0))); gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(peak, start + .004); gain.gain.exponentialRampToValueAtTime(Math.max(.001, peak * .34), Math.min(end - .02, start + .16)); gain.gain.exponentialRampToValueAtTime(.0001, end); filter.connect(body).connect(gain).connect(pan).connect(buses[e.clipId]); [1, 2, 3, 4].forEach((ratio, index) => { const osc = ctx.createOscillator(), level = ctx.createGain(); osc.type = index === 0 ? 'triangle' : 'sine'; osc.frequency.value = target * ratio; osc.detune.value = (index % 2 ? .7 : -.7) * (cfg.detune || 3); level.gain.value = [1, .34, .16, .07][index]; osc.connect(level).connect(filter); osc.start(start); osc.stop(end + .02); }); const pickLength = .018, buffer = ctx.createBuffer(1, Math.ceil(sr * pickLength), sr), data = buffer.getChannelData(0); for (let i = 0; i < data.length; i++)
         data[i] = (Math.random() * 2 - 1) * (1 - i / data.length); const pick = ctx.createBufferSource(), pickFilter = ctx.createBiquadFilter(), pickGain = ctx.createGain(); pick.buffer = buffer; pickFilter.type = 'bandpass'; pickFilter.frequency.value = Math.min(9000, target * 8); pickFilter.Q.value = .7; pickGain.gain.value = peak * .75; pick.connect(pickFilter).connect(pickGain).connect(filter); pick.start(start); };
-    const toneEvent = (e, cfg) => { const start = stepWithSwing(e.step, project.tempo, project.swing), end = start + e.length * secondsPerStep(project.tempo), clip = project.clips.find(c => c.id === e.clipId), { lfo, macros } = clip.character, f = ctx.createBiquadFilter(), g = ctx.createGain(), pan = ctx.createStereoPanner(), cut = automationValue(clip, 'cutoff', e.localStep, .5), vol = automationValue(clip, 'volume', e.localStep, 1), unison = Math.max(1, Math.min(3, cfg.unison || 1)), peak = Math.max(.002, e.velocity * cfg.volume * vol * .16 / Math.sqrt(unison)), attack = Math.max(.005, cfg.attack || .005), decay = Math.max(.01, cfg.decay || .1), sustain = Math.max(.01, cfg.sustain ?? .72), release = cfg.release || .1, noteDuration = end - start, attackEnd = start + Math.min(attack, noteDuration), decayEnd = Math.min(end, attackEnd + decay); f.type = cfg.filterType || 'lowpass'; f.frequency.value = Math.max(120, cfg.cutoff * (.35 + cut * 1.1) * (1 - macros.darkness * .35)); f.Q.value = cfg.resonance || 1; pan.pan.value = Math.max(-1, Math.min(1, (automationValue(clip, 'pan', e.localStep, .5) - .5) * 1.3 + (cfg.pan || 0))); g.gain.setValueAtTime(.001, start); g.gain.exponentialRampToValueAtTime(peak, attackEnd); if (decayEnd > attackEnd)
+    const toneEvent = (e, cfg) => { const start = stepWithSwing(e.step, project.tempo, project.swing), end = start + e.length * secondsPerStep(project.tempo), clip = project.clips.find(c => c.id === e.clipId), { lfo, macros } = clip.character, f = ctx.createBiquadFilter(), g = ctx.createGain(), pan = ctx.createStereoPanner(), cut = automationValue(clip, 'cutoff', e.localStep, .5), vol = automationValue(clip, 'volume', e.localStep, 1), unison = Math.max(1, Math.min(3, cfg.unison || 1)), peak = Math.max(.002, e.velocity * vol * .16 / Math.sqrt(unison)), attack = Math.max(.005, cfg.attack || .005), decay = Math.max(.01, cfg.decay || .1), sustain = Math.max(.01, cfg.sustain ?? .72), release = cfg.release || .1, noteDuration = end - start, attackEnd = start + Math.min(attack, noteDuration), decayEnd = Math.min(end, attackEnd + decay); f.type = cfg.filterType || 'lowpass'; f.frequency.value = Math.max(120, cfg.cutoff * (.35 + cut * 1.1) * (1 - macros.darkness * .35)); f.Q.value = cfg.resonance || 1; pan.pan.value = Math.max(-1, Math.min(1, (automationValue(clip, 'pan', e.localStep, .5) - .5) * 1.3 + (cfg.pan || 0))); g.gain.setValueAtTime(.001, start); g.gain.exponentialRampToValueAtTime(peak, attackEnd); if (decayEnd > attackEnd)
         g.gain.exponentialRampToValueAtTime(Math.max(.001, peak * sustain), decayEnd); if (end > decayEnd)
         g.gain.setValueAtTime(Math.max(.001, peak * sustain), end); g.gain.exponentialRampToValueAtTime(.001, end + release); f.connect(g).connect(pan).connect(buses[e.clipId]); const lfoNode = lfo.enabled ? ctx.createOscillator() : null, lfoGain = lfoNode ? ctx.createGain() : null; if (lfoNode) {
         lfoNode.frequency.value = lfo.rate;
@@ -395,12 +536,23 @@ export async function renderWav(project, { song = true } = {}) {
         o.stop(end + release + .02);
     } }; addOsc(cfg.wave || 'sawtooth', 1 - (cfg.osc2Mix || 0) * .35); if (cfg.osc2Wave && cfg.osc2Wave !== 'off' && cfg.osc2Mix > 0)
         addOsc(cfg.osc2Wave, cfg.osc2Mix, .5); };
-    const drumEvent = (e, cfg) => { const start = stepWithSwing(e.step, project.tempo, project.swing), g = ctx.createGain(), pan = ctx.createStereoPanner(); pan.pan.value = cfg.pan || 0; g.connect(pan).connect(buses[e.clipId]); if (e.pitch === 0 || e.pitch === 4) {
+    const drumEvent = (e, cfg) => { const start = stepWithSwing(e.step, project.tempo, project.swing), g = ctx.createGain(), pan = ctx.createStereoPanner(), custom = drumSamples?.get(e.pitch); pan.pan.value = cfg.pan || 0; g.connect(pan).connect(buses[e.clipId]); if (custom) {
+        const source = ctx.createBufferSource(), offset = Math.max(0, Math.min(.98, custom.trimStart)) * custom.buffer.duration, end = Math.max(offset + .001, Math.min(1, custom.trimEnd)) * custom.buffer.duration, sampleDuration = end - offset, rate = 2 ** (custom.tune / 12), audibleDuration = sampleDuration / rate, attack = Math.min(audibleDuration * .4, Math.max(.001, custom.attack)), release = Math.min(audibleDuration * .7, Math.max(.005, custom.release));
+        source.buffer = custom.buffer;
+        source.playbackRate.value = rate;
+        g.gain.setValueAtTime(.0001, start);
+        g.gain.linearRampToValueAtTime(Math.max(.001, e.velocity), start + attack);
+        g.gain.setValueAtTime(Math.max(.001, e.velocity), Math.max(start + attack, start + audibleDuration - release));
+        g.gain.linearRampToValueAtTime(.0001, start + audibleDuration);
+        source.connect(g);
+        source.start(start, offset, sampleDuration);
+        return;
+    } if (e.pitch === 0 || e.pitch === 4) {
         const o = ctx.createOscillator(), len = e.pitch === 0 ? .21 : .28;
         o.type = e.pitch === 4 ? 'triangle' : 'sine';
         o.frequency.setValueAtTime(e.pitch === 0 ? 150 : 125, start);
         o.frequency.exponentialRampToValueAtTime(e.pitch === 0 ? 43 : 72, start + len * .65);
-        g.gain.setValueAtTime(e.velocity * cfg.volume * (e.pitch === 0 ? .45 : .32), start);
+        g.gain.setValueAtTime(e.velocity * (e.pitch === 0 ? .45 : .32), start);
         g.gain.exponentialRampToValueAtTime(.001, start + len);
         o.connect(g);
         o.start(start);
@@ -413,15 +565,17 @@ export async function renderWav(project, { song = true } = {}) {
         const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter();
         filter.type = [2, 3, 6].includes(e.pitch) ? 'highpass' : 'bandpass';
         filter.frequency.value = e.pitch === 2 ? 6500 : e.pitch === 3 ? 4700 : e.pitch === 6 ? 3500 : e.pitch === 5 ? 2400 : 1800;
-        g.gain.setValueAtTime(e.velocity * cfg.volume * (e.pitch === 2 ? .2 : e.pitch === 6 ? .3 : .24), start);
+        g.gain.setValueAtTime(e.velocity * (e.pitch === 2 ? .2 : e.pitch === 6 ? .3 : .24), start);
         g.gain.exponentialRampToValueAtTime(.001, start + length);
         source.buffer = buf;
         source.connect(filter).connect(g);
         source.start(start);
     } };
-    const soloActive = TRACKS.some(track => project.tracks[track].solo);
     for (const e of events)
         if (!project.tracks[e.track].mute && (!soloActive || project.tracks[e.track].solo))
             e.track === 'drums' ? drumEvent(e, project.tracks.drums) : e.track === 'guitar' ? guitarEvent(e, project.tracks.guitar) : toneEvent(e, project.tracks[e.track]);
-    return wavBlob(await ctx.startRendering());
+    const rendered = await ctx.startRendering();
+    if (signal?.aborted)
+        throw new DOMException('Export cancelled', 'AbortError');
+    return wavBlob(rendered, bitDepth, normalize, dither);
 }

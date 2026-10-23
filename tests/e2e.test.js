@@ -26,8 +26,8 @@ test('complete composition flow works in Firefox',async t=>{
   await driver.findElement(By.id('playBtn')).click();await driver.sleep(5500);assert.match(await driver.findElement(By.id('audioState')).getText(),/RUNNING|COUNT/);
   await driver.findElement(By.css('[data-view="forge"]')).click();const liveKey=await driver.findElement(By.css('#keyboard .key'));await driver.executeScript('arguments[0].scrollIntoView({block:"center"})',liveKey);await driver.actions({async:true}).move({origin:liveKey}).press().perform();await driver.sleep(650);assert.equal((await driver.executeScript('return window.__kvDiagnostics()')).liveVoices,1);await driver.actions({async:true}).release().perform();await driver.sleep(250);assert.equal((await driver.executeScript('return window.__kvDiagnostics()')).liveVoices,0);
   await driver.findElement(By.id('playBtn')).click();
-  await driver.findElement(By.id('exportBtn')).click();await driver.findElement(By.id('clipWavBtn')).click();await driver.wait(async()=>/WAV READY/.test(await driver.findElement(By.id('renderStatus')).getText()),20000);
-  const stored=await driver.executeScript("return JSON.parse(localStorage.getItem('kiber-vengance-project-v4'))");assert.equal(stored.version,4);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));assert.deepEqual(await driver.executeScript('return window.__kvErrors'),[]);
+  await driver.findElement(By.id('exportAsBtn')).click();await driver.findElement(By.css('[data-export="clip-wav"]')).click();await driver.wait(async()=>/WAV READY/.test(await driver.findElement(By.id('renderStatus')).getText()),20000);
+  const stored=await driver.executeScript("return JSON.parse(localStorage.getItem('kiber-vengance-project-v5'))");assert.equal(stored.version,5);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));assert.deepEqual(await driver.executeScript('return window.__kvErrors'),[]);
 });
 
 test.after(()=>{if(!server.killed)server.kill('SIGTERM')});

@@ -14,4 +14,4 @@ const server = http.createServer(async (req, res) => {
   } catch { res.writeHead(404); res.end('Not found'); }
 });
 const port = Number(process.env.PORT || 4173);
-server.listen(port, '0.0.0.0', () => console.log(`Kiber Vengance → http://0.0.0.0:${port}`));
+server.listen(port, '0.0.0.0', () => console.log(`КИБЕР VENGANCE → http://0.0.0.0:${port}`));

@@ -1,6 +1,6 @@
 Quiero que diseñes y construyas una aplicación profesional de creación musical enfocada en electro-rock, música épica, industrial, synthwave, electrónica frenética y estilos híbridos cinematográficos.
 
-El grupo musical y todo el proyecto se llaman oficialmente "Kiber Vengance". Usa este nombre de forma consistente en la aplicación, la identidad visual, los metadatos, los proyectos de demostración y la documentación. No corrijas ni cambies su ortografía: la grafía oficial es exactamente Kiber Vengance.
+El grupo musical y todo el proyecto se llaman oficialmente **КИБЕР VENGANCE**. Usa este nombre de forma consistente en la aplicación, la identidad visual, los metadatos, los proyectos de demostración y la documentación. `КИБЕР` se escribe con caracteres cirílicos y `VENGANCE` con caracteres latinos. Los slugs, nombres de fichero y claves históricas `kiber-vengance` se conservan únicamente por compatibilidad técnica.
 
 No quiero un MVP, una prueba de concepto ni una interfaz superficial. Quiero una aplicación completa, coherente, estable, visualmente atractiva y realmente divertida de usar. Debe sentirse como un instrumento musical creativo, no como un simple conjunto de controles de audio.
 
@@ -16,11 +16,11 @@ Trabaja primero en modo Plan. Antes de modificar archivos:
 
 Después de aprobar o cerrar el plan, implementa la aplicación completa y ve iterándola. No te limites a entregar recomendaciones: escribe el código, ejecútalo, pruébalo, corrige los problemas y pule el resultado.
 
-## Identidad de Kiber Vengance
+## Identidad de КИБЕР VENGANCE
 
-Kiber Vengance es tanto el nombre del grupo como el nombre del proyecto y de la aplicación. La experiencia debe transmitir movimiento, energía, tensión, contundencia, precisión mecánica y una escala cinematográfica.
+КИБЕР VENGANCE es tanto el nombre del grupo como el nombre del proyecto y de la aplicación. La experiencia debe transmitir movimiento, energía, tensión, contundencia, precisión mecánica y una escala cinematográfica.
 
-Define una identidad propia para Kiber Vengance que incluya:
+Define una identidad propia para КИБЕР VENGANCE que incluya:
 
 - Dirección visual y personalidad de marca.
 - Logotipo o wordmark original cuando sea apropiado.
@@ -120,11 +120,11 @@ Evita simular instrumentos realistas de forma mediocre. Si una capacidad requier
 - Importación y exportación del formato interno del proyecto.
 - Exportación de audio mediante la opción más sólida que permita la plataforma.
 - Exportación MIDI si es técnicamente viable.
-- Proyectos de demostración de Kiber Vengance que enseñen las capacidades de la app.
+- Proyectos de demostración de КИБЕР VENGANCE que enseñen las capacidades de la app.
 
 ## Diseño y experiencia visual
 
-Quiero un diseño moderno, distintivo y funcional, con una identidad asociada a Kiber Vengance, al electro-rock y a la producción cinematográfica, pero sin caer en clichés de “neón por todas partes”.
+Quiero un diseño moderno, distintivo y funcional, con una identidad asociada a КИБЕР VENGANCE, al electro-rock y a la producción cinematográfica, pero sin caer en clichés de “neón por todas partes”.
 
 Debe incluir:
 
@@ -168,7 +168,7 @@ Trabaja mediante versiones internas claramente diferenciadas:
 
 ### Versión 1 — Fundamentos sólidos
 
-Construye la arquitectura, el motor de audio, transporte, instrumentos esenciales, secuenciador, persistencia básica y sistema visual de Kiber Vengance.
+Construye la arquitectura, el motor de audio, transporte, instrumentos esenciales, secuenciador, persistencia básica y sistema visual de КИБЕР VENGANCE.
 
 ### Versión 2 — Flujo de composición
 
@@ -219,10 +219,10 @@ Considera terminado el trabajo únicamente cuando:
 - La aplicación pueda crear una composición completa con varias pistas.
 - El audio sea estable, musical y responda correctamente.
 - El usuario pueda editar, reproducir, guardar, recuperar y exportar un proyecto.
-- Haya presets y proyectos demo convincentes de Kiber Vengance.
+- Haya presets y proyectos demo convincentes de КИБЕР VENGANCE.
 - Los controles visibles sean funcionales.
 - Los flujos principales estén probados.
-- El diseño se sienta cohesionado, profesional y propio de Kiber Vengance.
+- El diseño se sienta cohesionado, profesional y propio de КИБЕР VENGANCE.
 - La aplicación tenga buen rendimiento con un proyecto representativo.
 - El build de producción termine correctamente.
 - No existan errores críticos conocidos.
@@ -251,17 +251,27 @@ Esta sección actualiza el encargo original con el diseño real alcanzado. El re
 
 ### Concepto de experiencia
 
-Kiber Vengance se articula como un **cockpit de composición cyberpunk**: rápido para tocar y generar ideas, profundo para editar clips y suficientemente estructurado para terminar una canción. La complejidad se organiza en tres espacios:
+КИБЕР VENGANCE se articula como un **cockpit de composición cyberpunk**: rápido para tocar y generar ideas, profundo para editar clips y suficientemente estructurado para terminar una canción. La complejidad se organiza en cinco espacios:
 
 1. **Forge** — diseño del instrumento y del clip: piano roll, automatización, síntesis, movimiento, efectos, macros y ayudas armónicas.
-2. **Arrange** — construcción de la canción: secciones, asignación independiente de cinco clips, repeticiones y orden.
-3. **Perform** — interpretación inmediata: teclado, MIDI y macros expresivos.
+2. **Launch** — interpretación no lineal: matriz de clips, lanzamiento cuantizado, stop por pista y captura de escenas.
+3. **Arrange** — construcción de la canción: secciones, selección y edición múltiple, fills, marcadores, loop, punch-in y navegación exacta.
+4. **Mix** — acabado técnico: ganancia, faders, panorama, envíos pre/post, medición estéreo, LUFS aproximado y comparación A/B.
+5. **Perform** — interpretación inmediata: teclado, MIDI, macros expresivos, Scratch Deck y grabación de tomas.
+
+Perform añade además un **Scratch Deck** diseñado como instrumento táctil: captura
+una mezcla masterizada de los clips activos en memoria y permite recorrerla en
+ambas direcciones mediante un AudioWorklet, con crossfader, filtro, sincronía,
+freno, spinback, stutter y feedback de forma de onda. La captura de deck es
+temporal y no destructiva. Record Take conserva el audio en IndexedDB y guarda
+en el proyecto v5 un registro editable de eventos de interpretación.
 
 Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl/Cmd+K` permite ejecutar acciones sin abandonar el teclado.
 
 ### Sistema visual definitivo
 
-- Logo vectorial KV angular y wordmark Kiber Vengance.
+- Emblema vectorial К/V “Signal Core”: hexágono mecánico abierto, geometría fusionada y una incisión de señal de audio; wordmark híbrido `КИБЕР VENGANCE`.
+- Animación contenida de señal, pulso y ensamblaje en la interfaz, con versión estática para el icono instalable y respeto de `prefers-reduced-motion`.
 - Fondo azul-negro profundo con superficies escalonadas y color funcional: cian para señal/acción, magenta para energía, violeta para profundidad, lima para generación/estado válido y rojo para grabación o acciones destructivas.
 - Tipografía condensada para identidad y titulares, sans técnica para parámetros y microcopy.
 - Bordes luminosos contenidos, geometría recortada, indicadores de presión y movimiento únicamente cuando comunican estado.
@@ -270,11 +280,13 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 
 ### Modelo musical construido
 
-- Proyecto serializable v4 con cinco pistas: lead, guitarra, bass, pad y drums.
+- Proyecto serializable v5 con cinco pistas: lead, guitarra, bass, pad y drums.
 - Cada pista puede contener múltiples clips de 1–8 compases. Cada sección del arreglo referencia un clip distinto por pista.
 - Cada clip posee notas, automatización y carácter independiente: arpegiador, LFO, cinco efectos más tone/EQ y seis macros.
 - El arreglo completo, los loops de clips de distinta longitud y las repeticiones alimentan el mismo modelo de eventos usado por reproducción, WAV y MIDI.
 - Solo es exclusivo y Mute es independiente. Ambos afectan a reproducción y render exportado.
+- El proyecto añade colores, pre-gain y modo de envío por pista; marcadores, región de loop/punch, zoom, cuantización del launcher, tomas y referencias a assets locales.
+- Los samples binarios y el audio de tomas se guardan fuera del JSON en IndexedDB. El formato Project Package reúne JSON y samples para transportarlos juntos.
 
 ### Flujo de creación construido
 
@@ -282,22 +294,30 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 2. Tocar con QWERTY, pantalla táctil o MIDI, o generar acordes, riffs, bajo, batería y bases.
 3. Editar en el piano roll con drag/resize, selección rectangular, velocity, duración, cuantización y automatización.
 4. Dar carácter por clip con síntesis, arpegiador, LFO, efectos y macros.
-5. Construir secciones en Arrange o generar una base que preserve guitarra y lead.
-6. Interpretar y grabar con metrónomo, count-in, swing y timing cuantizado/libre.
-7. Exportar canción o clips a WAV/MIDI, o guardar el proyecto como JSON. WAV/MIDI/JSON de canción completa tienen accesos rápidos en la cabecera.
+5. Improvisar en Launch con cola cuantizada y convertir la interpretación en nuevas secciones del arreglo.
+6. Construir y editar secciones en Arrange, generar una base que preserve guitarra y lead, colocar marcadores y definir loop/punch.
+7. Mezclar cinco canales con pre-gain, faders dB, panorama, sends pre/post, medidores estéreo, LUFS aproximado y comparación A/B compensada.
+8. Interpretar y grabar con metrónomo, count-in, swing, timing cuantizado/libre y Scratch Deck; editar después los eventos de la toma.
+9. Elegir el punto de inicio del clip o de la canción con localizadores musicales y navegar a una posición exacta desde la línea temporal.
+10. Exportar canción, región o clips a WAV/MIDI, generar stems seleccionados, guardar JSON o crear un Project Package. La cabecera separa claramente Export de Export As.
 
 ### Persistencia y significado de exportar
 
 - Los cambios se guardan automáticamente en `localStorage` tras una breve espera.
 - Los snapshots nombrados permiten restaurar estados locales.
-- JSON es el formato portátil y la copia de seguridad recomendada.
-- Un archivo descargado es una instantánea: no queda enlazado al proyecto ni se sobrescribe automáticamente. Los accesos rápidos crean una exportación nueva con el estado actual.
+- JSON es el formato portátil para el material musical. Project Package es la copia transportable recomendada cuando existen samples locales.
+- `Export` actualiza el último archivo vinculado; `Export As` permite elegir explícitamente formato y destino. `Ctrl/Cmd+E` y `Ctrl/Cmd+Shift+E` reproducen esa distinción.
+- En navegadores compatibles, cada tipo de exportación conserva su handle localmente. Project Core muestra esos destinos y permite olvidarlos.
+- Si File System Access no está disponible, se descarga una instantánea nueva. El navegador también puede volver a pedir permiso de escritura entre sesiones.
+- WAV puede generarse en PCM de 16 bits o float de 32 bits a 44.1/48/96 kHz, con normalización, dither TPDF, cola FX, salida dry y región de loop opcionales. Stems crea un ZIP sin compresión con los canales seleccionados y un manifiesto.
 
 ### Atajos sin colisión musical
 
 - `Shift+S`: Solo de la pista activa; `S` sigue tocando una nota.
 - `Shift+M`: Mute de la pista activa.
 - `Shift+V`: Mutation del clip activo, reasignado para liberar Mute.
+- `Shift+L`: Clip Launcher; `Shift+X`: Mix Console.
+- `Ctrl/Cmd+E`: repetir la última exportación; `Ctrl/Cmd+Shift+E`: Export As.
 - Los diálogos y campos de texto aíslan la escritura del teclado musical.
 
 ### Arquitectura final
@@ -306,10 +326,10 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 - `model` define contratos; `core` concentra lógica musical pura; `audio` contiene Web Audio y render offline; `app` coordina UI y persistencia.
 - Scheduling anticipado basado en el reloj de audio, buses FX persistentes y liberación explícita de voces evitan cortes y crecimiento del grafo.
 - Aplicación estática instalable como PWA, sin secretos, telemetría ni dependencias de ejecución.
-- Migraciones v2/v3→v4 preservan proyectos y trasladan el antiguo carácter de pista a cada clip.
+- Migraciones v2/v3/v4→v5 preservan proyectos, trasladan el antiguo carácter de pista a cada clip y añaden los nuevos estados con valores seguros.
 
 ### Calidad y estado de aceptación
 
-La puerta de calidad actual es `npm run check:full`: TypeScript, build, ESLint, 20 pruebas unitarias y 4 recorridos de navegador. Chromium cubre escritorio, móvil, accesibilidad, PWA, selección, clips, atajos y descargas rápidas; Firefox cubre el flujo musical completo, audio sostenido, expresión y WAV.
+La puerta de calidad actual es `npm run check:full`: TypeScript, build, ESLint, 25 pruebas unitarias y 8 recorridos de navegador. Chromium cubre escritorio, móvil, accesibilidad, PWA, selección, clips, atajos, Export/Export As, Launcher, Arrange avanzado, mezcla, librerías locales, grabación de performance y Scratch Deck táctil; Firefox cubre el flujo musical completo, audio sostenido, expresión y WAV.
 
-Las limitaciones externas permanecen explícitas: Web MIDI depende del navegador/permiso, Safari e iOS requieren hardware Apple para certificación física, la persistencia es local y no existe backend, nube, colaboración remota ni plugins nativos.
+Las limitaciones externas permanecen explícitas: Web MIDI y File System Access dependen del navegador/permiso; MediaRecorder decide el contenedor de las tomas y sus eventos editados no re-sintetizan la forma de onda comprimida; los blobs locales requieren Project Package para viajar con el proyecto; Safari e iOS requieren hardware Apple para certificación física; y `OfflineAudioContext` solo permite cancelar antes/después de cada render, no interrumpir el DSP interno ya iniciado. La persistencia es local y no existe backend, nube, colaboración remota ni plugins nativos.

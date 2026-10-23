@@ -1,8 +1,8 @@
-# Kiber Vengance
+# КИБЕР VENGANCE
 
 The complete specification is in [`kiber-vengance.md`](kiber-vengance.md), the product status is in [`PRODUCT_PLAN.md`](PRODUCT_PLAN.md), and persistent memory for future sessions is in [`PROJECT_MEMORY.md`](PROJECT_MEMORY.md).
 
-Kiber Vengance is a cinematic electro-rock composition instrument that runs entirely in the browser. It combines five music engines—lead, modeled guitar, bass, pad, and a seven-piece drum kit—with independent clips, a multi-octave piano roll, arranger, automation, performance, recording, Web MIDI, and full-song export.
+КИБЕР VENGANCE is a cinematic electro-rock composition instrument that runs entirely in the browser. `КИБЕР` is intentionally written in Cyrillic and `VENGANCE` in Latin characters. It combines five music engines—lead, modeled guitar, bass, pad, and a seven-piece drum kit—with independent clips, a multi-octave piano roll, arranger, automation, performance, recording, Web MIDI, and full-song export.
 
 ## Installation and use
 
@@ -21,7 +21,7 @@ To validate the complete product:
 npm run check:full
 ```
 
-`check:full` compiles the entire runtime with strict TypeScript, runs lint, 20 unit tests, the static build, a real Firefox flow with audio, sustained voices, and WAV, and four browser flows covering responsiveness, accessibility, PWA behavior, shortcuts, and downloads. Install the Playwright browsers with `npx playwright install chromium` if they are not already available.
+`check:full` compiles the entire runtime with strict TypeScript, runs lint, 25 unit tests, the static build, a real Firefox flow with audio, sustained voices, and WAV, and eight browser flows covering accessibility, responsive design, launcher, arrangement, precision mixing, local libraries, exports, performance recording, and Scratch Deck capture.
 
 ## Creating a song
 
@@ -32,7 +32,10 @@ npm run check:full
 5. Draw cutoff, volume, or panorama automation below the piano roll.
 6. Use key, scale, chords, riffs, bass lines, beats, quantization, and Mutation to generate controlled musical material.
 7. Use `Backing` to create two to six sections of bass, pad, and drums in cinematic, driving, or dark styles while preserving your guitar and lead clips. In Arrange, you can later reassign any clip, set repeats, and reorder sections with buttons or drag-and-drop.
-8. Use the quick header buttons to export the complete song directly to WAV or MIDI, or create a JSON copy of the project. Export retains the advanced options for the song or active clips.
+8. Set the clip or song locator to start playback at any step. The Arrange timeline also jumps the global song locator to a section.
+9. Use `Export` to update the last linked destination or `Export As` to choose a format and new file. The panel supports WAV/MIDI, JSON/package backups, 16/32-bit depth, three sample rates, dither, normalization, dry/wet output, tail/region control, and selected stems.
+
+Launch provides a five-track clip matrix for improvisation. Queue on beats or bars, stop tracks independently, control visible cells with MIDI notes 36–63, and capture the result as arrangement sections. Arrange adds multi-selection, copy/paste, fills, zoom, markers, exact timeline navigation, loop regions, and punch-in limits.
 
 The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, metronome, and a one- or two-bar count-in. Changing the time signature remaps note and automation positions to preserve the musical shape of the clips.
 
@@ -47,6 +50,10 @@ The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, m
 - `Shift + M`: mute/unmute the selected track.
 - `Shift + V`: mutate the active clip (formerly `Shift + M`).
 - `Shift + G/A/P`: open Forge, Arrange, or Perform.
+- `Shift + L`: open Clip Launcher.
+- `Shift + X`: open the Mix Console.
+- `Ctrl/Cmd + E`: export the last format to its current destination.
+- `Ctrl/Cmd + Shift + E`: open Export As and choose a format/destination.
 - `Shift + N/D/V/Q`: create, duplicate, mutate, or quantize the active clip.
 - `Shift + click`: multiple selection.
 - `Ctrl/Cmd + A`, `C`, `V`: select, copy, and paste notes.
@@ -54,6 +61,38 @@ The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, m
 - `Delete`/`Backspace`: delete; `Ctrl/Cmd + Z` and `Ctrl/Cmd + Shift + Z`: undo/redo.
 
 The visual keyboard responds to mouse and touch, sustaining voices until the key is released. Web MIDI records note-on, note-off, velocity, and per-channel expression: pitch bend, channel/poly pressure, and CC74 timbre; drum mapping follows the usual GM notes. The recording selector provides quantized or free mode: the latter preserves microtiming and sub-step durations, while `Quantize` can align them afterward.
+
+### Scratch Deck
+
+Perform includes a bidirectional Scratch Deck driven by a dedicated
+`AudioWorklet`. `Capture Mix` renders the active clips into a mastered 1, 2, 4,
+or 8-bar memory buffer; shorter source clips repeat cleanly to fill the selected
+length. The platter supports mouse, touch, wheel/trackpad, and keyboard control,
+with interpolated forward and reverse playback, a smooth motor return, waveform
+and playhead feedback, equal-power crossfading against the live program, a deck
+low-pass filter, beat sync, brake, spinback, and tempo-derived stutter.
+
+Scratch capture is intentionally non-destructive: it does not modify the v5
+project or its clips. The temporary buffer lives in memory and is cleared when
+the page is reloaded. WAV/MIDI project export renders the composition itself;
+it does not record a live Scratch Deck performance. Use **Record Take** in
+Perform to capture the audible master—including scratching—and save that
+real-time take. The browser normally records it as WebM/Opus. Take audio persists
+in IndexedDB; v5 serializes its editable event log. Events can be trimmed,
+quantized, retimed, changed, deleted, and replayed over the captured audio.
+Editing events does not re-synthesize the already recorded waveform.
+
+### Presets and local samples
+
+Preset Vault searches and tags factory/user sounds, remembers favorites, saves the current instrument and clip character, and imports or exports JSON banks. Impact Sample Slots accepts local audio for all seven drum voices, with trim, tuning, attack, release, and reverse. Samples participate in live and offline rendering. Project Package exports/imports the v5 JSON and available sample assets together.
+
+### Mix Console and locators
+
+The global locator selects an exact start step across arrangement scenes and
+repeats. Each active clip also retains a session start position. Mix provides
+stereo RMS/peak meters, peak hold, approximate momentary LUFS, dB faders,
+pre-gain, pan, pre/post sends, track colors, Solo/Mute, master FX bypass, and a
+loudness-matched A/B comparison. Bus-level faders affect sustained voices.
 
 Every clip preserves its own **character**: the Motion Engine arpeggiator and LFO, Signal Processing bypass and complete effect chain, and the six Vector Control macros. When switching clips, all three racks restore their independent values; duplicating or mutating a clip copies its character, while creating a new one starts from the active character. The base synthesizer and channel volume/pan remain instrument/track settings.
 
@@ -73,29 +112,30 @@ The interface starts in English and can switch to Spanish using the `EN/ES` sele
 
 ## Projects and recovery
 
-Versioned autosave is stored in `localStorage`. The project menu can create a demo, start from an empty project, duplicate the project, create up to 20 named snapshots, restore them, and export/import JSON. The v4 migration automatically converts v2/v3 projects and copies their former track/project settings into each clip's character without losing the previous sound.
+Versioned autosave is stored in `localStorage`. The project menu can create a demo, start from an empty project, duplicate the project, create up to 20 named snapshots, restore them, export/import JSON or a project package, and inspect or forget linked export destinations. The v5 migration converts v2/v3/v4 projects without changing their musical material.
 
 ## Architecture
 
-- `src/core.ts`: v4 music model, migration, clips with independent character, harmony, generation, automation, arranger, history, and expressive MIDI.
+- `src/core.ts`: v5 model, migrations, performance data, launcher capture, arrangement, generators, history, and expressive MIDI.
 - `src/audio.ts`: look-ahead scheduler, polyphonic and sustained/MPE dual-oscillator voices, plucked-string guitar, drum synth, five persistent FX buses, master, analyzer, and offline WAV.
+- `src/scratch-worklet.ts`: real-time bidirectional scratch playback, interpolation, looping, stutter, and position reporting off the UI thread.
 - `src/app.ts`: UI state, piano roll, free/quantized recording, MIDI, versions, diagnostics, export, and editing flows.
-- `src/model.ts`: strict serializable contract. `npm run build` compiles all four modules into `dist/`.
+- `src/model.ts`: strict serializable contract. `npm run build` compiles the runtime modules into `dist/`.
 - `tests/`: model, migrations, ten-minute transport, MIDI, Firefox, Chromium, accessibility, and responsiveness.
 
 The scheduler programs 120 ms ahead and wakes every 25 ms. If a tab is suspended, it discards stale time rather than firing delayed events. Each track maintains one bus with independent saturation and distortion, tonal EQ, chorus, delay, and reverb; temporary voices disconnect when they end. The master adds EQ, compression, and limiting, preventing the graph growth that caused the former audio cutoff.
 
-Offline WAV renders the arrangement, loops, automation, and independent character of every clip—arpeggiator, LFO, macros, and effects—as well as modeled guitar, dual oscillator, unison, ADSR, and drums. MIDI contains one tempo/time-signature track and five music tracks; it materializes the arpeggiator as notes, while effects and timbral macros remain exclusive to the audio render.
+Offline WAV renders arrangement, automation, clip character, modeled guitar, synths, drums, and loaded local samples. It supports 16-bit PCM or 32-bit float, 44.1/48/96 kHz, normalization, TPDF dither, dry/wet mode, configurable tail, and loop-region export. The cancellable stems queue exports selected tracks plus a manifest. Cancellation is checked around each offline render and between stems; the browser cannot interrupt an `OfflineAudioContext` already rendering one stem. MIDI contains one tempo/time-signature track and five music tracks.
 
 ## Compatibility, PWA, accessibility, and limitations
 
 The app includes a manifest and Service Worker for installation and offline use after the first load. The `Compatibility report` menu item displays and copies capabilities, status, and sample rate without telemetry. The suite is verified in headless Firefox and Chromium. The interface provides visible focus, accessible labels, high contrast, reduced motion, and a mobile layout without horizontal overflow; detailed editing remains optimized for desktop.
 
-There are no runtime dependencies: only standard browser APIs. Web MIDI depends on support and permission; Safari/iOS still requires manual verification on Apple hardware. The guitar is an expressive synthesized model, not an acoustic sample library. Plugins, cloud storage, and multi-user collaboration are not included: they would require licenses or external services and are deliberately excluded to preserve quality, local privacy, and static distribution.
+There are no runtime dependencies: only standard browser APIs. Web MIDI depends on support and permission; Safari/iOS still requires manual verification on Apple hardware. Export handles, performance audio, and samples use browser storage. Clearing it removes binary assets, so plain JSON is not a sample backup—use Project Package. Unsupported File System Access browsers fall back to downloads. Performance capture uses the MediaRecorder codec exposed by the browser, normally WebM/Opus. Plugins, cloud storage, and multi-user collaboration remain outside the local static architecture.
 
 ## Licensing
 
-Kiber Vengance source code is licensed under [GPL-3.0-or-later](LICENSE).
+КИБЕР VENGANCE source code is licensed under [GPL-3.0-or-later](LICENSE).
 This applies to the application source, tooling, tests, configuration, and
 generated application code as defined in that file.
 
@@ -104,8 +144,8 @@ Musical compositions and project files in [`projects/`](projects/), including
 licensed under [CC BY-NC-ND 4.0](projects/LICENSE.md): unmodified,
 attributed, non-commercial sharing is allowed; commercial use, remixes,
 adaptations, stems, synchronization, and distribution of altered versions
-require prior written permission from Kiber Vengance.
+require prior written permission from КИБЕР VENGANCE.
 
 This policy does not claim ownership of music independently created by users
-with the application. It does not grant any trademark rights in the Kiber
-Vengance name, logo, or other brand assets.
+with the application. It does not grant any trademark rights in the КИБЕР
+VENGANCE name, logo, or other brand assets.
