@@ -1,0 +1,10 @@
+{
+  "name": "Kiber Vengance",
+  "short_name": "Kiber Vengance",
+  "description": "Cinematic electro-rock composition engine",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#070914",
+  "theme_color": "#080a18",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
