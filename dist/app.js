@@ -568,7 +568,7 @@ function animateMixer() { if (activeView !== 'mix')
 } const loudness = Math.sqrt(loudnessEnergy / TRACKS.length); $('#mixerLoudness').textContent = loudness > .0001 ? `${(20 * Math.log10(loudness) - 9).toFixed(1)} LUFS-M APPROX` : '−∞ LUFS-M APPROX'; engine.draw($('#mixerMasterMeter')); requestAnimationFrame(animateMixer); }
 function setScratchControls(enabled) { for (const id of ['scratchPlayBtn', 'scratchSyncBtn', 'scratchBrakeBtn', 'scratchSpinBtn', 'scratchStutterBtn', 'scratchFilter', 'scratchMix', 'scratchRate', 'scratchReverse', 'scratchRestart'])
     $(`#${id}`).disabled = !enabled; const platter = $('#scratchPlatter'); platter.classList.toggle('disabled', !enabled); platter.setAttribute('aria-disabled', String(!enabled)); $('.scratch-deck').classList.toggle('ready', enabled); }
-function updateScratchPlayButton() { const button = $('#scratchPlayBtn'); button.textContent = engine.scratchPlaying ? L('■ STOP', '■ PARAR') : L('▶ PLAY', '▶ REPRODUCIR'); button.classList.toggle('active', Boolean(engine.scratchPlaying)); }
+function updateScratchPlayButton() { const button = $('#scratchPlayBtn'); button.textContent = engine.scratchPlaying ? L('Pause', 'Pausar') : L('Play', 'Reproducir'); button.classList.toggle('active', Boolean(engine.scratchPlaying)); }
 function drawScratchWaveform(buffer) { const canvas = $('#scratchWaveform'), ctx = canvas.getContext('2d'), width = canvas.width, height = canvas.height, data = buffer.getChannelData(0), stride = Math.max(1, Math.floor(data.length / width)); ctx.clearRect(0, 0, width, height); const gradient = ctx.createLinearGradient(0, 0, width, 0); gradient.addColorStop(0, '#2ee8ff'); gradient.addColorStop(.52, '#8b7cff'); gradient.addColorStop(1, '#ff3bd4'); ctx.strokeStyle = gradient; ctx.lineWidth = 1.5; ctx.beginPath(); for (let x = 0; x < width; x++) {
     let peak = 0;
     const start = x * stride;
@@ -989,7 +989,7 @@ function audioBufferWav(buffer) { const channels = Math.min(2, buffer.numberOfCh
         view.setInt16(offset, sample < 0 ? sample * 32768 : sample * 32767, true);
         offset += 2;
     } return new Blob([array], { type: 'audio/wav' }); }
-async function addAudioBlob(blob, name = '', lane) { await engine.init(); const resolvedName = name || blob.name || 'Recorded signal.wav', id = `audio-${cryptoId()}`, duration = await engine.setAudioAsset(id, await blob.arrayBuffer()); await putAsset(id, blob); const targetLane = lane || project.audioLanes[0] || (project.audioLanes[0] = createAudioLane()), steps = Math.max(1, Math.round(duration / (60 / project.tempo / 4) * 4) / 4), end = Math.max(0, ...targetLane.regions.map((region) => region.startStep + region.lengthSteps)); targetLane.regions.push(createAudioRegion(id, resolvedName, end, steps, duration)); changed(); renderAudioStudio(); toast(L('AUDIO REGION READY', 'REGIÓN DE AUDIO LISTA')); }
+async function addAudioBlob(blob, name = '', lane) { await engine.init(); const resolvedName = name || blob.name || 'Recorded signal.wav', id = `audio-${cryptoId()}`, duration = await engine.setAudioAsset(id, await blob.arrayBuffer()); await putAsset(id, blob); snapshot(); const targetLane = lane || project.audioLanes[0] || (project.audioLanes[0] = createAudioLane()), steps = Math.max(1, Math.round(duration / (60 / project.tempo / 4) * 4) / 4), end = Math.max(0, ...targetLane.regions.map((region) => region.startStep + region.lengthSteps)); targetLane.regions.push(createAudioRegion(id, resolvedName, end, steps, duration)); changed(); renderAudioStudio(); toast(L('Audio saved in project', 'Audio guardado en el proyecto'), true); }
 async function loadAudioAssets() { const ids = new Set(); for (const lane of project.audioLanes || [])
     for (const region of lane.regions)
         ids.add(region.assetId); for (const id of ids)
@@ -1141,11 +1141,11 @@ catch (error) {
     await loadSamplerAsset();
 else
     renderSamplerKeyboard(); }); loadSamplerAsset(); }
-function setupV6Studio() { const scale = localStorage.getItem('kiber-vengance-ui-scale-v1') || '1'; document.documentElement.style.setProperty('--ui-scale', scale); $('#uiScale').value = scale; $('#uiScale').onchange = () => { localStorage.setItem('kiber-vengance-ui-scale-v1', $('#uiScale').value); document.documentElement.style.setProperty('--ui-scale', $('#uiScale').value); }; $('#audioLaneBtn').onclick = () => { project.audioLanes.push(createAudioLane(`AUDIO ${project.audioLanes.length + 1}`, ['#2ee8ff', '#ff3bd4', '#a7ff5b', '#ff9f43'][project.audioLanes.length % 4])); changed(); renderAudioStudio(); }; $('#audioImport').onchange = async (event) => { for (const file of Array.from(event.target.files || []))
+function setupV6Studio() { const scale = localStorage.getItem('kiber-vengance-ui-scale-v1') || '1'; document.documentElement.style.setProperty('--ui-scale', scale); $('#uiScale').value = scale; $('#uiScale').onchange = () => { localStorage.setItem('kiber-vengance-ui-scale-v1', $('#uiScale').value); document.documentElement.style.setProperty('--ui-scale', $('#uiScale').value); }; $('#audioLaneBtn').onclick = () => { snapshot(); project.audioLanes.push(createAudioLane(`AUDIO ${project.audioLanes.length + 1}`, ['#2ee8ff', '#ff3bd4', '#a7ff5b', '#ff9f43'][project.audioLanes.length % 4])); changed(); renderAudioStudio(); }; $('#audioImport').onchange = async (event) => { for (const file of Array.from(event.target.files || []))
     await addAudioBlob(file); event.target.value = ''; }; $('#audioRecordBtn').onclick = async () => { const button = $('#audioRecordBtn'); if (inputRecorder?.state === 'recording') {
     inputRecorder.stop();
     button.classList.remove('active');
-    button.textContent = '● RECORD INPUT';
+    button.textContent = L('Record input', 'Grabar entrada');
     return;
 } try {
     inputStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
@@ -1156,14 +1156,14 @@ function setupV6Studio() { const scale = localStorage.getItem('kiber-vengance-ui
     inputRecorder.onstop = async () => { inputStream?.getTracks().forEach(track => track.stop()); await addAudioBlob(new Blob(inputChunks, { type: inputRecorder?.mimeType || 'audio/webm' }), `Input ${new Date().toLocaleTimeString()}.webm`); };
     inputRecorder.start(250);
     button.classList.add('active');
-    button.textContent = '■ STOP INPUT';
+    button.textContent = L('Stop recording', 'Terminar grabación');
 }
 catch (error) {
     toast(`${L('INPUT UNAVAILABLE', 'ENTRADA NO DISPONIBLE')}: ${error instanceof Error ? error.message : String(error)}`);
 } }; $('#audioScratchBtn').onclick = async () => { if (!scratchBuffer) {
     toast(L('CAPTURE THE SCRATCH DECK FIRST', 'CAPTURA PRIMERO EL PLATO'));
     return;
-} await addAudioBlob(audioBufferWav(scratchBuffer), 'Scratch resample.wav'); }; $('#automationLaneBtn').onclick = () => { const target = $('#automationTarget').value, lane = createAutomationLane(target, target.replace(/[._]/g, ' ').toUpperCase()); lane.writeMode = $('#automationWriteMode').value; lane.points = [{ id: cryptoId(), step: 0, value: .5, curve: 'smooth' }, { id: cryptoId(), step: 64, value: .8, curve: 'smooth' }]; project.automationLanes.push(lane); changed(); renderGlobalAutomation(); }; $('#modulationBtn').onclick = () => { project.modulationRoutes.push({ id: cryptoId(), source: 'lfo-1', target: $('#automationTarget').value, amount: .25, bipolar: true, rate: .5 }); changed(); renderGlobalAutomation(); }; $('#monoCheckBtn').onclick = () => { project.masterSettings.monoCheck = !project.masterSettings.monoCheck; changed(); renderMixer(); renderMixGroups(); }; for (const id of ['masterTargetLufs', 'masterCeiling'])
+} await addAudioBlob(audioBufferWav(scratchBuffer), 'Scratch resample.wav'); }; $('#automationLaneBtn').onclick = () => { snapshot(); const target = $('#automationTarget').value, lane = createAutomationLane(target, target.replace(/[._]/g, ' ').toUpperCase()); lane.writeMode = $('#automationWriteMode').value; lane.points = [{ id: cryptoId(), step: 0, value: .5, curve: 'smooth' }, { id: cryptoId(), step: 64, value: .8, curve: 'smooth' }]; project.automationLanes.push(lane); changed(); renderGlobalAutomation(); }; $('#modulationBtn').onclick = () => { snapshot(); project.modulationRoutes.push({ id: cryptoId(), source: 'lfo-1', target: $('#automationTarget').value, amount: .25, bipolar: true, rate: .5 }); changed(); renderGlobalAutomation(); }; $('#monoCheckBtn').onclick = () => { snapshot(); project.masterSettings.monoCheck = !project.masterSettings.monoCheck; changed(); renderMixer(); renderMixGroups(); }; for (const id of ['masterTargetLufs', 'masterCeiling'])
     $(`#${id}`).onchange = () => { project.masterSettings[id === 'masterTargetLufs' ? 'targetLufs' : 'ceilingDb'] = +$(`#${id}`).value; changed(); engine.setProject(project); renderMixGroups(); }; const tools = $('.generators'); if (tools && !$('#transformNotes'))
     tools.insertAdjacentHTML('beforeend', '<span id="transformNotes"><button data-transform="retrograde">REVERSE</button><button data-transform="invert">INVERT</button><button data-transform="double">×2</button><button data-transform="half">÷2</button><button data-transform="humanize">HUMANIZE</button></span>'); $$('[data-transform]').forEach(button => button.onclick = () => { snapshot(); transformNotes(clip(), button.dataset.transform, .65); changed(); renderPiano(); toast(`TRANSFORM · ${button.dataset.transform.toUpperCase()}`); }); const toolbar = $('.arrange-toolbar'); if (toolbar && !$('#tempoEventBtn'))
     toolbar.insertAdjacentHTML('beforeend', '<button id="tempoEventBtn">＋ TEMPO</button><button id="meterEventBtn">＋ METER</button>'); $('#tempoEventBtn').onclick = () => { const step = +(prompt('Step', '0') || 0), bpm = +(prompt('BPM', String(project.tempo)) || project.tempo); project.tempoMap.push({ id: cryptoId(), step: Math.max(0, step), bpm: Math.max(30, Math.min(300, bpm)), curve: 'jump' }); changed(); renderArrangement(); renderTempoMap(); }; $('#meterEventBtn').onclick = () => { const step = +(prompt('Step', '0') || 0), meter = (prompt('Meter', '4/4') || '4/4').split('/').map(Number); project.meterMap.push({ id: cryptoId(), step: Math.max(0, step), beats: Math.max(1, Math.min(12, meter[0] || 4)), unit: meter[1] === 8 ? 8 : 4 }); changed(); renderArrangement(); renderTempoMap(); }; loadAudioAssets(); }
@@ -1872,3 +1872,75 @@ function setupStudioUi() {
     syncStudioUi();
 }
 setupStudioUi();
+function setupConsistentControls() {
+    const labels = [['scratchCaptureBtn', 'Capture mix', 'Capturar mezcla'], ['scratchBrakeBtn', 'Brake', 'Frenar'], ['scratchSpinBtn', 'Spinback', 'Retroceso'], ['scratchStutterBtn', 'Stutter', 'Repetir'], ['audioLaneBtn', 'Add audio lane', 'Añadir pista de audio'], ['automationLaneBtn', 'Add automation', 'Añadir automatización'], ['modulationBtn', 'Add modulation', 'Añadir modulación'], ['scratchReverse', 'Reverse', 'Reversa'], ['scratchRestart', 'Back to start', 'Volver al inicio']];
+    for (const [id, en, es] of labels) {
+        const node = $('#' + id);
+        node.dataset.en = en;
+        node.dataset.es = es;
+        node.textContent = L(en, es);
+    }
+    const refreshState = () => { updateScratchPlayButton(); $('#audioRecordBtn').textContent = inputRecorder?.state === 'recording' ? L('Stop recording', 'Terminar grabación') : L('Record input', 'Grabar entrada'); };
+    $('#languageSelect').addEventListener('change', refreshState);
+    $('#menuLanguageSelect').addEventListener('change', refreshState);
+    refreshState();
+    const wave = $('#scratchWaveform');
+    wave.tabIndex = 0;
+    wave.setAttribute('role', 'slider');
+    wave.setAttribute('aria-label', L('Position in scratch audio', 'Posición en audio de scratch'));
+    wave.setAttribute('aria-valuemin', '0');
+    wave.setAttribute('aria-valuemax', '100');
+    const seek = (fraction) => { if (!scratchBuffer || !engine.scratchFrames)
+        return; const f = Math.max(0, Math.min(1, fraction)); scratchStuttering = false; engine.setScratchStutter(0); $('#scratchStutterBtn').setAttribute('aria-pressed', 'false'); const frame = Math.round(f * (engine.scratchFrames - 1)); engine.scratchNode?.port.postMessage({ type: 'seek', frame }); engine.scratchPosition = frame; wave.setAttribute('aria-valuenow', String(Math.round(f * 100))); $('#scratchWavePlayhead').style.left = `${f * 100}%`; };
+    let pointer = null;
+    const at = (e) => { const r = wave.getBoundingClientRect(); seek((e.clientX - r.left) / r.width); };
+    wave.onpointerdown = (e) => { if (!scratchBuffer || e.button !== 0 || pointer !== null)
+        return; e.preventDefault(); pointer = e.pointerId; wave.setPointerCapture(pointer); at(e); };
+    wave.onpointermove = (e) => { if (e.pointerId === pointer) {
+        e.preventDefault();
+        at(e);
+    } };
+    const end = (e) => { if (pointer !== e.pointerId)
+        return; pointer = null; if (wave.hasPointerCapture(e.pointerId))
+        wave.releasePointerCapture(e.pointerId); };
+    wave.onpointerup = wave.onpointercancel = wave.onlostpointercapture = end;
+    wave.onkeydown = (e) => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key))
+        return; e.preventDefault(); const fraction = (engine.scratchPosition || 0) / Math.max(1, engine.scratchFrames || 1); seek(e.key === 'Home' ? 0 : e.key === 'End' ? 1 : fraction + (e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? .1 : .01)); };
+    const save = document.createElement('button');
+    save.id = 'scratchKeep';
+    save.dataset.en = 'Keep in project';
+    save.dataset.es = 'Guardar en proyecto';
+    save.textContent = L(save.dataset.en, save.dataset.es);
+    $('.scratch-pro').append(save);
+    save.onclick = async () => { if (!scratchBuffer) {
+        toast(L('Load or record audio first', 'Carga o graba audio primero'));
+        return;
+    } save.disabled = true; try {
+        await addAudioBlob(audioBufferWav(scratchBuffer), 'Scratch.wav');
+    }
+    catch (error) {
+        toast(String(error));
+    }
+    finally {
+        save.disabled = false;
+    } };
+    const hint = document.createElement('p');
+    hint.dataset.en = 'Temporary deck audio · touch or drag the waveform to seek. Keep in project saves a copy in Audio.';
+    hint.dataset.es = 'Audio temporal del plato · toca o arrastra la onda para moverte. Guardar en proyecto conserva una copia en Audio.';
+    hint.textContent = L(hint.dataset.en, hint.dataset.es);
+    $('.scratch-pro p').replaceWith(hint);
+    for (const id of ['audioLaneBtn', 'automationLaneBtn', 'modulationBtn', 'monoCheckBtn']) {
+        const el = $('#' + id), original = el.onclick;
+        el.onclick = (event) => { original?.call(el, event); toast(L('Project updated', 'Proyecto actualizado'), true); };
+    }
+    const dialog = document.createElement('dialog');
+    dialog.id = 'timingDialog';
+    document.body.append(dialog);
+    const editTiming = (meter) => { dialog.innerHTML = `<form method="dialog"><h2>${meter ? L('Add meter change', 'Añadir cambio de compás') : L('Add tempo change', 'Añadir cambio de tempo')}</h2><label>${L('Position (steps)', 'Posición (pasos)')}<input name="position" type="number" min="0" step="1" value="0" required></label>${meter ? `<label>${L('Beats', 'Pulsos')}<input name="beats" type="number" min="1" max="12" value="4" required></label><label>${L('Beat unit', 'Unidad')}<select name="unit"><option>4</option><option>8</option></select></label>` : `<label>BPM<input name="bpm" type="number" min="30" max="300" value="${project.tempo}" required></label>`}<div><button type="button" id="cancelTiming">${L('Cancel', 'Cancelar')}</button><button type="submit">${L('Add change', 'Añadir cambio')}</button></div></form>`; $('#cancelTiming').onclick = () => dialog.close(); dialog.querySelector('form').onsubmit = e => { e.preventDefault(); const data = new window.FormData(dialog.querySelector('form')); snapshot(); const step = Number(data.get('position')); if (meter)
+        project.meterMap.push({ id: cryptoId(), step, beats: Number(data.get('beats')), unit: Number(data.get('unit')) });
+    else
+        project.tempoMap.push({ id: cryptoId(), step, bpm: Number(data.get('bpm')), curve: 'jump' }); changed(); renderArrangement(); renderTempoMap(); dialog.close(); toast(L('Timing change added', 'Cambio añadido'), true); }; dialog.showModal(); };
+    $('#tempoEventBtn').onclick = () => editTiming(false);
+    $('#meterEventBtn').onclick = () => editTiming(true);
+}
+setupConsistentControls();

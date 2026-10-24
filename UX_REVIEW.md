@@ -22,3 +22,8 @@ Microphone capture (browser permission, no live monitoring, maximum 60 seconds, 
 Multiple named hot cues, loop in/out with quantization, slip mode, adjustable crossfader curve and cut-in, momentary cut pads, waveform zoom and sample trimming. These need persistent deck state and dedicated audio regression tests; they are not included in this delivery.
 
 Validation: typecheck/build/lint/core tests passed. A dedicated Chromium mobile test passed using a simulated microphone: capture, decode/load, stopped state, stutter, reverse, restart and document width. This does not verify physical microphones or Safari. The general E2E command was also attempted; its result must be considered separately.
+
+## Implemented consistency pass
+Shared 14 px control typography, 12 px secondary labels, 44 px action targets and common focus/pressed/disabled styling now apply across studio panels. Main scratch and creation actions use sentence-case bilingual labels. Deck play/pause wording now matches its position-preserving behavior. The waveform supports pointer seeking and Home/End/arrows while retaining play state and clearing active stutter. A Keep in project action saves temporary deck audio into Audio. Audio import/record placement, audio-lane creation, automation/modulation insertion and mono-check now participate in history; creation actions expose Undo feedback. Tempo/meter insertion uses one validated dialog with cancellation instead of native prompts.
+
+Remaining depth: this pass does not replace every legacy control with a shared component, migrate every dynamic string to a central catalog, or restructure the two navigation bars. Those architectural items remain a follow-up rather than a claim of full application-wide parity.

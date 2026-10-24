@@ -131,3 +131,5 @@ Clips abre el editor y Sonido muestra los racks bajo demanda. En móvil hay tran
 - Dial and scratch surfaces own touch gestures; Perform buttons/ranges suppress double-tap zoom without disabling page pinch zoom. Physical iOS validation remains outstanding.
 
 Scratch input/control additions and the prioritized consistency backlog are documented in UX_REVIEW.md. Physical microphone/Safari validation remains required.
+
+Consistency pass: implemented waveform seeking, direct deck persistence, shared control scale, creation Undo and validated timing dialogs. UX_REVIEW.md tracks remaining component, translation and navigation architecture work explicitly.

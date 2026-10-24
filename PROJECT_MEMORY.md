@@ -205,3 +205,6 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 
 ## Scratch input and controls
 Microphone capture loads a temporary scratch buffer, stops playback after capture, releases microphone tracks and limits recording to 60 seconds. Stutter supports whole-note divisions 1/1–1/64. Motor speed (with pitch change), reverse and restart are available. UX_REVIEW.md records observed inconsistencies and proposed work, not completed global standardization.
+
+## Consistency and waveform seeking
+Scratch waveform supports touch/mouse seeking and keyboard arrows/Home/End without starting paused audio. Seeking clears stutter. Keep in project persists a scratch copy as an audio region. Shared control typography/targets/focus states and bilingual main action labels are applied. Audio additions and several creation operations now snapshot history. Tempo/meter use validated cancelable dialogs. See UX_REVIEW.md for implementation boundaries. Dedicated Chromium simulated-microphone, waveform seek and save workflow passed; check passed; physical Safari remains unverified.

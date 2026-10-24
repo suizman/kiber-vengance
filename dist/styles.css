@@ -259,3 +259,13 @@ body[data-editor-tool=select] .note-block{touch-action:manipulation}
 @media(pointer:coarse){.knob{min-width:56px;min-height:56px}}
 
 .scratch-pro{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.scratch-pro label{display:flex;flex-direction:column;gap:8px}.scratch-pro p{grid-column:1/-1}.scratch-pro button,.scratch-pro select,#scratchMic{min-height:44px;font-size:14px}.scratch-pro input{width:100%;touch-action:manipulation}.scratch-pro [aria-pressed=true],#scratchMic[aria-pressed=true]{border-color:var(--cyan);color:var(--cyan)}
+
+/* Shared studio control scale. Instrument geometry remains independently sized. */
+:root{--control-text:14px;--secondary-text:12px;--control-height:44px}
+.view button:not(.key):not(.sampler-key):not(.knob):not(.note-block),dialog button,.file-button{font-size:var(--control-text);min-height:var(--control-height);line-height:1.35;letter-spacing:normal}
+.view label,.view select,.view output,dialog label,dialog select{font-size:var(--control-text);line-height:1.45}
+.view .eyebrow,.view small,.view .fx-unit,.view .macro label{font-size:var(--secondary-text);line-height:1.45}
+button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+button[aria-pressed=true]{border-color:var(--cyan)}button:disabled{cursor:not-allowed;opacity:.5}
+#scratchWaveform{touch-action:none;cursor:crosshair}#scratchWavePlayhead,#scratchStatus{pointer-events:none}
+#timingDialog form{display:grid;gap:16px;min-width:min(320px,75vw)}#timingDialog label{display:grid;gap:6px}#timingDialog form>div{display:flex;gap:12px;justify-content:flex-end}
