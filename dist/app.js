@@ -12,6 +12,8 @@ let project = loadProject(), selectedTrack = 'lead', selectedNotes = new Set(), 
 const clipStartSteps = new Map();
 let samplerArmed = false, loadedSamplerAssetId = null, samplerQwertyBase = 60;
 const samplerHeld = new Map();
+let editorTool = 'draw';
+let soundPanel = false;
 let language = localStorage.getItem(LANGUAGE_STORAGE) === 'es' ? 'es' : 'en', tutorialStep = 0, helpMode = false;
 const L = (en, es) => language === 'es' ? es : en;
 const history = new History();
@@ -37,15 +39,50 @@ function loadProject() { for (const key of [STORAGE, LEGACY_V5, LEGACY_V4, LEGAC
     catch { } return createProject(); }
 function esc(v) { return String(v).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
 function snapshot() { history.push(project); }
-function changed(render = false) { project.modifiedAt = Date.now(); $('#saveState').textContent = L('SAVING…', 'GUARDANDO…'); clearTimeout(saveTimer); saveTimer = setTimeout(() => { if (Date.now() - lastRecovery > 60000) {
-    const list = loadVersions();
-    list.unshift({ id: cryptoId(), label: `AUTO RECOVERY · ${project.title}`, date: Date.now(), project: structuredClone(project) });
-    localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
-    lastRecovery = Date.now();
-} localStorage.setItem(STORAGE, JSON.stringify(project)); $('#saveState').textContent = L('SAVED LOCALLY', 'GUARDADO LOCAL'); }, 350); engine.setProject(project); if (project.sampler?.assetId !== loadedSamplerAssetId)
-    void loadSamplerAsset(); if (render)
-    renderAll(); }
-function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1900); }
+function changed(render = false) {
+    project.modifiedAt = Date.now();
+    $('#saveState').textContent = L('Saving…', 'Guardando…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        try {
+            localStorage.setItem(STORAGE, JSON.stringify(project));
+            $('#saveState').textContent = L('Saved on this device', 'Guardado en este dispositivo');
+            $('#saveWarning')?.setAttribute('hidden', '');
+        }
+        catch {
+            $('#saveState').textContent = L('Not saved', 'Sin guardar');
+            const warning = $('#saveWarning');
+            if (warning) {
+                warning.hidden = false;
+                warning.textContent = L('Could not save locally. Export a project package to keep your changes.', 'No se pudo guardar localmente. Exporta un proyecto completo para conservar los cambios.');
+            }
+            return;
+        }
+        if (Date.now() - lastRecovery > 60000) {
+            try {
+                const list = loadVersions();
+                list.unshift({ id: cryptoId(), label: `AUTO RECOVERY · ${project.title}`, date: Date.now(), project: structuredClone(project) });
+                localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
+                lastRecovery = Date.now();
+            }
+            catch {
+                toast(L('Project saved; recovery snapshot unavailable.', 'Proyecto guardado; copia de recuperación no disponible.'));
+            }
+        }
+    }, 350);
+    engine.setProject(project);
+    if (project.sampler?.assetId !== loadedSamplerAssetId)
+        void loadSamplerAsset();
+    if (render)
+        renderAll();
+    syncStudioUi();
+}
+function toast(message, undo = false) { const el = $('#toast'); el.textContent = message; if (undo) {
+    const button = document.createElement('button');
+    button.textContent = L('Undo', 'Deshacer');
+    button.onclick = () => { $('#undoBtn').click(); el.classList.remove('show'); };
+    el.append(button);
+} el.classList.add('show'); setTimeout(() => el.classList.remove('show'), undo ? 6000 : 2500); }
 function download(data, name, type = 'application/octet-stream') { const blob = data instanceof Blob ? data : new Blob([data], { type }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 const quickHandles = new Map(), QUICK_HANDLE_DB = 'kiber-vengance-file-handles-v1', LAST_EXPORT = 'kiber-vengance-last-export-v1';
 function quickHandleDb() { return new Promise((resolve, reject) => { const request = indexedDB.open(QUICK_HANDLE_DB, 1); request.onupgradeneeded = () => request.result.createObjectStore('handles'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
@@ -266,7 +303,7 @@ function requestClipDelete(id) { const target = project.clips.find((c) => c.id =
     toast(L('KEEP AT LEAST ONE CLIP PER TRACK', 'DEBE QUEDAR UN CLIP POR PISTA'));
     return;
 } pendingDeleteClipId = id; updateDeleteClipDialog(); $('#deleteClipDialog').showModal(); }
-function renderHarmony() { $('#keySelect').innerHTML = KEYS.map(k => `<option ${k === project.key ? 'selected' : ''}>${k}</option>`).join(''); $('#scaleSelect').innerHTML = Object.keys(SCALES).map(s => `<option value="${s}" ${s === project.scale ? 'selected' : ''}>${s.replace(/([A-Z])/g, ' $1').toUpperCase()}</option>`).join(''); $('#keySelect').onchange = () => { snapshot(); project.key = $('#keySelect').value; changed(true); }; $('#scaleSelect').onchange = () => { snapshot(); project.scale = $('#scaleSelect').value; changed(true); }; $$('[data-generate]').forEach(b => { const type = b.dataset.generate; b.disabled = (selectedTrack === 'drums' && type !== 'drums') || (selectedTrack !== 'drums' && type === 'drums'); b.onclick = () => { snapshot(); generateClip(project, clip(), type, clip().character.macros.complexity); selectedNotes.clear(); changed(true); toast(`${type.toUpperCase()} GENERATED IN ${project.key} ${project.scale.toUpperCase()}`); }; }); $('#quantizeBtn').onclick = () => { snapshot(); quantizeClip(clip(), project.editor.snap); changed(true); toast('CLIP QUANTIZED'); }; }
+function renderHarmony() { $('#keySelect').innerHTML = KEYS.map(k => `<option ${k === project.key ? 'selected' : ''}>${k}</option>`).join(''); $('#scaleSelect').innerHTML = Object.keys(SCALES).map(s => `<option value="${s}" ${s === project.scale ? 'selected' : ''}>${s.replace(/([A-Z])/g, ' $1').toUpperCase()}</option>`).join(''); $('#keySelect').onchange = () => { snapshot(); project.key = $('#keySelect').value; changed(true); }; $('#scaleSelect').onchange = () => { snapshot(); project.scale = $('#scaleSelect').value; changed(true); }; $$('[data-generate]').forEach(b => { const type = b.dataset.generate; b.disabled = (selectedTrack === 'drums' && type !== 'drums') || (selectedTrack !== 'drums' && type === 'drums'); b.onclick = () => { snapshot(); generateClip(project, clip(), type, clip().character.macros.complexity); selectedNotes.clear(); changed(true); toast(L('Musical material generated', 'Material musical generado'), true); }; }); $('#quantizeBtn').onclick = () => { snapshot(); quantizeClip(clip(), project.editor.snap); changed(true); toast(L('Clip quantized', 'Clip cuantizado'), true); }; }
 function renderPiano() {
     const c = clip(), rows = pitches(), zoom = project.editor.zoom, rowH = 22, steps = clipLengthSteps(c), pane = $('#rollPane'), old = rollScroll[selectedTrack] || { left: pane?.scrollLeft || 0, top: pane?.scrollTop || 0 };
     $('#pianoLabelRows').innerHTML = rows.map(p => `<div class="pitch-label ${selectedTrack !== 'drums' && isInScale(p, project.key, project.scale) ? 'in-scale' : ''}">${selectedTrack === 'drums' ? (DRUM_NAMES[p] ?? 'DRUM') : (pitchNames[p % 12] ?? 'N') + Math.floor(p / 12 - 1)}</div>`).join('');
@@ -285,7 +322,7 @@ function renderPiano() {
     seq.onclick = (e) => { if (suppressSequencerClick) {
         suppressSequencerClick = false;
         return;
-    } if (e.target !== seq)
+    } if (editorTool !== 'draw' || e.target !== seq)
         return; const rect = seq.getBoundingClientRect(), step = Math.max(0, Math.min(steps - project.editor.snap, Math.floor((e.clientX - rect.left) / zoom / project.editor.snap) * project.editor.snap)), row = Math.floor((e.clientY - rect.top) / rowH), pitch = rows[row]; if (pitch == null)
         return; snapshot(); const n = makeNote(step, pitch, selectedTrack === 'drums' ? 1 : Math.max(project.editor.snap, 1), e.shiftKey ? 1 : .8); c.notes.push(n); selectedNotes = e.shiftKey ? new Set([...selectedNotes, n.id]) : new Set([n.id]); changed(); engine.preview(selectedTrack, pitch, n.velocity); renderPiano(); renderSelection(); };
     bindMarqueeSelection(seq);
@@ -296,14 +333,20 @@ function renderPiano() {
     pane.onscroll = () => { rollScroll[selectedTrack] = { left: pane.scrollLeft, top: pane.scrollTop }; syncRollScroll(); };
     renderSelection();
 }
-function bindMarqueeSelection(seq) { seq.onpointerdown = (e) => { if (e.target !== seq || (e.button != null && e.button !== 0) || e.pointerType === 'touch')
+function bindMarqueeSelection(seq) { seq.onpointerdown = (e) => { if (editorTool === 'navigate' || e.target !== seq || (e.button != null && e.button !== 0) || e.pointerType === 'touch')
     return; const rect = seq.getBoundingClientRect(), clamp = (value, max) => Math.max(0, Math.min(max, value)), startX = clamp(e.clientX - rect.left, seq.clientWidth), startY = clamp(e.clientY - rect.top, seq.clientHeight), base = e.shiftKey ? new Set(selectedNotes) : new Set(), box = document.createElement('div'); box.className = 'selection-marquee'; seq.append(box); let moved = false; const move = (ev) => { const x = clamp(ev.clientX - rect.left, seq.clientWidth), y = clamp(ev.clientY - rect.top, seq.clientHeight), left = Math.min(startX, x), top = Math.min(startY, y), right = Math.max(startX, x), bottom = Math.max(startY, y); if (!moved && Math.hypot(x - startX, y - startY) < 4)
     return; moved = true; ev.preventDefault(); Object.assign(box.style, { left: `${left}px`, top: `${top}px`, width: `${right - left}px`, height: `${bottom - top}px` }); const next = new Set(base); seq.querySelectorAll('.note-block').forEach((note) => { const noteRight = note.offsetLeft + note.offsetWidth, noteBottom = note.offsetTop + note.offsetHeight; if (note.offsetLeft <= right && noteRight >= left && note.offsetTop <= bottom && noteBottom >= top)
     next.add(note.dataset.note); }); selectedNotes = next; syncSelectedClasses(); renderSelection(); }, up = () => { box.remove(); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); if (moved) {
     suppressSequencerClick = true;
     renderSelection();
 } }; window.addEventListener('pointermove', move, { passive: false }); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); }; }
-function bindNoteDrag(el, c, rows, zoom, rowH) { el.onpointerdown = (e) => { e.stopPropagation(); const id = el.dataset.note; if (e.shiftKey) {
+function bindNoteDrag(el, c, rows, zoom, rowH) { el.onpointerdown = (e) => { if (editorTool === 'navigate')
+    return; e.stopPropagation(); const id = el.dataset.note; if (editorTool === 'select') {
+    selectedNotes.has(id) ? selectedNotes.delete(id) : selectedNotes.add(id);
+    syncSelectedClasses();
+    renderSelection();
+    return;
+} if (e.shiftKey) {
     selectedNotes.has(id) ? selectedNotes.delete(id) : selectedNotes.add(id);
 }
 else if (!selectedNotes.has(id))
@@ -320,8 +363,8 @@ else if (!selectedNotes.has(id))
         if (selectedTrack !== 'drums')
             n.pitch = Math.max(TRACK_META[selectedTrack].low, Math.min(TRACK_META[selectedTrack].high, o.pitch - dy));
     }
-} renderPiano(); }; const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); if (moved)
-    changed(); }; window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); }; }
+} renderPiano(); }; const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); if (moved)
+    changed(); }; window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); }; }
 function syncSelectedClasses() { $$('.note-block').forEach(n => n.classList.toggle('selected', selectedNotes.has(n.dataset.note))); }
 function syncRollScroll() { const pane = $('#rollPane'), content = $('#rollRuler .ruler-content'); if (content)
     content.style.transform = `translateX(${-pane.scrollLeft}px)`; $('#pianoLabelRows').style.transform = `translateY(${-pane.scrollTop}px)`; $('#automationPane').scrollLeft = pane.scrollLeft; }
@@ -1034,7 +1077,7 @@ function setupProjectTemplates() { if (!$('#projectTemplate'))
     next.title = 'Hybrid Session';
     next.audioLanes = [createAudioLane('RESAMPLE', '#ff3bd4'), createAudioLane('VOCALS', '#2ee8ff')];
 } replaceProject(next); toast(L('PROJECT TEMPLATE CREATED', 'PLANTILLA DE PROYECTO CREADA')); }; }
-function renderAll() { renderTracks(); renderInspector(); renderArp(); renderFx(); macroMarkup($('#macros')); macroMarkup($('#performMacros')); renderClipControls(); renderHarmony(); renderPiano(); renderAutomation(); renderKeyboard(); renderLauncher(); renderArrangement(); renderTempoMap(); renderMixer(); renderMixGroups(); renderSamplerKeyboard(); renderAudioStudio(); renderPerformanceTakes(); renderLocators(); $('#title').value = project.title; $('#tempo').value = project.tempo; $('#meterSelect').value = `${project.meter.beats}/${project.meter.unit}`; $('#recordMode').value = project.editor.recordMode || 'quantized'; $('#swing').value = Math.round(project.swing * 100); $('#masterVolume').value = project.master; $('#masterValue').textContent = Math.round(project.master * 100); updateOrb(); installControlHelp(); }
+function renderAll() { renderTracks(); renderInspector(); renderArp(); renderFx(); macroMarkup($('#macros')); macroMarkup($('#performMacros')); renderClipControls(); renderHarmony(); renderPiano(); renderAutomation(); renderKeyboard(); renderLauncher(); renderArrangement(); renderTempoMap(); renderMixer(); renderMixGroups(); renderSamplerKeyboard(); renderAudioStudio(); renderPerformanceTakes(); renderLocators(); $('#title').value = project.title; $('#tempo').value = project.tempo; $('#meterSelect').value = `${project.meter.beats}/${project.meter.unit}`; $('#recordMode').value = project.editor.recordMode || 'quantized'; $('#swing').value = Math.round(project.swing * 100); $('#masterVolume').value = project.master; $('#masterValue').textContent = Math.round(project.master * 100); updateOrb(); installControlHelp(); syncStudioUi(); }
 async function togglePlay(forceSong) { if (engine.playing) {
     engine.stop();
     $('#playBtn').textContent = '▶';
@@ -1221,7 +1264,7 @@ async function quickExportMidi(forcePicker = false) { await performExport('midi'
 function repeatLastExport() { const kind = (localStorage.getItem(LAST_EXPORT) || 'wav'); performExport(kind, false); }
 $('#playBtn').onclick = () => togglePlay();
 $('#rewindBtn').onclick = () => { engine.stop(); currentStep = -1; currentScene = -1; transportPosition = 0; setGlobalStart(0); setClipStart(0); updatePlayheads(); $('#playBtn').textContent = '▶'; $('#playBtn').classList.remove('active'); };
-$('#recordBtn').onclick = () => { recordArmed = !recordArmed; $('#recordBtn').classList.toggle('active', recordArmed); toast(recordArmed ? `RECORD ARMED · ${$('#countIn').value} BAR COUNT-IN` : 'RECORD SAFE'); };
+$('#recordBtn').onclick = () => { recordArmed = !recordArmed; $('#recordBtn').classList.toggle('active', recordArmed); toast(recordArmed ? `RECORD ARMED · ${$('#countIn').value} BAR COUNT-IN` : 'RECORD SAFE'); syncStudioUi(); };
 $('#metroBtn').onclick = () => { metronome = !metronome; engine.metronome = metronome; $('#metroBtn').setAttribute('aria-pressed', metronome); };
 $('#tempo').onchange = () => { snapshot(); project.tempo = Math.max(50, Math.min(220, +$('#tempo').value)); changed(); };
 $('#meterSelect').onchange = () => { snapshot(); const [beats, unit] = $('#meterSelect').value.split('/').map(Number); setProjectMeter(project, beats, unit); selectedNotes.clear(); changed(true); };
@@ -1234,7 +1277,7 @@ $('#masterVolume').onchange = () => changed();
 $('#undoBtn').onclick = () => { project = history.undo(project); engine.project = project; selectedNotes.clear(); changed(true); };
 $('#redoBtn').onclick = () => { project = history.redo(project); engine.project = project; selectedNotes.clear(); changed(true); };
 $('#newClipBtn').onclick = () => { snapshot(); const source = clip(), c = createClip(selectedTrack, `${TRACK_META[selectedTrack].label} ${clipsForTrack(project, selectedTrack).length + 1}`, 2, meterSteps(project.meter)); c.character = structuredClone(source.character); project.clips.push(c); project.activeClipIds[selectedTrack] = c.id; selectedNotes.clear(); changed(true); toast(L('INDEPENDENT CLIP + CHARACTER CREATED', 'CLIP Y CARÁCTER INDEPENDIENTES CREADOS')); };
-$('#duplicateBtn').onclick = () => { snapshot(); duplicateClip(project, clip().id); selectedNotes.clear(); changed(true); };
+$('#duplicateBtn').onclick = () => { snapshot(); duplicateClip(project, clip().id); selectedNotes.clear(); changed(true); toast(L('Clip duplicated', 'Clip duplicado'), true); };
 $('#mutateBtn').onclick = () => { snapshot(); varyClip(project, clip(), clip().character.macros.tension); selectedNotes.clear(); changed(true); };
 $('#noteLength').onchange = () => editSelection('length', $('#noteLength').value);
 $('#noteVelocity').onpointerdown = () => { if (selectedNotes.size)
@@ -1259,7 +1302,7 @@ function activateView(view) { activeView = view; $$('[data-view]').forEach(x => 
     renderMixGroups();
     requestAnimationFrame(animateMixer);
 } if (view === 'perform')
-    renderPerformanceTakes(); }
+    renderPerformanceTakes(); syncStudioUi(); }
 $$('[data-view]').forEach((b) => b.onclick = () => activateView(b.dataset.view));
 function compatibility() { return { timestamp: new Date().toISOString(), userAgent: navigator.userAgent, audioContext: Boolean(window.AudioContext || window.webkitAudioContext), offlineAudio: Boolean(window.OfflineAudioContext), webMidi: Boolean(navigator.requestMIDIAccess), fileSystemAccess: Boolean(window.showSaveFilePicker), serviceWorker: Boolean(navigator.serviceWorker), secureContext: window.isSecureContext, platform: navigator.platform || 'unknown', sampleRate: engine.ctx?.sampleRate || 'not initialized', audioState: engine.ctx?.state || 'not initialized' }; }
 function showCompatibility() { const data = compatibility(); $('#compatReport').innerHTML = Object.entries(data).map(([key, value]) => `<div><span>${esc(key)}</span><b class="${value === false ? 'bad' : 'good'}">${esc(value)}</b></div>`).join(''); open('#compatDialog'); return data; }
@@ -1518,3 +1561,117 @@ else
 initMidi();
 if ('serviceWorker' in navigator && !query.has('qa'))
     navigator.serviceWorker.register('./sw.js').catch(() => { });
+function syncStudioUi() {
+    const context = $('#clipContext');
+    if (!context)
+        return;
+    const c = clip();
+    context.textContent = `${TRACK_META[selectedTrack].label} → ${c.name} · ${c.bars} ${L('bars', 'compases')}`;
+    document.body.classList.toggle('sound-panel', soundPanel);
+    document.body.dataset.editorTool = editorTool;
+    $$('[data-studio-tab]').forEach((b) => { const tab = b.dataset.studioTab; const active = tab === 'sound' ? activeView === 'forge' && soundPanel : tab === 'clips' ? activeView === 'forge' && !soundPanel : activeView === tab; b.setAttribute('aria-pressed', String(active)); });
+    $$('[data-editor-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.editorTool === editorTool)));
+    const hint = $('#recordHint');
+    hint.textContent = recordArmed ? L('Armed: keyboard / MIDI notes → active clip. Press Play to record.', 'Preparado: notas de teclado / MIDI → clip activo. Pulsa Play para grabar.') : L('Notes record into the active clip. Record Take captures audio in Perform.', 'Las notas se graban en el clip activo. Grabar toma captura audio en Perform.');
+}
+function setupStudioUi() {
+    const bar = document.createElement('div');
+    bar.className = 'studio-context';
+    bar.innerHTML = '<strong id="clipContext"></strong><div class="studio-tabs"></div><p id="recordHint"></p><p id="saveWarning" role="alert" hidden></p>';
+    $('#forgeView').prepend(bar);
+    const nav = document.createElement('nav');
+    nav.className = 'mobile-studio-nav';
+    nav.setAttribute('aria-label', 'Studio');
+    document.body.append(nav);
+    const choices = [['clips', 'Clips', 'Clips'], ['sound', 'Sound', 'Sonido'], ['arrange', 'Arrange', 'Arreglo'], ['mix', 'Mix', 'Mezcla']];
+    for (const container of [bar.querySelector('.studio-tabs'), nav])
+        for (const [tab, en, es] of choices) {
+            const button = document.createElement('button');
+            button.dataset.studioTab = tab;
+            button.dataset.en = en;
+            button.dataset.es = es;
+            button.textContent = L(en, es);
+            button.onclick = () => { soundPanel = tab === 'sound'; if (soundPanel)
+                toggleFocus(false, true); activateView(tab === 'sound' || tab === 'clips' ? 'forge' : tab); if (window.matchMedia('(max-width:820px)').matches)
+                document.querySelector('.workspace')?.scrollIntoView({ block: 'start' }); };
+            container.append(button);
+        }
+    const tools = document.createElement('div');
+    tools.className = 'editor-tools';
+    tools.setAttribute('role', 'group');
+    tools.setAttribute('aria-label', 'Editor tools');
+    for (const [tool, en, es] of [['draw', 'Draw', 'Dibujar'], ['select', 'Select', 'Seleccionar'], ['navigate', 'Navigate', 'Navegar']]) {
+        const button = document.createElement('button');
+        button.dataset.editorTool = tool;
+        button.dataset.en = en;
+        button.dataset.es = es;
+        button.textContent = L(en, es);
+        button.onclick = () => { editorTool = tool; syncStudioUi(); };
+        tools.append(button);
+    }
+    const newClip = document.createElement('button');
+    newClip.dataset.en = '+ New clip';
+    newClip.dataset.es = '+ Nuevo clip';
+    newClip.textContent = L('+ New clip', '+ Nuevo clip');
+    newClip.onclick = () => $('#newClipBtn').click();
+    tools.append(newClip);
+    const undo = document.createElement('button');
+    undo.dataset.en = 'Undo';
+    undo.dataset.es = 'Deshacer';
+    undo.textContent = L('Undo', 'Deshacer');
+    undo.onclick = () => $('#undoBtn').click();
+    tools.append(undo);
+    $('.piano-shell').before(tools);
+    const advanced = document.createElement('details');
+    advanced.className = 'export-advanced';
+    const summary = document.createElement('summary');
+    summary.dataset.en = 'Advanced export options';
+    summary.dataset.es = 'Opciones avanzadas de exportación';
+    summary.textContent = L(summary.dataset.en, summary.dataset.es);
+    advanced.append(summary);
+    $('.export-options').before(advanced);
+    advanced.append($('.export-options'), $('.stem-selection'));
+    const quick = document.createElement('div');
+    quick.className = 'export-simple';
+    for (const [kind, en, es] of [['bundle', 'Save complete project', 'Guardar proyecto completo'], ['wav', 'Export audio', 'Exportar audio'], ['midi', 'Export MIDI', 'Exportar MIDI']]) {
+        const button = document.createElement('button');
+        button.dataset.en = en;
+        button.dataset.es = es;
+        button.textContent = L(en, es);
+        button.onclick = () => performExport(kind, true);
+        quick.append(button);
+    }
+    advanced.before(quick);
+    const other = document.createElement('details');
+    other.className = 'export-advanced';
+    const otherLabel = document.createElement('summary');
+    otherLabel.dataset.en = 'More formats and linked destinations';
+    otherLabel.dataset.es = 'Más formatos y destinos vinculados';
+    otherLabel.textContent = L(otherLabel.dataset.en, otherLabel.dataset.es);
+    other.append(otherLabel);
+    $('.export-grid').before(other);
+    other.append($('.export-grid'));
+    const music = document.createElement('details');
+    music.className = 'composition-options';
+    const musicLabel = document.createElement('summary');
+    musicLabel.dataset.en = 'Generate music and harmony';
+    musicLabel.dataset.es = 'Generar música y armonía';
+    musicLabel.textContent = L(musicLabel.dataset.en, musicLabel.dataset.es);
+    music.append(musicLabel);
+    $('.composition-tools').before(music);
+    music.append($('.harmony'), $('.generators'));
+    const transport = $('.transport'), anchor = document.createComment('transport');
+    transport.before(anchor);
+    const mobile = window.matchMedia('(max-width:820px)');
+    const placeTransport = () => { $('#uiScale').disabled = mobile.matches; $('#uiScale').title = mobile.matches ? L('Mobile uses the device scale', 'En móvil se utiliza la escala del dispositivo') : ''; if (mobile.matches)
+        document.body.append(transport);
+    else
+        anchor.parentNode.insertBefore(transport, anchor.nextSibling); };
+    mobile.addEventListener('change', placeTransport);
+    placeTransport();
+    const translate = () => { $$('[data-en][data-es]').forEach((el) => el.textContent = L(el.dataset.en, el.dataset.es)); syncStudioUi(); };
+    $('#languageSelect').addEventListener('change', translate);
+    $('#menuLanguageSelect').addEventListener('change', translate);
+    syncStudioUi();
+}
+setupStudioUi();

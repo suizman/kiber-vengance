@@ -165,3 +165,12 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 - Mobile and tablet layouts through 820 px use document-level vertical scrolling, including at 80–120% UI scale. The app height follows its content; workspace clipping is horizontal only. The piano roll and horizontal control strips retain their own local scrolling.
 - The Service Worker cache revision is v20-mobile-scroll.
 - Validation: dedicated Chromium checks with touch gestures passed at 320/390/768/820 px and UI scales 0.8/1/1.2; the footer was reachable in each case. Desktop layout was checked at 1366 px with all three scales. Typecheck, build, lint and the unit-test command passed. The repository Firefox/Chromium E2E commands failed in this environment; no full-suite pass is claimed. Physical Safari/iOS validation remains outstanding.
+
+## Composition-first usability update (2026-10-24)
+
+- Clips is the default editing workspace; Sound reveals existing synth, motion, FX and macro racks. The four direct destinations are Clips, Sound, Arrange and Mix; Launcher, Audio Studio and Perform remain accessible through the main mode bar.
+- Mobile through 820 px has a fixed transport and bottom navigation, 44 px primary controls, document scrolling and native device scale. Desktop retains the adjustable UI scale. Mobile scale selector is disabled with an explanation.
+- A context strip identifies track, clip and bars and explains note recording versus audio takes. The piano roll has Draw, Select (tap to toggle notes) and Navigate (scroll without editing) tools. Music generation/harmony is disclosed on demand. New clip and Undo are directly available by the editor.
+- Export presents complete project package, audio and MIDI first. Advanced rendering options, other formats and linked destinations remain available in disclosure panels.
+- Autosave writes the current project before optional recovery snapshots. Failures display a persistent local-save warning; failed recovery snapshots do not block the project save. Duplication, generation and quantization offer Undo feedback.
+- Validation: typecheck/build/lint/unit-test command passed. Dedicated real Chromium workflows passed at widths 390, 768 and 1366: create/duplicate/undo clips, draw/select/navigate, export disclosures, quota-failure feedback, transport visibility and absence of horizontal overflow. Existing full E2E suite still fails in this environment; Safari/iOS physical verification remains pending.

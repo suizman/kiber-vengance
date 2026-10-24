@@ -104,3 +104,7 @@ La guitarra incluida es un modelo de cuerda pulsada deliberadamente sintético, 
 ## Corrección móvil en Sites
 
 Hasta 820 px, la página usa scroll vertical del documento y altura automática para que la edición de clips y el pie sean alcanzables. El piano roll conserva su desplazamiento local. Se elimina el bloqueo causado por overflow:hidden y la altura de escritorio aplicada a la app móvil.
+
+## Usabilidad centrada en composición (2026-10-24)
+
+Clips abre el editor y Sonido muestra los racks bajo demanda. En móvil hay transporte fijo y navegación inferior Clips/Sonido/Arreglo/Mezcla, con controles principales de 44 px. El editor distingue Dibujar, Seleccionar y Navegar; el contexto muestra pista, clip y compases. Generación y armonía están plegadas inicialmente. Exportación prioriza proyecto completo, audio y MIDI, conservando formatos y opciones avanzadas. Los errores de autoguardado quedan visibles y los snapshots no impiden guardar el proyecto actual. La escala móvil sigue al dispositivo; el ajuste 80–120% permanece para escritorio.
