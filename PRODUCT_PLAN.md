@@ -23,6 +23,7 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 13. Signal Core Identity: nombre oficial `КИБЕР VENGANCE`, wordmark cirílico/latino, monograma К/V original, icono PWA renovado y animación de señal accesible con reducción de movimiento.
 14. Hybrid Studio v6: pistas y regiones de audio no destructivas, importación/micrófono/resampling del plato, edición de offset/fades/pitch/warp, slicing por transitorios, automatización y modulación globales, MIDI Learn, mapas de tempo/compás, transformaciones musicales, routing/sidechain, mastering, plantillas, recuperación automática y escala de interfaz 80–120%.
 15. Prism Keys: sampler cromático polifónico persistente con teclado táctil multicolor de 25 teclas, waveform, root/trim/tune/envolvente/filtro, reverse, gate/one-shot/loop, QWERTY/MIDI y portabilidad mediante Project Package.
+16. Audio-to-Deck & Pause: transporte con pausa que conserva el cursor y reanuda regiones desde su offset real; Audio Studio reproduce correctamente con el transporte global, envía regiones editadas al Scratch Deck y el plato acepta importación directa de formatos decodificables por el navegador.
 
 ## Decisiones técnicas
 
@@ -83,6 +84,8 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 - [x] Routing por grupos, sidechain disparado por kick, target LUFS, ceiling, mono check, plantillas de proyecto y puntos automáticos de recuperación.
 - [x] Auditoría de densidad con escala 80–120%, breakpoints específicos de 1550/1320/900/760 px y scroll local en subsistemas anchos.
 - [x] Prism Keys con muestra local persistente, 25 teclas cromáticas grandes y multicolor, feedback luminoso por nota, polifonía configurable, modos gate/one-shot/loop, QWERTY cromático completo con cambio de octava, control táctil/MIDI y asset incluido en Project Package.
+- [x] Pausa dedicada que conserva el cursor de clip/canción y reanuda regiones de audio en mitad del archivo sin volver a dispararlas desde el principio.
+- [x] Scratch Deck alimentado por captura de mezcla, importación local directa o regiones editadas de Audio Studio, con errores de codec visibles y búfer temporal no destructivo.
 
 ## Dependencias externas inevitables y exclusiones deliberadas
 
@@ -96,6 +99,7 @@ La guitarra incluida es un modelo de cuerda pulsada deliberadamente sintético, 
 - Web MIDI no está presente en todos los navegadores y siempre queda sujeto a permiso del usuario. QWERTY, ratón y táctil siguen funcionando sin él.
 - File System Access no está presente en todos los navegadores. Sin él, Export/Export As usan descargas normales; con él, el navegador puede volver a pedir permiso de escritura entre sesiones.
 - La grabación de interpretación depende de MediaRecorder y utiliza el contenedor de audio que ofrece el navegador, normalmente WebM/Opus. La exportación determinista de composición y stems continúa usando WAV.
+- La importación directa al Scratch Deck acepta WAV y los formatos comprimidos que `decodeAudioData` exponga en el navegador actual. MP3, OGG y WebM habituales funcionan donde exista el codec; un navegador sin ese codec muestra un error y no arma el plato.
 - MediaRecorder entrega una forma de onda ya comprimida. Editar los eventos de una toma modifica su reproducción de controles sobre el audio exacto capturado, pero no vuelve a sintetizar retroactivamente esa grabación.
 - Los blobs de samples, regiones de audio y tomas viven en IndexedDB y pueden desaparecer al limpiar los datos del sitio. JSON conserva sus metadatos; para trasladar un proyecto con audio se debe usar Project Package.
 - `OfflineAudioContext` no ofrece cancelación a mitad de una operación ya iniciada. El panel puede abortar antes o después de cada render y entre stems, evitando escrituras posteriores, pero no interrumpir el DSP interno de un stem en curso.

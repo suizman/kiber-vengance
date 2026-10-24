@@ -261,7 +261,8 @@ Esta sección actualiza el encargo original con el diseño real alcanzado. El re
 6. **Perform** — interpretación inmediata: teclado, MIDI, macros expresivos, Scratch Deck y grabación de tomas.
 
 Perform añade además un **Scratch Deck** diseñado como instrumento táctil: captura
-una mezcla masterizada de los clips activos en memoria y permite recorrerla en
+una mezcla masterizada de los clips activos, importa audio local decodificable por
+el navegador o recibe una región editada desde Audio Studio, y permite recorrerla en
 ambas direcciones mediante un AudioWorklet, con crossfader, filtro, sincronía,
 freno, spinback, stutter y feedback de forma de onda. La captura de deck es
 temporal y no destructiva. Record Take conserva el audio en IndexedDB y guarda
@@ -302,7 +303,8 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 8. Mezclar canales y lanes con pre-gain, grupos, sidechain, faders dB, panorama, sends, medidores, mastering/mono y comparación A/B.
 9. Interpretar y grabar con metrónomo, count-in, swing, timing cuantizado/libre y Scratch Deck; editar después los eventos de la toma.
 10. Elegir el punto de inicio del clip o de la canción con localizadores musicales y navegar a una posición exacta desde la línea temporal.
-11. Exportar canción, región o clips a WAV/MIDI, generar stems seleccionados, guardar JSON o crear un Project Package. La cabecera separa claramente Export de Export As.
+11. Pausar en el cursor y continuar desde la misma posición, incluso dentro de una región de audio importada.
+12. Exportar canción, región o clips a WAV/MIDI, generar stems seleccionados, guardar JSON o crear un Project Package. La cabecera separa claramente Export de Export As.
 
 ### Persistencia y significado de exportar
 

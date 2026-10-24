@@ -2,7 +2,7 @@
 
 This file is the operational memory for КИБЕР VENGANCE. It must be read alongside `kiber-vengance.md` before development continues. It records the product's actual state, established decisions, and user expectations; it does not replace the code or tests as the ultimate source of truth.
 
-Last updated: 2026-10-23.
+Last updated: 2026-10-25.
 
 ## Product intent
 
@@ -38,7 +38,7 @@ Last updated: 2026-10-23.
 - The arpeggiator, LFO, effects, and macros belong to the clip rather than globally to the track. Every clip preserves and exports its own character.
 - Visual keyboard and QWERTY `A S D F G H J K`, quantized or free recording, metronome, count-in, swing, and 4/4, 3/4, and 6/8 time signatures.
 - Web MIDI supports note-on/off, velocity, pitch bend, channel/poly pressure, and CC74/timbre when supported by the browser.
-- Perform includes a dedicated Scratch Deck. It renders the active mix into a temporary 1/2/4/8-bar buffer and provides sample-interpolated bidirectional touch/mouse/keyboard scratching, waveform feedback, crossfader, filter, sync, brake, spinback, and tempo-derived stutter through an `AudioWorklet`.
+- Perform includes a dedicated Scratch Deck. It renders the active mix into a temporary 1/2/4/8-bar buffer, accepts direct local audio import through the browser's Web Audio codecs, and receives edited Audio Studio regions through `Load Deck`. It provides sample-interpolated bidirectional touch/mouse/keyboard scratching, waveform feedback, crossfader, filter, sync, brake, spinback, and tempo-derived stutter through an `AudioWorklet`.
 - Audio Studio provides arbitrary non-destructive audio lanes and regions. Local files, microphone recordings, and committed Scratch Deck buffers support position, length, source offset, gain, fades, pitch, source BPM, reverse metadata, and rate-based tempo warp in live playback and offline WAV.
 - Audio Studio also contains **Prism Keys**, a persistent chromatic sampler with a large multicolor 25-key keyboard, strong per-note light feedback, waveform, root note, trim, tuning, level, low-pass filter, attack/release, 1–24 voice polyphony, reverse, and gate/one-shot/loop modes. It is playable by touch/mouse, the full chromatic QWERTY row `A W S E D F T G Y H U J K`, and velocity-sensitive MIDI when armed; `Z/X` or the visible octave buttons move QWERTY between C3–C4 and C4–C5. Record Take captures its live master output.
 - The Automation Lab stores global lanes with curve points and write-mode metadata, audible LFO modulation routes, and persistent MIDI CC Learn mappings. Musical transforms include retrograde, inversion, double/half time, and deterministic humanization.
@@ -56,6 +56,7 @@ Last updated: 2026-10-23.
 ### Transport and performance capture
 
 - The global song locator and active-clip locator select an exact musical start position. Playback begins from the selected scene/repeat/step rather than always returning to zero; the Arrange timeline also sets the global locator.
+- The dedicated Pause control preserves the active clip or global song playhead. Resume schedules imported audio from the matching source offset instead of restarting or dropping a region that began before the cursor. Audio view uses song-mode playback so its lanes sound from the global transport.
 - `Perform` records the audible master in real time, including live notes, macros, mixer changes, launcher actions, and Scratch Deck output. Audio is persisted locally in IndexedDB, while the v6 project stores take metadata and an editable, quantizable event log.
 - Takes can be trimmed, renamed, replayed, exported, or deleted. Individual automation events expose editable time/value and deletion; replay applies those edited events over the exact captured audio.
 
@@ -143,6 +144,7 @@ Last updated: 2026-10-23.
 - Reusable export destinations require File System Access support. Unsupported browsers download a new revision; supported browsers may ask to renew write permission after a restart or browser-data cleanup.
 - Scratch buffers remain temporary unless committed through `Resample Deck`; recorded performance audio persists in IndexedDB and its event data is serialized in v6. Editing events changes event replay; it does not retroactively re-synthesize the already captured compressed audio.
 - MediaRecorder container/codec support is browser-dependent. Performance capture is normally WebM/Opus in Chromium; deterministic composition, local samples, and stem exports use WAV.
+- Direct Scratch Deck import supports WAV plus MP3, OGG, WebM, and other formats only when the current browser exposes the corresponding decoder through `decodeAudioData`; unsupported codecs produce a visible error.
 - Sample and Audio Studio blobs are device-local and are not embedded in plain JSON. Project Package is required to move them; if an asset is missing, the serialized edit remains but cannot sound until the blob is restored.
 - Audio warp currently uses native playback-rate conversion. Tempo and pitch therefore move together; independent pitch-preserving time stretch would require a separate granular/phase-vocoder worklet and is not claimed by the current UI.
 - `OfflineAudioContext` cannot interrupt DSP already in progress. Export cancellation is observed before and after each render and between selected stems, and prevents subsequent file writes; an individual stem already rendering must finish first.
@@ -191,3 +193,12 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 ## Precision touch dials
 - Dials support continuous captured pointer dragging: vertical movement spans the range in 300 px, horizontal movement is five times finer; Shift adds desktop precision. Other fingers cannot interrupt a dial gesture. Release, cancellation, lost capture and blur clean up the gesture. Plus/minus remain available.
 - Dial and scratch surfaces own touch gestures; Perform buttons/ranges suppress double-tap zoom without disabling page pinch zoom. Physical iOS validation remains outstanding.
+
+## Audio transport and Scratch Deck sources (2026-10-25)
+
+- Audio Studio now stays in song mode when the global Play control is pressed, fixing imported regions that were visible but silent.
+- A dedicated Pause button stores the current clip/song cursor. Resuming inside a running audio region derives the correct source offset, remaining length and fade state.
+- Every Audio Studio region has `Load Deck` / `Al plato`; its temporary scratch buffer applies source offset, region length, lane/region gain, fades, pitch/tempo rate and reverse.
+- Perform adds direct local Scratch Deck import for browser-decodable WAV, MP3, OGG, WebM and related audio formats. The deck buffer remains temporary and non-destructive.
+- Service Worker cache revision is `v25-audio-scratch-pause`.
+- Validation: `npm run check:full` passed with 26 core tests and all 10 Chromium/Firefox functional workflows, including Audio Studio import/play/pause/resume and both Scratch Deck loading paths.

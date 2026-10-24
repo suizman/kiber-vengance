@@ -33,6 +33,7 @@ export class AudioEngine {
     drumSamples = new Map();
     audioAssets = new Map();
     activeAudioSources = new Set();
+    audioResumeStep = null;
     constructor(onStep = () => { }) { this.project = null; this.onStep = onStep; }
     async init() {
         if (!this.ctx) {
@@ -201,18 +202,21 @@ export class AudioEngine {
         return; const fx = character.fx || {}, macros = character.macros, bypass = fx.bypass, space = .55 + macros.space * .75, energy = .78 + macros.energy * .25 + (macros.aggression || 0) * .32, soloActive = TRACKS.some(track => this.project.tracks[track].solo), audible = !cfg.mute && (!soloActive || cfg.solo) && !this.launcherStopped?.has(id), smooth = (p, v) => p.setTargetAtTime(v, Math.max(this.ctx.currentTime, time), .025), fader = Math.max(0, Math.min(2, cfg.volume ?? 1)) * dbToGain(cfg.preGainDb ?? 0); bus.saturation.curve = this.saturationCurve(bypass ? 0 : (fx.saturation || 0) * energy); bus.shape.curve = this.distortionCurve(bypass ? 0 : (fx.distortion || 0) * energy); smooth(bus.tone.gain, bypass ? 0 : ((fx.tone ?? .5) - .5) * 18 - macros.darkness * 2); smooth(bus.dry.gain, bypass ? 1 : .82); smooth(bus.chorusWet.gain, bypass ? 0 : (fx.chorus || 0) * .4); smooth(bus.lfo.frequency, .18 + (fx.chorus || 0) * .8); smooth(bus.depth.gain, .002 + (fx.chorus || 0) * .006); smooth(bus.delay.delayTime, .16 + (fx.delay || 0) * .22); smooth(bus.feedback.gain, bypass ? 0 : Math.min(.55, .1 + (fx.delay || 0) * .4)); smooth(bus.delayWet.gain, bypass ? 0 : (fx.delay || 0) * .34 * space); smooth(bus.reverbWet.gain, bypass ? 0 : (fx.reverb || 0) * .42 * space); smooth(bus.output.gain, audible ? fader : 0); smooth(bus.sendOutput.gain, audible ? (cfg.sendMode === 'pre' ? dbToGain(cfg.preGainDb ?? 0) : fader) : 0); }
     async start(project, { countInBars = 0, startStep = 0 } = {}) { await this.init(); this.setProject(project); if (this.playing)
         return; this.playing = true; this.nextTime = this.ctx.currentTime + .06; this.sceneIndex = 0; this.sceneStep = 0; this.sceneRepeat = 0; this.seek(startStep, this.songMode); this.countInRemaining = Math.max(0, countInBars * meterSteps(project.meter)); this.countingIn = this.countInRemaining > 0; this.sequenceStartTime = this.nextTime - this.position * secondsPerStep(project.tempo) + this.countInRemaining * secondsPerStep(project.tempo); this.timer = setInterval(() => this.schedule(), 25); this.schedule(); }
-    stop() { this.playing = false; this.countingIn = false; if (this.timer)
-        clearInterval(this.timer); this.timer = null; for (const source of this.activeAudioSources)
+    stopActiveAudioRegions() { for (const source of this.activeAudioSources)
         try {
             source.stop();
         }
-        catch { } this.activeAudioSources.clear(); this.onStep(-1, 0, -1, { stopped: true }); }
+        catch { } this.activeAudioSources.clear(); }
+    stop() { this.playing = false; this.countingIn = false; if (this.timer)
+        clearInterval(this.timer); this.timer = null; this.stopActiveAudioRegions(); this.audioResumeStep = null; this.onStep(-1, 0, -1, { stopped: true }); }
     seek(step, songMode = this.songMode) { if (!this.project)
-        return; const requested = Math.max(0, Math.floor(step)); if (!songMode) {
+        return; const requested = Math.max(0, Math.floor(step)); if (this.playing && this.timer)
+        this.stopActiveAudioRegions(); if (!songMode) {
         const length = Math.max(...TRACKS.map(track => clipLengthSteps(activeClip(this.project, track))));
         this.position = requested % Math.max(1, length);
+        this.audioResumeStep = null;
         return this.position;
-    } const { durationSteps } = playbackEvents(this.project, { song: true }), target = requested % Math.max(1, durationSteps); let cursor = 0; for (let sceneIndex = 0; sceneIndex < this.project.arrangement.length; sceneIndex++) {
+    } const { durationSteps } = playbackEvents(this.project, { song: true }), target = requested % Math.max(1, durationSteps); this.audioResumeStep = target; let cursor = 0; for (let sceneIndex = 0; sceneIndex < this.project.arrangement.length; sceneIndex++) {
         const scene = this.project.arrangement[sceneIndex], length = sceneLengthSteps(this.project, scene);
         for (let repeat = 0; repeat < scene.repeats; repeat++) {
             if (target < cursor + length) {
@@ -224,7 +228,7 @@ export class AudioEngine {
             }
             cursor += length;
         }
-    } this.position = 0; this.sceneIndex = 0; this.sceneRepeat = 0; this.sceneStep = 0; return 0; }
+    } this.position = 0; this.sceneIndex = 0; this.sceneRepeat = 0; this.sceneStep = 0; this.audioResumeStep = 0; return 0; }
     schedule() { if (!this.playing || !this.project)
         return; if (this.nextTime < this.ctx.currentTime - .1)
         this.nextTime = this.ctx.currentTime + .03; while (this.nextTime < this.ctx.currentTime + .12) {
@@ -313,34 +317,39 @@ export class AudioEngine {
             bus.output.gain.exponentialRampToValueAtTime(Math.max(.0001, normal), time + .22);
         }
     } }
-    scheduleAudioRegions(time, step) { const solo = (this.project.audioLanes || []).some(lane => lane.solo); for (const lane of this.project.audioLanes || []) {
-        if (lane.mute || (solo && !lane.solo))
-            continue;
-        for (const region of lane.regions) {
-            const trigger = Math.floor(region.startStep);
-            if (trigger !== step)
+    scheduleAudioRegions(time, step) {
+        const solo = (this.project.audioLanes || []).some(lane => lane.solo), resuming = this.audioResumeStep === step, stepSeconds = secondsPerStep(this.project.tempo);
+        for (const lane of this.project.audioLanes || []) {
+            if (lane.mute || (solo && !lane.solo))
                 continue;
-            const buffer = this.audioAssets.get(region.assetId);
-            if (!buffer)
-                continue;
-            const rate = audioRegionRate(region, this.project.tempo), fraction = Math.max(0, region.startStep - trigger), when = Math.max(this.ctx.currentTime + .001, time + fraction * secondsPerStep(this.project.tempo)), offset = Math.max(0, Math.min(buffer.duration - .001, region.offsetSeconds)), available = Math.max(.001, buffer.duration - offset), wanted = region.lengthSteps * secondsPerStep(this.project.tempo) * rate, duration = Math.min(available, wanted), source = this.ctx.createBufferSource(), gain = this.ctx.createGain(), pan = this.ctx.createStereoPanner();
-            source.buffer = buffer;
-            source.playbackRate.value = rate;
-            pan.pan.value = Math.max(-1, Math.min(1, lane.pan));
-            const level = Math.max(.0001, lane.volume * dbToGain(region.gainDb)), audible = Math.max(.01, duration / rate), fadeIn = Math.min(audible * .45, region.fadeInSteps * secondsPerStep(this.project.tempo)), fadeOut = Math.min(audible * .45, region.fadeOutSteps * secondsPerStep(this.project.tempo));
-            gain.gain.setValueAtTime(fadeIn ? .0001 : level, when);
-            if (fadeIn)
-                gain.gain.linearRampToValueAtTime(level, when + fadeIn);
-            if (fadeOut) {
-                gain.gain.setValueAtTime(level, Math.max(when + fadeIn, when + audible - fadeOut));
-                gain.gain.linearRampToValueAtTime(.0001, when + audible);
+            for (const region of lane.regions) {
+                const trigger = Math.floor(region.startStep), startsNow = trigger === step, insideOnResume = resuming && region.startStep < step && region.startStep + region.lengthSteps > step;
+                if (!startsNow && !insideOnResume)
+                    continue;
+                const buffer = this.audioAssets.get(region.assetId);
+                if (!buffer)
+                    continue;
+                const rate = audioRegionRate(region, this.project.tempo), elapsedSteps = insideOnResume ? step - region.startStep : 0, fraction = startsNow ? Math.max(0, region.startStep - trigger) : 0, when = Math.max(this.ctx.currentTime + .001, time + fraction * stepSeconds), offset = Math.max(0, Math.min(buffer.duration - .001, region.offsetSeconds + elapsedSteps * stepSeconds * rate)), available = Math.max(.001, buffer.duration - offset), wanted = Math.max(.001, (region.lengthSteps - elapsedSteps) * stepSeconds * rate), duration = Math.min(available, wanted), source = this.ctx.createBufferSource(), gain = this.ctx.createGain(), pan = this.ctx.createStereoPanner();
+                source.buffer = buffer;
+                source.playbackRate.value = rate;
+                pan.pan.value = Math.max(-1, Math.min(1, lane.pan));
+                const level = Math.max(.0001, lane.volume * dbToGain(region.gainDb)), audible = Math.max(.01, duration / rate), fadeInTotal = Math.min(region.lengthSteps * stepSeconds * .45, region.fadeInSteps * stepSeconds), fadeOut = Math.min(audible * .45, region.fadeOutSteps * stepSeconds), elapsedSeconds = elapsedSteps * stepSeconds, remainingFadeIn = Math.max(0, fadeInTotal - elapsedSeconds), startLevel = fadeInTotal && elapsedSeconds < fadeInTotal ? Math.max(.0001, level * elapsedSeconds / fadeInTotal) : level;
+                gain.gain.setValueAtTime(startLevel, when);
+                if (remainingFadeIn)
+                    gain.gain.linearRampToValueAtTime(level, when + Math.min(audible, remainingFadeIn));
+                if (fadeOut) {
+                    gain.gain.setValueAtTime(level, Math.max(when + Math.min(audible, remainingFadeIn), when + audible - fadeOut));
+                    gain.gain.linearRampToValueAtTime(.0001, when + audible);
+                }
+                source.connect(gain).connect(pan).connect(this.master);
+                this.activeAudioSources.add(source);
+                source.onended = () => { this.activeAudioSources.delete(source); source.disconnect(); gain.disconnect(); pan.disconnect(); };
+                source.start(when, offset, duration);
             }
-            source.connect(gain).connect(pan).connect(this.master);
-            this.activeAudioSources.add(source);
-            source.onended = () => { this.activeAudioSources.delete(source); source.disconnect(); gain.disconnect(); pan.disconnect(); };
-            source.start(when, offset, duration);
         }
-    } }
+        if (resuming)
+            this.audioResumeStep = null;
+    }
     advanceTransport() { this.position++; if (!this.songMode && this.launchQueue?.size) {
         for (const [track, launch] of this.launchQueue)
             if (this.position % launch.quantization === 0) {

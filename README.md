@@ -35,7 +35,7 @@ npm run check:full
 8. Set the clip or song locator to start playback at any step. The Arrange timeline also jumps the global song locator to a section.
 9. Use `Export` to update the last linked destination or `Export As` to choose a format and new file. The panel supports WAV/MIDI, JSON/package backups, 16/32-bit depth, three sample rates, dither, normalization, dry/wet output, tail/region control, and selected stems.
 
-Audio Studio adds any number of local audio lanes beside the generated instruments. Files and microphone takes are stored privately in IndexedDB and become non-destructive regions with start, length, source offset, gain, fades, pitch, source BPM and tempo-rate warp. The Scratch Deck buffer can be committed as a region. Song WAV and Project Package include loaded audio; plain JSON contains metadata only. Tempo-rate warp currently changes playback rate, so it also changes pitch—the browser-native engine does not claim independent pitch-preserving time stretch.
+Audio Studio adds any number of local audio lanes beside the generated instruments. Files and microphone takes are stored privately in IndexedDB and become non-destructive regions with start, length, source offset, gain, fades, pitch, source BPM and tempo-rate warp. Global Play schedules these lanes together with the arrangement, while Pause preserves the playhead and resumes an audio region from the matching source offset. Every region offers `Load Deck`, which creates a temporary Scratch Deck buffer that respects its trim, length, gain, fades, pitch, warp and reverse settings. The Scratch Deck buffer can also be committed back as a region. Song WAV and Project Package include loaded audio; plain JSON contains metadata only. Tempo-rate warp currently changes playback rate, so it also changes pitch—the browser-native engine does not claim independent pitch-preserving time stretch.
 
 **Prism Keys** in Audio Studio turns any local audio file into a chromatic performance instrument. Its large multicolor 25-key keyboard gives illuminated per-note feedback and supports mouse, touch, velocity-sensitive MIDI, and the complete chromatic QWERTY row `A W S E D F T G Y H U J K` when armed. Use `Z/X` or the visible octave buttons to switch between C3–C4 and C4–C5. Root note, trim, tuning, level, filter, attack/release, reverse, polyphony, and gate/one-shot/loop modes persist in the v6 project. The private source blob lives in IndexedDB and travels with Project Package; use Record Take to capture a live sampler performance.
 
@@ -43,7 +43,7 @@ The global Automation Lab stores curve points for master or track parameters, of
 
 Launch provides a five-track clip matrix for improvisation. Queue on beats or bars, stop tracks independently, control visible cells with MIDI notes 36–63, and capture the result as arrangement sections. Arrange adds multi-selection, copy/paste, fills, zoom, markers, exact timeline navigation, loop regions, and punch-in limits.
 
-The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, metronome, and a one- or two-bar count-in. Changing the time signature remaps note and automation positions to preserve the musical shape of the clips.
+The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, metronome, and a one- or two-bar count-in. Its dedicated Pause control stops at the current playhead without returning to the configured locator; the next Play continues from that position, including inside Audio Studio regions. Changing the time signature remaps note and automation positions to preserve the musical shape of the clips.
 
 ## Performance and editing
 
@@ -73,7 +73,10 @@ The visual keyboard responds to mouse and touch, sustaining voices until the key
 Perform includes a bidirectional Scratch Deck driven by a dedicated
 `AudioWorklet`. `Capture Mix` renders the active clips into a mastered 1, 2, 4,
 or 8-bar memory buffer; shorter source clips repeat cleanly to fill the selected
-length. The platter supports mouse, touch, wheel/trackpad, and keyboard control,
+length. `Import Audio` also decodes a local WAV, MP3, OGG, WebM, or any other
+audio format supported by the current browser directly into the deck. Audio
+Studio regions can send their edited signal to the same temporary buffer with
+`Load Deck`. The platter supports mouse, touch, wheel/trackpad, and keyboard control,
 with interpolated forward and reverse playback, a smooth motor return, waveform
 and playhead feedback, equal-power crossfading against the live program, a deck
 low-pass filter, beat sync, brake, spinback, and tempo-derived stutter.
@@ -137,7 +140,7 @@ Offline WAV renders arrangement, automation, clip character, modeled guitar, syn
 
 The app includes a manifest and Service Worker for installation and offline use after the first load. The `Compatibility report` menu item displays and copies capabilities, status, and sample rate without telemetry. The suite is verified in headless Firefox and Chromium. The interface provides visible focus, accessible labels, high contrast, reduced motion, and a mobile layout without horizontal overflow; detailed editing remains optimized for desktop.
 
-There are no runtime dependencies: only standard browser APIs. Web MIDI depends on support and permission; Safari/iOS still requires manual verification on Apple hardware. Export handles, performance audio, and samples use browser storage. Clearing it removes binary assets, so plain JSON is not a sample backup—use Project Package. Unsupported File System Access browsers fall back to downloads. Performance capture uses the MediaRecorder codec exposed by the browser, normally WebM/Opus. Plugins, cloud storage, and multi-user collaboration remain outside the local static architecture.
+There are no runtime dependencies: only standard browser APIs. Web MIDI depends on support and permission; Safari/iOS still requires manual verification on Apple hardware. MP3/OGG/WebM import depends on the codecs exposed to Web Audio by the current browser; unsupported files produce a visible import error. Export handles, performance audio, and samples use browser storage. Clearing it removes binary assets, so plain JSON is not a sample backup—use Project Package. Unsupported File System Access browsers fall back to downloads. Performance capture uses the MediaRecorder codec exposed by the browser, normally WebM/Opus. Plugins, cloud storage, and multi-user collaboration remain outside the local static architecture.
 
 ## Licensing
 
