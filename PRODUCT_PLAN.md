@@ -108,3 +108,11 @@ Hasta 820 px, la página usa scroll vertical del documento y altura automática 
 ## Usabilidad centrada en composición (2026-10-24)
 
 Clips abre el editor y Sonido muestra los racks bajo demanda. En móvil hay transporte fijo y navegación inferior Clips/Sonido/Arreglo/Mezcla, con controles principales de 44 px. El editor distingue Dibujar, Seleccionar y Navegar; el contexto muestra pista, clip y compases. Generación y armonía están plegadas inicialmente. Exportación prioriza proyecto completo, audio y MIDI, conservando formatos y opciones avanzadas. Los errores de autoguardado quedan visibles y los snapshots no impiden guardar el proyecto actual. La escala móvil sigue al dispositivo; el ajuste 80–120% permanece para escritorio.
+
+## Touch editing and usability completion (2026-10-24)
+
+- Selection actions duplicate, quantize or delete only selected notes. Duplication selects the copies and refuses overflow with an instruction to extend the clip. Quantization uses the current snap grid.
+- Undo feedback now covers clip creation/variation/deletion, note deletion, selection edits, backing generation and clearing automation. Toast timers no longer dismiss newer feedback early.
+- Automation is collapsed until requested. Shared controls and dialogs have larger text and touch targets; mobile inputs use 16 px text to avoid focus zoom.
+- Forge, Perform and Prism piano keys use `touch-action: manipulation` to suppress double-tap zoom while retaining browser pinch zoom. Forge/Perform track separate pointer IDs and release held voices on pointer cancellation, lost capture, blur and page hiding.
+- Validation: `npm run check` passed. Dedicated Chromium workflows passed at 390/768/1366 px, including selected-note actions and Undo, automation disclosure, repeated touch taps without scale changes, blur voice release, all six views without horizontal document overflow, export and autosave-error feedback. `npm run check:full` could not complete: its configured Playwright browser and Firefox binary are absent. Physical iPhone/Safari validation remains outstanding.

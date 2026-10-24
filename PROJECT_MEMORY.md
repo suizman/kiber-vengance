@@ -174,3 +174,11 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 - Export presents complete project package, audio and MIDI first. Advanced rendering options, other formats and linked destinations remain available in disclosure panels.
 - Autosave writes the current project before optional recovery snapshots. Failures display a persistent local-save warning; failed recovery snapshots do not block the project save. Duplication, generation and quantization offer Undo feedback.
 - Validation: typecheck/build/lint/unit-test command passed. Dedicated real Chromium workflows passed at widths 390, 768 and 1366: create/duplicate/undo clips, draw/select/navigate, export disclosures, quota-failure feedback, transport visibility and absence of horizontal overflow. Existing full E2E suite still fails in this environment; Safari/iOS physical verification remains pending.
+
+## Touch editing and usability completion (2026-10-24)
+
+- Selection actions duplicate, quantize or delete only selected notes. Duplication selects the copies and refuses overflow with an instruction to extend the clip. Quantization uses the current snap grid.
+- Undo feedback now covers clip creation/variation/deletion, note deletion, selection edits, backing generation and clearing automation. Toast timers no longer dismiss newer feedback early.
+- Automation is collapsed until requested. Shared controls and dialogs have larger text and touch targets; mobile inputs use 16 px text to avoid focus zoom.
+- Forge, Perform and Prism piano keys use `touch-action: manipulation` to suppress double-tap zoom while retaining browser pinch zoom. Forge/Perform track separate pointer IDs and release held voices on pointer cancellation, lost capture, blur and page hiding.
+- Validation: `npm run check` passed. Dedicated Chromium workflows passed at 390/768/1366 px, including selected-note actions and Undo, automation disclosure, repeated touch taps without scale changes, blur voice release, all six views without horizontal document overflow, export and autosave-error feedback. `npm run check:full` could not complete: its configured Playwright browser and Firefox binary are absent. Physical iPhone/Safari validation remains outstanding.

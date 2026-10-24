@@ -12,6 +12,7 @@ let project = loadProject(), selectedTrack = 'lead', selectedNotes = new Set(), 
 const clipStartSteps = new Map();
 let samplerArmed = false, loadedSamplerAssetId = null, samplerQwertyBase = 60;
 const samplerHeld = new Map();
+let toastTimer;
 let editorTool = 'draw';
 let soundPanel = false;
 let language = localStorage.getItem(LANGUAGE_STORAGE) === 'es' ? 'es' : 'en', tutorialStep = 0, helpMode = false;
@@ -77,12 +78,12 @@ function changed(render = false) {
         renderAll();
     syncStudioUi();
 }
-function toast(message, undo = false) { const el = $('#toast'); el.textContent = message; if (undo) {
+function toast(message, undo = false) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; if (undo) {
     const button = document.createElement('button');
     button.textContent = L('Undo', 'Deshacer');
     button.onclick = () => { $('#undoBtn').click(); el.classList.remove('show'); };
     el.append(button);
-} el.classList.add('show'); setTimeout(() => el.classList.remove('show'), undo ? 6000 : 2500); }
+} el.classList.add('show'); toastTimer = setTimeout(() => el.classList.remove('show'), undo ? 6000 : 2500); }
 function download(data, name, type = 'application/octet-stream') { const blob = data instanceof Blob ? data : new Blob([data], { type }), a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 const quickHandles = new Map(), QUICK_HANDLE_DB = 'kiber-vengance-file-handles-v1', LAST_EXPORT = 'kiber-vengance-last-export-v1';
 function quickHandleDb() { return new Promise((resolve, reject) => { const request = indexedDB.open(QUICK_HANDLE_DB, 1); request.onupgradeneeded = () => request.result.createObjectStore('handles'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
@@ -370,7 +371,7 @@ function syncRollScroll() { const pane = $('#rollPane'), content = $('#rollRuler
     content.style.transform = `translateX(${-pane.scrollLeft}px)`; $('#pianoLabelRows').style.transform = `translateY(${-pane.scrollTop}px)`; $('#automationPane').scrollLeft = pane.scrollLeft; }
 function setDefaultScroll() { setTimeout(() => { const pane = $('#rollPane'); if (!pane || selectedTrack === 'drums')
     return; const row = (TRACK_META[selectedTrack].high - TRACK_META[selectedTrack].base) * 22; pane.scrollTop = Math.max(0, row - pane.clientHeight / 2); rollScroll[selectedTrack] = { left: 0, top: pane.scrollTop }; syncRollScroll(); }, 0); }
-function renderSelection() { const notes = clip().notes.filter(n => selectedNotes.has(n.id)); $('#selectionCount').textContent = language === 'es' ? `${notes.length} NOTA${notes.length === 1 ? '' : 'S'}` : `${notes.length} NOTE${notes.length === 1 ? '' : 'S'}`; $('#noteLength').disabled = !notes.length; $('#noteVelocity').disabled = !notes.length; $('#deleteNotesBtn').disabled = !notes.length; if (notes.length) {
+function renderSelection() { const notes = clip().notes.filter(n => selectedNotes.has(n.id)); $('#selectionCount').textContent = language === 'es' ? `${notes.length} NOTA${notes.length === 1 ? '' : 'S'}` : `${notes.length} NOTE${notes.length === 1 ? '' : 'S'}`; $('#noteLength').disabled = !notes.length; $('#noteVelocity').disabled = !notes.length; $('#deleteNotesBtn').disabled = !notes.length; $$('[data-selection-action]').forEach((button) => button.disabled = !notes.length); if (notes.length) {
     $('#noteLength').value = notes[0].length;
     $('#noteVelocity').value = notes.reduce((a, n) => a + n.velocity, 0) / notes.length;
 } }
@@ -378,13 +379,30 @@ function editSelection(key, value) { const notes = clip().notes.filter(n => sele
     return; snapshot(); for (const n of notes)
     n[key] = key === 'velocity' ? Math.max(.01, Math.min(1, +value)) : Math.max(project.editor.snap, Math.min(clipLengthSteps(clip()) - n.step, +value)); changed(); renderPiano(); }
 function deleteSelection() { if (!selectedNotes.size)
-    return; snapshot(); clip().notes = clip().notes.filter(n => !selectedNotes.has(n.id)); selectedNotes.clear(); changed(); renderPiano(); renderSelection(); }
+    return; snapshot(); clip().notes = clip().notes.filter(n => !selectedNotes.has(n.id)); selectedNotes.clear(); changed(); renderPiano(); renderSelection(); toast(L('Selected notes deleted', 'Notas seleccionadas borradas'), true); }
 function renderAutomation() { const c = clip(), steps = clipLengthSteps(c), zoom = project.editor.zoom, param = project.editor.automationParam, lane = c.automation[param]; $('#automationParam').value = param; const el = $('#automationLane'); el.style.width = `${steps * zoom}px`; el.innerHTML = Array.from({ length: steps }, (_, s) => { const value = automationValue(c, param, s, .5), point = lane[s] != null; return `<i class="automation-step ${point ? 'point' : ''}" style="left:${s * zoom}px;width:${zoom}px;--value:${value}" data-step="${s}"></i>`; }).join('') + `<div class="automation-playhead" style="left:${Math.max(0, currentStep % steps) * zoom}px"></div>`; const draw = (e) => { const rect = el.getBoundingClientRect(), step = Math.max(0, Math.min(steps - 1, Math.round((e.clientX - rect.left) / zoom / project.editor.snap) * project.editor.snap)), value = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height)); lane[step] = value; renderAutomation(); engine.setProject(project); }; el.onpointerdown = (e) => { snapshot(); draw(e); const move = (ev) => draw(ev), up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); changed(); }; window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); }; $('#automationPane').scrollLeft = $('#rollPane').scrollLeft; }
-function renderKeyboard() { const base = TRACK_META[selectedTrack].base, offsets = selectedTrack === 'drums' ? [0, 1, 2, 3, 4, 5, 6] : [0, 2, 4, 5, 7, 9, 11, 12], markup = offsets.map((x, i) => `<button class="key" data-pitch="${base + x}" data-source="${keyMap[i] || i}">${keyMap[i]?.toUpperCase() || ''}</button>`).join(''); for (const id of ['#keyboard', '#performanceKeyboard']) {
-    $(id).innerHTML = markup;
-    $(id).querySelectorAll('.key').forEach((k) => { k.onpointerdown = () => startPerformance(k.dataset.source, +k.dataset.pitch, .85, k); k.onpointerup = () => endPerformance(k.dataset.source, k); k.onpointerleave = (e) => { if (e.buttons)
-        endPerformance(k.dataset.source, k); }; });
-} }
+const heldKeyPointers = new Map();
+function releaseKeyPointer(pointerId) { const held = heldKeyPointers.get(pointerId); if (!held)
+    return; heldKeyPointers.delete(pointerId); endPerformance(held.source, held.key); }
+function releaseKeyPointers() { for (const id of [...heldKeyPointers.keys()])
+    releaseKeyPointer(id); }
+window.addEventListener('blur', releaseKeyPointers);
+document.addEventListener('visibilitychange', () => { if (document.hidden)
+    releaseKeyPointers(); });
+function renderKeyboard() {
+    releaseKeyPointers();
+    const base = TRACK_META[selectedTrack].base, offsets = selectedTrack === 'drums' ? [0, 1, 2, 3, 4, 5, 6] : [0, 2, 4, 5, 7, 9, 11, 12];
+    const markup = offsets.map((x, i) => `<button class="key" data-pitch="${base + x}" data-source="${keyMap[i] || i}" aria-label="${selectedTrack === 'drums' ? DRUM_NAMES[x] : pitchNames[(base + x) % 12]} ${keyMap[i]?.toUpperCase() || ''}">${keyMap[i]?.toUpperCase() || ''}</button>`).join('');
+    for (const id of ['#keyboard', '#performanceKeyboard']) {
+        $(id).innerHTML = markup;
+        $(id).querySelectorAll('.key').forEach((key) => {
+            key.onpointerdown = (event) => { if (event.button !== 0)
+                return; event.preventDefault(); const source = `key-pointer-${event.pointerId}`; heldKeyPointers.set(event.pointerId, { source, key }); key.setPointerCapture(event.pointerId); startPerformance(source, Number(key.dataset.pitch), .85, key); };
+            key.onpointerup = key.onpointercancel = key.onlostpointercapture = (event) => releaseKeyPointer(event.pointerId);
+            key.ondblclick = event => event.preventDefault();
+        });
+    }
+}
 function startPerformance(source, pitch, velocity = .8, el = null, expression = {}, channel = null) { if (samplerArmed && activeView === 'audio') {
     const keyboardIndex = keyMap.indexOf(source), samplerPitch = keyboardIndex >= 0 ? samplerQwertyPitches[keyboardIndex] : pitch, samplerKey = $(`[data-sampler-pitch="${samplerPitch}"]`);
     startSamplerPerformance(source, samplerPitch, velocity, samplerKey);
@@ -1276,9 +1294,9 @@ $('#masterVolume').oninput = () => { project.master = +$('#masterVolume').value;
 $('#masterVolume').onchange = () => changed();
 $('#undoBtn').onclick = () => { project = history.undo(project); engine.project = project; selectedNotes.clear(); changed(true); };
 $('#redoBtn').onclick = () => { project = history.redo(project); engine.project = project; selectedNotes.clear(); changed(true); };
-$('#newClipBtn').onclick = () => { snapshot(); const source = clip(), c = createClip(selectedTrack, `${TRACK_META[selectedTrack].label} ${clipsForTrack(project, selectedTrack).length + 1}`, 2, meterSteps(project.meter)); c.character = structuredClone(source.character); project.clips.push(c); project.activeClipIds[selectedTrack] = c.id; selectedNotes.clear(); changed(true); toast(L('INDEPENDENT CLIP + CHARACTER CREATED', 'CLIP Y CARÁCTER INDEPENDIENTES CREADOS')); };
+$('#newClipBtn').onclick = () => { snapshot(); const source = clip(), c = createClip(selectedTrack, `${TRACK_META[selectedTrack].label} ${clipsForTrack(project, selectedTrack).length + 1}`, 2, meterSteps(project.meter)); c.character = structuredClone(source.character); project.clips.push(c); project.activeClipIds[selectedTrack] = c.id; selectedNotes.clear(); changed(true); toast(L('New clip created', 'Nuevo clip creado'), true); };
 $('#duplicateBtn').onclick = () => { snapshot(); duplicateClip(project, clip().id); selectedNotes.clear(); changed(true); toast(L('Clip duplicated', 'Clip duplicado'), true); };
-$('#mutateBtn').onclick = () => { snapshot(); varyClip(project, clip(), clip().character.macros.tension); selectedNotes.clear(); changed(true); };
+$('#mutateBtn').onclick = () => { snapshot(); varyClip(project, clip(), clip().character.macros.tension); selectedNotes.clear(); changed(true); toast(L('Variation created', 'Variación creada'), true); };
 $('#noteLength').onchange = () => editSelection('length', $('#noteLength').value);
 $('#noteVelocity').onpointerdown = () => { if (selectedNotes.size)
     snapshot(); };
@@ -1287,7 +1305,7 @@ $('#noteVelocity').oninput = () => { for (const n of clip().notes.filter(n => se
 $('#noteVelocity').onchange = () => changed();
 $('#deleteNotesBtn').onclick = deleteSelection;
 $('#automationParam').onchange = () => { project.editor.automationParam = $('#automationParam').value; changed(); renderAutomation(); };
-$('#clearAutomationBtn').onclick = () => { snapshot(); clip().automation[project.editor.automationParam] = {}; changed(); renderAutomation(); };
+$('#clearAutomationBtn').onclick = () => { snapshot(); clip().automation[project.editor.automationParam] = {}; changed(); renderAutomation(); toast(L('Automation cleared', 'Automatización borrada'), true); };
 $('#addSceneBtn').onclick = () => { snapshot(); addArrangementScene(project); changed(true); focusScene(project.arrangement.length - 1); };
 $('#autoArrangeBtn').onclick = () => { snapshot(); distributeArrangementPatterns(project); changed(true); toast('CLIPS DISTRIBUTED ACROSS SONG'); };
 function activateView(view) { activeView = view; $$('[data-view]').forEach(x => x.classList.toggle('active', x.dataset.view === view)); $$('.view').forEach(v => v.classList.toggle('active', v.id === `${view}View`)); engine.songMode = ['audio', 'arrange', 'mix'].includes(view); if (view === 'launch')
@@ -1343,14 +1361,14 @@ catch (err) {
 } };
 $('#backingBtn').onclick = () => open('#backingDialog');
 $('#backingIntensity').oninput = () => $('#backingIntensityValue').textContent = Math.round(+$('#backingIntensity').value * 100);
-$('#generateBackingBtn').onclick = () => { snapshot(); generateBacking(project, { sections: +$('#backingSections').value, intensity: +$('#backingIntensity').value, style: $('#backingStyle').value }); selectedNotes.clear(); changed(true); $('#backingDialog').close(); activateView('arrange'); toast(L('BACKING GENERATED · GUITAR READY', 'BASE GENERADA · GUITARRA LISTA')); };
+$('#generateBackingBtn').onclick = () => { snapshot(); generateBacking(project, { sections: +$('#backingSections').value, intensity: +$('#backingIntensity').value, style: $('#backingStyle').value }); selectedNotes.clear(); changed(true); $('#backingDialog').close(); activateView('arrange'); toast(L('Backing generated · guitar ready', 'Base generada · guitarra lista'), true); };
 $('#deleteClipDialog').onclose = () => pendingDeleteClipId = null;
 $('#confirmDeleteClipBtn').onclick = () => { if (!pendingDeleteClipId)
     return; const target = project.clips.find((c) => c.id === pendingDeleteClipId); if (!target)
     return; const name = target.name; snapshot(); if (!deleteClip(project, pendingDeleteClipId)) {
     toast(L('KEEP AT LEAST ONE CLIP PER TRACK', 'DEBE QUEDAR UN CLIP POR PISTA'));
     return;
-} pendingDeleteClipId = null; selectedNotes.clear(); $('#deleteClipDialog').close(); changed(true); toast(L(`“${name}” DELETED · ARRANGEMENT UPDATED`, `“${name}” BORRADO · ARREGLO ACTUALIZADO`)); };
+} pendingDeleteClipId = null; selectedNotes.clear(); $('#deleteClipDialog').close(); changed(true); toast(L(`“${name}” DELETED · ARRANGEMENT UPDATED`, `“${name}” BORRADO · ARREGLO ACTUALIZADO`), true); };
 document.addEventListener('keydown', e => { const target = e.target, typing = Boolean(target?.closest?.('textarea,[contenteditable="true"],input:not([type]),input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],input[type="url"],input[type="tel"]')), blocked = $$('dialog').some(dialog => dialog.open) || typing, key = e.code === 'KeyS' || e.key.toLowerCase() === 's' ? 'solo' : e.code === 'KeyM' || e.key.toLowerCase() === 'm' ? 'mute' : e.code === 'KeyV' || e.key.toLowerCase() === 'v' ? 'mutate' : null; if (!blocked && !e.ctrlKey && !e.metaKey && !e.altKey && e.shiftKey && key) {
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -1574,6 +1592,38 @@ function syncStudioUi() {
     const hint = $('#recordHint');
     hint.textContent = recordArmed ? L('Armed: keyboard / MIDI notes → active clip. Press Play to record.', 'Preparado: notas de teclado / MIDI → clip activo. Pulsa Play para grabar.') : L('Notes record into the active clip. Record Take captures audio in Perform.', 'Las notas se graban en el clip activo. Grabar toma captura audio en Perform.');
 }
+function duplicateSelectedNotes() {
+    const c = clip(), notes = c.notes.filter(n => selectedNotes.has(n.id));
+    if (!notes.length)
+        return;
+    const first = Math.min(...notes.map(n => n.step + n.offset)), last = Math.max(...notes.map(n => n.step + n.offset + n.length));
+    const shift = Math.max(project.editor.snap, Math.ceil((last - first) / project.editor.snap) * project.editor.snap);
+    if (last + shift > clipLengthSteps(c)) {
+        toast(L('Not enough room. Increase the clip bars to duplicate these notes.', 'No hay espacio. Amplía los compases del clip para duplicar estas notas.'));
+        return;
+    }
+    snapshot();
+    const copies = notes.map(n => ({ ...structuredClone(n), id: cryptoId(), step: n.step + shift }));
+    c.notes.push(...copies);
+    selectedNotes = new Set(copies.map(n => n.id));
+    changed();
+    renderPiano();
+    toast(L('Selected notes duplicated', 'Notas seleccionadas duplicadas'), true);
+}
+function quantizeSelectedNotes() {
+    const c = clip(), notes = c.notes.filter(n => selectedNotes.has(n.id));
+    if (!notes.length)
+        return;
+    snapshot();
+    for (const n of notes) {
+        n.step = Math.max(0, Math.min(clipLengthSteps(c) - project.editor.snap, Math.round((n.step + n.offset) / project.editor.snap) * project.editor.snap));
+        n.offset = 0;
+        n.length = Math.min(clipLengthSteps(c) - n.step, Math.max(project.editor.snap, Math.round(n.length / project.editor.snap) * project.editor.snap));
+    }
+    changed();
+    renderPiano();
+    toast(L('Selected notes quantized', 'Notas seleccionadas cuantizadas'), true);
+}
 function setupStudioUi() {
     const bar = document.createElement('div');
     bar.className = 'studio-context';
@@ -1622,6 +1672,34 @@ function setupStudioUi() {
     undo.onclick = () => $('#undoBtn').click();
     tools.append(undo);
     $('.piano-shell').before(tools);
+    const selection = document.createElement('div');
+    selection.className = 'selection-actions';
+    selection.setAttribute('role', 'group');
+    selection.setAttribute('aria-label', L('Selected notes', 'Notas seleccionadas'));
+    for (const [action, en, es] of [['duplicate', 'Duplicate notes', 'Duplicar notas'], ['quantize', 'Quantize notes', 'Cuantizar notas'], ['delete', 'Delete notes', 'Borrar notas']]) {
+        const button = document.createElement('button');
+        button.dataset.selectionAction = action;
+        button.dataset.en = en;
+        button.dataset.es = es;
+        button.textContent = L(en, es);
+        button.onclick = action === 'duplicate' ? duplicateSelectedNotes : action === 'quantize' ? quantizeSelectedNotes : deleteSelection;
+        selection.append(button);
+    }
+    tools.after(selection);
+    renderSelection();
+    const automation = document.createElement('details');
+    automation.className = 'automation-disclosure';
+    const automationLabel = document.createElement('summary');
+    automationLabel.dataset.en = 'Clip automation';
+    automationLabel.dataset.es = 'Automatización del clip';
+    automationLabel.textContent = L(automationLabel.dataset.en, automationLabel.dataset.es);
+    automation.append(automationLabel);
+    $('.automation-head').before(automation);
+    automation.append($('.automation-head'), $('#automationPane'));
+    automation.addEventListener('toggle', () => { if (automation.open) {
+        renderAutomation();
+        syncRollScroll();
+    } });
     const advanced = document.createElement('details');
     advanced.className = 'export-advanced';
     const summary = document.createElement('summary');
@@ -1669,6 +1747,15 @@ function setupStudioUi() {
         anchor.parentNode.insertBefore(transport, anchor.nextSibling); };
     mobile.addEventListener('change', placeTransport);
     placeTransport();
+    const copy = [['#duplicateBtn', 'Duplicate clip', 'Duplicar clip'], ['#mutateBtn', 'Create variation', 'Crear variación'], ['#quantizeBtn', 'Quantize clip', 'Cuantizar clip'], ['#deleteNotesBtn', 'Delete notes', 'Borrar notas'], ['#backingBtn', 'Create backing', 'Crear base'], ['#clearAutomationBtn', 'Clear lane', 'Borrar curva'], ['#exportDialog h2', 'Save and export', 'Guardar y exportar'], ['#exportDialog>p', 'Save a complete project to keep your audio assets. Audio and MIDI exports are for sharing your music.', 'Guarda el proyecto completo para conservar tus archivos de audio. Exporta audio o MIDI para compartir tu música.']];
+    for (const [selector, en, es] of copy) {
+        const node = $(selector);
+        if (node) {
+            node.dataset.en = en;
+            node.dataset.es = es;
+            node.textContent = L(en, es);
+        }
+    }
     const translate = () => { $$('[data-en][data-es]').forEach((el) => el.textContent = L(el.dataset.en, el.dataset.es)); syncStudioUi(); };
     $('#languageSelect').addEventListener('change', translate);
     $('#menuLanguageSelect').addEventListener('change', translate);
