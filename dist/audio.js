@@ -429,8 +429,13 @@ export class AudioEngine {
     guitar(pitch, time, duration, velocity, cfg, character, cutoffAuto = .5, panAuto = .5) { const target = frequency(pitch), filter = this.ctx.createBiquadFilter(), body = this.ctx.createBiquadFilter(), gain = this.ctx.createGain(), pan = this.ctx.createStereoPanner(), nodes = [], release = Math.max(.12, cfg.release || .35), end = time + Math.max(.12, duration) + release, peak = Math.max(.002, Math.min(.28, velocity * .27)); let tail; filter.type = 'lowpass'; filter.frequency.value = Math.max(900, (cfg.cutoff || 5200) * (.45 + cutoffAuto * .75) * (1 - character.macros.darkness * .28)); filter.Q.value = cfg.resonance || 2; body.type = 'peaking'; body.frequency.value = 190 + target * .28; body.Q.value = 1.2; body.gain.value = 4; pan.pan.value = Math.max(-1, Math.min(1, (panAuto - .5) * 1.3 + (cfg.pan || 0))); gain.gain.setValueAtTime(.0001, time); gain.gain.exponentialRampToValueAtTime(peak, time + .004); gain.gain.exponentialRampToValueAtTime(Math.max(.001, peak * .34), Math.min(end - .02, time + .16)); gain.gain.exponentialRampToValueAtTime(.0001, end); filter.connect(body).connect(gain).connect(pan).connect(this.buses.guitar.input); const harmonics = [1, 2, 3, 4], levels = [1, .34, .16, .07]; harmonics.forEach((ratio, index) => { const osc = this.ctx.createOscillator(), level = this.ctx.createGain(); osc.type = index === 0 ? 'triangle' : 'sine'; osc.frequency.value = target * ratio; osc.detune.value = (index % 2 ? .7 : -.7) * (cfg.detune || 3); level.gain.value = levels[index]; osc.connect(level).connect(filter); osc.start(time); osc.stop(end + .02); tail = osc; nodes.push(osc, level); }); const pickLength = .018, buffer = this.ctx.createBuffer(1, Math.ceil(this.ctx.sampleRate * pickLength), this.ctx.sampleRate), data = buffer.getChannelData(0); for (let i = 0; i < data.length; i++)
         data[i] = (Math.random() * 2 - 1) * (1 - i / data.length); const pick = this.ctx.createBufferSource(), pickFilter = this.ctx.createBiquadFilter(), pickGain = this.ctx.createGain(); pick.buffer = buffer; pickFilter.type = 'bandpass'; pickFilter.frequency.value = Math.min(9000, target * 8); pickFilter.Q.value = .7; pickGain.gain.value = peak * .75; pick.connect(pickFilter).connect(pickGain).connect(filter); pick.start(time); nodes.push(pick, pickFilter, pickGain); if (tail)
         tail.onended = () => { nodes.forEach(n => n.disconnect()); filter.disconnect(); body.disconnect(); gain.disconnect(); pan.disconnect(); }; }
+    pendingLive = new Map();
     async startLive(id, track, pitch, velocity = .8, expression = {}, channel = null) {
+        const request = Symbol();
+        this.pendingLive.set(id, request);
         await this.init();
+        if (this.pendingLive.get(id) !== request)
+            return;
         this.setProject(this.project);
         this.stopLive(id, true);
         const now = this.ctx.currentTime, cfg = this.project.tracks[track], character = activeClip(this.project, track).character, macros = character.macros;
@@ -467,7 +472,7 @@ export class AudioEngine {
     updateLiveChannel(channel, expression) { for (const [id, voice] of this.liveVoices)
         if (voice.channel === channel)
             this.updateLive(id, expression); }
-    stopLive(id, immediate = false) { const voice = this.liveVoices.get(id); if (!voice || !this.ctx)
+    stopLive(id, immediate = false) { this.pendingLive.delete(id); const voice = this.liveVoices.get(id); if (!voice || !this.ctx)
         return; this.liveVoices.delete(id); const now = this.ctx.currentTime, release = immediate ? .01 : Math.max(.02, voice.cfg.release || .12); voice.gain.gain.cancelScheduledValues(now); voice.gain.gain.setTargetAtTime(.0001, now, release / 4); for (const { node } of voice.oscillators)
         try {
             node.stop(now + release);

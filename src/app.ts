@@ -135,6 +135,8 @@ function renderAutomation(){const c=clip(),steps=clipLengthSteps(c),zoom=project
 const heldKeyPointers=new Map<number,{source:string,key:HTMLElement}>();
 function releaseKeyPointer(pointerId:number){const held=heldKeyPointers.get(pointerId);if(!held)return;heldKeyPointers.delete(pointerId);endPerformance(held.source,held.key)}
 function releaseKeyPointers(){for(const id of [...heldKeyPointers.keys()])releaseKeyPointer(id)}
+window.addEventListener('pointerup',event=>releaseKeyPointer(event.pointerId),true);
+window.addEventListener('pointercancel',event=>releaseKeyPointer(event.pointerId),true);
 window.addEventListener('blur',releaseKeyPointers);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseKeyPointers()});
 function renderKeyboard(){

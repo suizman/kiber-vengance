@@ -386,6 +386,8 @@ function releaseKeyPointer(pointerId) { const held = heldKeyPointers.get(pointer
     return; heldKeyPointers.delete(pointerId); endPerformance(held.source, held.key); }
 function releaseKeyPointers() { for (const id of [...heldKeyPointers.keys()])
     releaseKeyPointer(id); }
+window.addEventListener('pointerup', event => releaseKeyPointer(event.pointerId), true);
+window.addEventListener('pointercancel', event => releaseKeyPointer(event.pointerId), true);
 window.addEventListener('blur', releaseKeyPointers);
 document.addEventListener('visibilitychange', () => { if (document.hidden)
     releaseKeyPointers(); });

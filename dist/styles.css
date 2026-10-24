@@ -238,3 +238,5 @@ body[data-editor-tool=select] .note-block{touch-action:manipulation}
  .view .sampler-controls label{min-width:0}.view .sampler-controls select,.view .sampler-controls input{max-width:100%}
  dialog .export-options label{flex-wrap:wrap}dialog .export-options select{max-width:100%}
 }
+
+@media(max-width:820px){.global-locator label,.clip-locator label{display:flex;flex:1;min-width:0}.global-locator input[type=range],.clip-locator input[type=range]{flex:1;width:100%;min-width:0;max-width:none}.key:hover:not(.active){filter:none}}
