@@ -187,3 +187,7 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 - Cancel pending live-note initialization when a finger is released before audio initialization finishes. Global pointer release/cancel also clears held keys.
 - Mobile song/clip position ranges flex across the remaining width instead of retaining the native input width.
 - Typecheck, build, lint and core tests passed; physical iPhone verification remains pending.
+
+## Precision touch dials
+- Dials support continuous captured pointer dragging: vertical movement spans the range in 300 px, horizontal movement is five times finer; Shift adds desktop precision. Other fingers cannot interrupt a dial gesture. Release, cancellation, lost capture and blur clean up the gesture. Plus/minus remain available.
+- Dial and scratch surfaces own touch gestures; Perform buttons/ranges suppress double-tap zoom without disabling page pinch zoom. Physical iOS validation remains outstanding.
