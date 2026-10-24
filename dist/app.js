@@ -566,7 +566,7 @@ function animateMixer() { if (activeView !== 'mix')
     if (peak)
         peak.textContent = mixerPeaks[track] <= .001 ? '−∞ dB' : `${(20 * Math.log10(mixerPeaks[track])).toFixed(1)} dB`;
 } const loudness = Math.sqrt(loudnessEnergy / TRACKS.length); $('#mixerLoudness').textContent = loudness > .0001 ? `${(20 * Math.log10(loudness) - 9).toFixed(1)} LUFS-M APPROX` : '−∞ LUFS-M APPROX'; engine.draw($('#mixerMasterMeter')); requestAnimationFrame(animateMixer); }
-function setScratchControls(enabled) { for (const id of ['scratchPlayBtn', 'scratchSyncBtn', 'scratchBrakeBtn', 'scratchSpinBtn', 'scratchStutterBtn', 'scratchFilter', 'scratchMix'])
+function setScratchControls(enabled) { for (const id of ['scratchPlayBtn', 'scratchSyncBtn', 'scratchBrakeBtn', 'scratchSpinBtn', 'scratchStutterBtn', 'scratchFilter', 'scratchMix', 'scratchRate', 'scratchReverse', 'scratchRestart'])
     $(`#${id}`).disabled = !enabled; const platter = $('#scratchPlatter'); platter.classList.toggle('disabled', !enabled); platter.setAttribute('aria-disabled', String(!enabled)); $('.scratch-deck').classList.toggle('ready', enabled); }
 function updateScratchPlayButton() { const button = $('#scratchPlayBtn'); button.textContent = engine.scratchPlaying ? L('■ STOP', '■ PARAR') : L('▶ PLAY', '▶ REPRODUCIR'); button.classList.toggle('active', Boolean(engine.scratchPlaying)); }
 function drawScratchWaveform(buffer) { const canvas = $('#scratchWaveform'), ctx = canvas.getContext('2d'), width = canvas.width, height = canvas.height, data = buffer.getChannelData(0), stride = Math.max(1, Math.floor(data.length / width)); ctx.clearRect(0, 0, width, height); const gradient = ctx.createLinearGradient(0, 0, width, 0); gradient.addColorStop(0, '#2ee8ff'); gradient.addColorStop(.52, '#8b7cff'); gradient.addColorStop(1, '#ff3bd4'); ctx.strokeStyle = gradient; ctx.lineWidth = 1.5; ctx.beginPath(); for (let x = 0; x < width; x++) {
@@ -578,7 +578,11 @@ function drawScratchWaveform(buffer) { const canvas = $('#scratchWaveform'), ctx
     ctx.moveTo(x, height / 2 - size);
     ctx.lineTo(x, height / 2 + size);
 } ctx.stroke(); ctx.fillStyle = '#ffffff12'; ctx.fillRect(0, height / 2, width, 1); }
-async function armScratchBuffer(buffer, label) { scratchBuffer = buffer; scratchAngle = 0; scratchStuttering = false; $('#scratchStutterBtn').setAttribute('aria-pressed', 'false'); drawScratchWaveform(buffer); await engine.loadScratchBuffer(buffer); engine.setScratchFilter(+$('#scratchFilter').value); engine.setScratchMix(+$('#scratchMix').value); setScratchControls(true); updateScratchPlayButton(); $('#scratchStatus').textContent = L(`BUFFER ARMED · ${label} · DRAG THE VINYL`, `BÚFER LISTO · ${label} · ARRASTRA EL VINILO`); toast(L('SCRATCH BUFFER ARMED', 'BÚFER DE SCRATCH LISTO')); }
+async function armScratchBuffer(buffer, label) { scratchBuffer = buffer; scratchAngle = 0; if ($('#scratchRate')) {
+    $('#scratchRate').value = '1';
+    $('#scratchRateValue').textContent = '1.00×';
+    $('#scratchReverse').setAttribute('aria-pressed', 'false');
+} ; scratchStuttering = false; $('#scratchStutterBtn').setAttribute('aria-pressed', 'false'); drawScratchWaveform(buffer); await engine.loadScratchBuffer(buffer); engine.setScratchFilter(+$('#scratchFilter').value); engine.setScratchMix(+$('#scratchMix').value); setScratchControls(true); updateScratchPlayButton(); $('#scratchStatus').textContent = L(`BUFFER ARMED · ${label} · DRAG THE VINYL`, `BÚFER LISTO · ${label} · ARRASTRA EL VINILO`); toast(L('SCRATCH BUFFER ARMED', 'BÚFER DE SCRATCH LISTO')); }
 async function importScratchFile(file) { const input = $('#scratchImport'); input.disabled = true; $('#scratchStatus').textContent = L('DECODING LOCAL AUDIO…', 'DECODIFICANDO AUDIO LOCAL…'); try {
     await engine.init();
     const buffer = await engine.ctx.decodeAudioData(await file.arrayBuffer());
@@ -645,8 +649,64 @@ finally {
 function animateScratchDeck(now = performance.now()) { cancelAnimationFrame(scratchAnimation); const dt = Math.min(.05, (now - scratchLastFrame) / 1000); scratchLastFrame = now; if (scratchBuffer && engine.scratchPlaying && !$('.scratch-deck').classList.contains('scratching'))
     scratchAngle += Number(engine.scratchSpeed || 0) * 200 * dt; $('#scratchPlatter').style.setProperty('--rotation', `${scratchAngle}deg`); $('#scratchSpeed').textContent = `${Number(engine.scratchSpeed || 0) >= 0 ? '+' : ''}${Number(engine.scratchSpeed || 0).toFixed(2)}×`; if (scratchBuffer && engine.scratchFrames)
     $('#scratchWavePlayhead').style.left = `${Math.max(0, Math.min(100, (engine.scratchPosition || 0) / engine.scratchFrames * 100))}%`; scratchAnimation = requestAnimationFrame(animateScratchDeck); }
-function setupScratchDeck() { setScratchControls(false); engine.onScratchPosition = (state) => { engine.scratchPosition = state.frame; engine.scratchSpeed = state.speed; engine.scratchPlaying = state.playing; }; $('#scratchCaptureBtn').onclick = captureScratchMix; $('#scratchImport').onchange = (event) => { const file = event.target.files?.[0]; if (file)
-    importScratchFile(file); }; $('#scratchPlayBtn').onclick = () => { engine.setScratchPlaying(!engine.scratchPlaying); updateScratchPlayButton(); }; $('#scratchSyncBtn').onclick = () => engine.syncScratch((engine.scratchSampleRate || 44100) * 60 / project.tempo * 4 / project.meter.unit); $('#scratchBrakeBtn').onclick = () => { engine.setScratchSpeed(0, 1.15); toast(L('MOTOR BRAKE', 'FRENO DE MOTOR')); }; $('#scratchSpinBtn').onclick = () => { engine.setScratchPlaying(true); engine.setScratchSpeed(-3.6, .035); engine.setScratchSpeed(0, 1.6); updateScratchPlayButton(); }; $('#scratchStutterBtn').onclick = () => { scratchStuttering = !scratchStuttering; const frames = scratchStuttering ? Math.round((engine.scratchSampleRate || 44100) * 60 / project.tempo / 2) : 0; engine.setScratchStutter(frames); $('#scratchStutterBtn').setAttribute('aria-pressed', String(scratchStuttering)); }; $('#scratchFilter').oninput = () => { const value = +$('#scratchFilter').value; engine.setScratchFilter(value); $('#scratchFilterValue').textContent = value > .96 ? 'OPEN' : `${Math.round(value * 100)}%`; }; $('#scratchMix').oninput = () => { const value = +$('#scratchMix').value; engine.setScratchMix(value); $('#scratchMixValue').textContent = `${L('DECK', 'PLATO')} ${Math.round(value * 100)}%`; }; const platter = $('#scratchPlatter'); let previousAngle = 0, previousTime = 0, dragging = false, rotation = 0; const angle = (event) => { const rect = platter.getBoundingClientRect(); return Math.atan2(event.clientY - (rect.top + rect.height / 2), event.clientX - (rect.left + rect.width / 2)); }; platter.onpointerdown = (event) => { if (!scratchBuffer)
+function scratchMotorRate() { return (+$('#scratchRate').value || 1) * ($('#scratchReverse').getAttribute('aria-pressed') === 'true' ? -1 : 1); }
+function setupScratchPro() {
+    const mic = document.createElement('button');
+    mic.id = 'scratchMic';
+    mic.textContent = L('Record mic', 'Grabar micro');
+    $('.scratch-capture').append(mic);
+    $('.scratch-controls').insertAdjacentHTML('beforeend', `<div class="scratch-pro"><label>${L('Stutter interval', 'Intervalo stutter')}<select id="scratchDivision" aria-label="${L('Stutter interval', 'Intervalo stutter')}"><option value="1">1/1</option><option value="2">1/2</option><option value="4">1/4</option><option value="8" selected>1/8</option><option value="16">1/16</option><option value="32">1/32</option><option value="64">1/64</option></select></label><label>${L('Motor speed (changes pitch)', 'Velocidad (cambia el tono)')} <output id="scratchRateValue">1.00×</output><input id="scratchRate" type="range" min=".5" max="1.5" step=".01" value="1"></label><button id="scratchReverse" aria-pressed="false">${L('Reverse', 'Reversa')}</button><button id="scratchRestart">${L('Back to start', 'Volver al inicio')}</button><p>${L('Mic audio is temporary. Use Audio → Scratch resample to keep it in the project.', 'El audio del micro es temporal. Usa Audio → Scratch resample para guardarlo en el proyecto.')}</p></div>`);
+    $('#scratchDivision').onchange = () => { if (scratchStuttering)
+        engine.setScratchStutter(Math.round((engine.scratchSampleRate || 44100) * 60 / project.tempo * 4 / +$('#scratchDivision').value)); };
+    $('#scratchRate').oninput = () => { $('#scratchRateValue').textContent = `${(+$('#scratchRate').value).toFixed(2)}×`; engine.setScratchSpeed(scratchMotorRate()); };
+    $('#scratchReverse').onclick = () => { const b = $('#scratchReverse'); b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); engine.setScratchSpeed(scratchMotorRate()); };
+    $('#scratchRestart').onclick = () => { scratchStuttering = false; $('#scratchStutterBtn').setAttribute('aria-pressed', 'false'); engine.setScratchStutter(0); engine.scratchNode?.port.postMessage({ type: 'seek', frame: 0 }); engine.setScratchSpeed(scratchMotorRate()); engine.setScratchPlaying(true); updateScratchPlayButton(); };
+    let recorder = null, stream = null, timer;
+    const stop = () => { if (recorder?.state === 'recording')
+        recorder.stop(); stream?.getTracks().forEach(t => t.stop()); clearTimeout(timer); };
+    window.addEventListener('pagehide', stop);
+    mic.onclick = async () => { if (recorder?.state === 'recording') {
+        stop();
+        return;
+    } mic.disabled = true; try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        const chunks = [];
+        recorder = new MediaRecorder(stream);
+        const current = recorder;
+        current.ondataavailable = e => { if (e.data.size)
+            chunks.push(e.data); };
+        current.onstop = async () => { stop(); mic.disabled = true; try {
+            await engine.init();
+            const buffer = await engine.ctx.decodeAudioData(await new Blob(chunks, { type: current.mimeType }).arrayBuffer());
+            await armScratchBuffer(buffer, L('Microphone', 'Micrófono'));
+            engine.setScratchPlaying(false);
+            updateScratchPlayButton();
+        }
+        catch (error) {
+            toast(String(error));
+        }
+        finally {
+            recorder = null;
+            mic.disabled = false;
+            mic.textContent = L('Record mic', 'Grabar micro');
+            mic.setAttribute('aria-pressed', 'false');
+        } };
+        current.start();
+        mic.textContent = L('Stop mic (max 60 s)', 'Parar micro (máx. 60 s)');
+        mic.setAttribute('aria-pressed', 'true');
+        timer = setTimeout(stop, 60000);
+    }
+    catch (error) {
+        stop();
+        recorder = null;
+        toast(`${L('Microphone unavailable', 'Micrófono no disponible')}: ${String(error)}`);
+    }
+    finally {
+        mic.disabled = false;
+    } };
+}
+function setupScratchDeck() { setupScratchPro(); setScratchControls(false); engine.onScratchPosition = (state) => { engine.scratchPosition = state.frame; engine.scratchSpeed = state.speed; engine.scratchPlaying = state.playing; }; $('#scratchCaptureBtn').onclick = captureScratchMix; $('#scratchImport').onchange = (event) => { const file = event.target.files?.[0]; if (file)
+    importScratchFile(file); }; $('#scratchPlayBtn').onclick = () => { engine.setScratchPlaying(!engine.scratchPlaying); updateScratchPlayButton(); }; $('#scratchSyncBtn').onclick = () => engine.syncScratch((engine.scratchSampleRate || 44100) * 60 / project.tempo * 4 / project.meter.unit); $('#scratchBrakeBtn').onclick = () => { engine.setScratchSpeed(0, 1.15); toast(L('MOTOR BRAKE', 'FRENO DE MOTOR')); }; $('#scratchSpinBtn').onclick = () => { engine.setScratchPlaying(true); engine.setScratchSpeed(-3.6, .035); engine.setScratchSpeed(0, 1.6); updateScratchPlayButton(); }; $('#scratchStutterBtn').onclick = () => { scratchStuttering = !scratchStuttering; const frames = scratchStuttering ? Math.round((engine.scratchSampleRate || 44100) * 60 / project.tempo * 4 / (+$('#scratchDivision').value)) : 0; engine.setScratchStutter(frames); $('#scratchStutterBtn').setAttribute('aria-pressed', String(scratchStuttering)); }; $('#scratchFilter').oninput = () => { const value = +$('#scratchFilter').value; engine.setScratchFilter(value); $('#scratchFilterValue').textContent = value > .96 ? 'OPEN' : `${Math.round(value * 100)}%`; }; $('#scratchMix').oninput = () => { const value = +$('#scratchMix').value; engine.setScratchMix(value); $('#scratchMixValue').textContent = `${L('DECK', 'PLATO')} ${Math.round(value * 100)}%`; }; const platter = $('#scratchPlatter'); let previousAngle = 0, previousTime = 0, dragging = false, rotation = 0; const angle = (event) => { const rect = platter.getBoundingClientRect(); return Math.atan2(event.clientY - (rect.top + rect.height / 2), event.clientX - (rect.left + rect.width / 2)); }; platter.onpointerdown = (event) => { if (!scratchBuffer)
     return; event.preventDefault(); dragging = true; previousAngle = angle(event); previousTime = performance.now(); rotation = scratchAngle; try {
     platter.setPointerCapture(event.pointerId);
 }
@@ -657,8 +717,8 @@ catch { } $('.scratch-deck').classList.add('scratching'); engine.setScratchPlayi
     return; dragging = false; try {
     platter.releasePointerCapture(event.pointerId);
 }
-catch { } $('.scratch-deck').classList.remove('scratching'); engine.setScratchSpeed(1, .14); }; platter.onpointerup = release; platter.onpointercancel = release; platter.onwheel = (event) => { if (!scratchBuffer)
-    return; event.preventDefault(); engine.setScratchPlaying(true); engine.setScratchSpeed(Math.max(-4, Math.min(4, -event.deltaY * .018)), .01); clearTimeout(engine.scratchReturnTimer); engine.scratchReturnTimer = setTimeout(() => engine.setScratchSpeed(1, .12), 90); }; platter.onkeydown = (event) => { if (!scratchBuffer)
+catch { } $('.scratch-deck').classList.remove('scratching'); engine.setScratchSpeed(scratchMotorRate(), .14); }; platter.onpointerup = release; platter.onpointercancel = release; platter.onwheel = (event) => { if (!scratchBuffer)
+    return; event.preventDefault(); engine.setScratchPlaying(true); engine.setScratchSpeed(Math.max(-4, Math.min(4, -event.deltaY * .018)), .01); clearTimeout(engine.scratchReturnTimer); engine.scratchReturnTimer = setTimeout(() => engine.setScratchSpeed(scratchMotorRate(), .12), 90); }; platter.onkeydown = (event) => { if (!scratchBuffer)
     return; if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault();
     engine.setScratchPlaying(true);
@@ -668,7 +728,7 @@ else if (event.key === 'Enter') {
     event.preventDefault();
     $('#scratchPlayBtn').click();
 } }; platter.onkeyup = (event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
-    engine.setScratchSpeed(1, .1); }; animateScratchDeck(); }
+    engine.setScratchSpeed(scratchMotorRate(), .1); }; animateScratchDeck(); }
 const performanceEventThrottle = new Map();
 function performanceStep() { return Math.max(0, (Date.now() - performanceStarted) / 1000 / (60 / project.tempo / 4)); }
 function recordPerformanceEvent(kind, target, value) { if (!performanceEvents)
@@ -714,7 +774,7 @@ else if (event.kind === 'scratch') {
     if (event.target === 'filter')
         engine.setScratchFilter(+event.value);
     if (event.target === 'stutter')
-        engine.setScratchStutter(event.value ? Math.round((engine.scratchSampleRate || 44100) * 60 / project.tempo / 2) : 0);
+        engine.setScratchStutter(event.value ? Math.round((engine.scratchSampleRate || 44100) * 60 / project.tempo * 4 / (+$('#scratchDivision').value)) : 0);
     if (event.target === 'playing')
         engine.setScratchPlaying(Boolean(event.value));
 }

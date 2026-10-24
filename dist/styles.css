@@ -257,3 +257,5 @@ body[data-editor-tool=select] .note-block{touch-action:manipulation}
 .knob,#scratchPlatter{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #performView button,#performView input,#performView [role=slider],.knob-nudge{touch-action:manipulation}
 @media(pointer:coarse){.knob{min-width:56px;min-height:56px}}
+
+.scratch-pro{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.scratch-pro label{display:flex;flex-direction:column;gap:8px}.scratch-pro p{grid-column:1/-1}.scratch-pro button,.scratch-pro select,#scratchMic{min-height:44px;font-size:14px}.scratch-pro input{width:100%;touch-action:manipulation}.scratch-pro [aria-pressed=true],#scratchMic[aria-pressed=true]{border-color:var(--cyan);color:var(--cyan)}

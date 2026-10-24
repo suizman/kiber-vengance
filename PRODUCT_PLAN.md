@@ -129,3 +129,5 @@ Clips abre el editor y Sonido muestra los racks bajo demanda. En móvil hay tran
 ## Precision touch dials
 - Dials support continuous captured pointer dragging: vertical movement spans the range in 300 px, horizontal movement is five times finer; Shift adds desktop precision. Other fingers cannot interrupt a dial gesture. Release, cancellation, lost capture and blur clean up the gesture. Plus/minus remain available.
 - Dial and scratch surfaces own touch gestures; Perform buttons/ranges suppress double-tap zoom without disabling page pinch zoom. Physical iOS validation remains outstanding.
+
+Scratch input/control additions and the prioritized consistency backlog are documented in UX_REVIEW.md. Physical microphone/Safari validation remains required.

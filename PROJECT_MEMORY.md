@@ -202,3 +202,6 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 - Perform adds direct local Scratch Deck import for browser-decodable WAV, MP3, OGG, WebM and related audio formats. The deck buffer remains temporary and non-destructive.
 - Service Worker cache revision is `v25-audio-scratch-pause`.
 - Validation: `npm run check:full` passed with 26 core tests and all 10 Chromium/Firefox functional workflows, including Audio Studio import/play/pause/resume and both Scratch Deck loading paths.
+
+## Scratch input and controls
+Microphone capture loads a temporary scratch buffer, stops playback after capture, releases microphone tracks and limits recording to 60 seconds. Stutter supports whole-note divisions 1/1–1/64. Motor speed (with pitch change), reverse and restart are available. UX_REVIEW.md records observed inconsistencies and proposed work, not completed global standardization.
