@@ -186,11 +186,13 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 - Validation: `npm run check` passed. Dedicated Chromium workflows passed at 390/768/1366 px, including selected-note actions and Undo, automation disclosure, repeated touch taps without scale changes, blur voice release, all six views without horizontal document overflow, export and autosave-error feedback. `npm run check:full` could not complete: its configured Playwright browser and Firefox binary are absent. Physical iPhone/Safari validation remains outstanding.
 
 ## Mobile note release and position sliders
+
 - Cancel pending live-note initialization when a finger is released before audio initialization finishes. Global pointer release/cancel also clears held keys.
 - Mobile song/clip position ranges flex across the remaining width instead of retaining the native input width.
 - Typecheck, build, lint and core tests passed; physical iPhone verification remains pending.
 
 ## Precision touch dials
+
 - Dials support continuous captured pointer dragging: vertical movement spans the range in 300 px, horizontal movement is five times finer; Shift adds desktop precision. Other fingers cannot interrupt a dial gesture. Release, cancellation, lost capture and blur clean up the gesture. Plus/minus remain available.
 - Dial and scratch surfaces own touch gestures; Perform buttons/ranges suppress double-tap zoom without disabling page pinch zoom. Physical iOS validation remains outstanding.
 
@@ -204,9 +206,11 @@ Before modifying КИБЕР VENGANCE, read this file, `kiber-vengance.md`, `PROD
 - Validation: `npm run check:full` passed with 26 core tests and all 10 Chromium/Firefox functional workflows, including Audio Studio import/play/pause/resume and both Scratch Deck loading paths.
 
 ## Scratch input and controls
+
 Microphone capture loads a temporary scratch buffer, stops playback after capture, releases microphone tracks and limits recording to 60 seconds. Stutter supports whole-note divisions 1/1–1/64. Motor speed (with pitch change), reverse and restart are available. UX_REVIEW.md records observed inconsistencies and proposed work, not completed global standardization.
 
 ## Consistency and waveform seeking
+
 Scratch waveform supports touch/mouse seeking and keyboard arrows/Home/End without starting paused audio. Seeking clears stutter. Keep in project persists a scratch copy as an audio region. Shared control typography/targets/focus states and bilingual main action labels are applied. Audio additions and several creation operations now snapshot history. Tempo/meter use validated cancelable dialogs. See UX_REVIEW.md for implementation boundaries. Dedicated Chromium simulated-microphone, waveform seek and save workflow passed; check passed; physical Safari remains unverified.
 
 ## Studio interface refactor (2026-10-25)
@@ -214,3 +218,7 @@ Scratch waveform supports touch/mouse seeking and keyboard arrows/Home/End witho
 The approved four-workspace interface is implemented using Vite, a Preact shell and shared keyboards/dials/dialogs. Ten feature controllers preserve the music workflows and project schema v6. Signal KV is the selected SVG identity. Common typography, focus/disabled states, inspector, bilingual catalog and pointer lifecycles replace the previous navigation/control patches. Hidden panels render on demand; inactive animations stop and waveform envelopes are cached. Native edit prompts are replaced by validated cancelable dialogs. See `docs/REFACTOR.md` for feature parity, implementation decisions, performance evidence and real-device limits. Earlier descriptions of Forge/Audio/Perform as top-level tabs describe the previous interface.
 
 Final refactor validation: `node scripts/with-null-audio.mjs npm run check:full` passed, including 12/12 Chromium/Firefox workflows with no skips. Hardware input/output and physical Safari remain unverified. Initial DOM is 1,342 nodes versus the 1,790-node local baseline. Full evidence and limitations: `docs/REFACTOR.md`.
+
+## Neon visual restoration (2026-10-25)
+
+The studio keeps the four-workspace layout while restoring a stronger cyberpunk identity. Shared tokens now use a blue-black base and brighter cyan, magenta, amber, lime and violet accents. Navigation and track cards have clear active states; headers, the piano roll, keyboards, launcher, mixer and Scratch Deck use restrained gradients or glows. The changes are CSS-only and do not alter audio, touch behavior, project files or storage. See `docs/DESIGN.md` for color semantics.

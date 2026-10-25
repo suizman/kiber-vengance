@@ -1185,3 +1185,143 @@ html[data-density="compact"] #app .composition-tools {
   flex: 1 0 100%;
   max-width: 100%;
 }
+
+/* Neon character lives at the edges of the workspace, away from editing text. */
+#app.studio-shell {
+  background: var(--bg);
+}
+#app .studio-main {
+  background:
+    radial-gradient(ellipse 42% 25% at 4% 0%, #823ab020, transparent 100%),
+    radial-gradient(ellipse 40% 24% at 100% 0%, #168ba51a, transparent 100%),
+    var(--bg);
+}
+.studio-header {
+  background: linear-gradient(110deg, #151525f7, #102131f7 64%, #1c1530f7);
+  border-bottom: 1px solid #516388;
+  box-shadow: 0 5px 24px #03071190;
+}
+.studio-header::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--magenta),
+    var(--violet) 30%,
+    var(--cyan) 68%,
+    var(--lime)
+  );
+  opacity: 0.82;
+}
+.studio-header .brand-word b:first-child {
+  color: #fff;
+  text-shadow: 0 0 14px #ff73d468;
+}
+.studio-header .brand-word b:last-child {
+  color: var(--cyan);
+}
+.studio-header .transport .play,
+.studio-header .top-actions #exportAsBtn {
+  box-shadow: 0 0 20px #59eaff36;
+}
+.studio-header .transport .record.active {
+  box-shadow: 0 0 20px #ff73d45c;
+}
+.studio-nav {
+  background: linear-gradient(180deg, #19172a, #101a2c 65%, #15192d);
+  border-right-color: #3e4d71;
+}
+.studio-nav button:hover:not(:disabled) {
+  color: var(--ink);
+  background: #354061;
+  border-color: #526793;
+}
+.studio-nav button[aria-current="page"],
+.studio-nav button.active,
+.studio-nav button[aria-pressed="true"] {
+  color: #f8f4ff;
+  border-color: #8955bc;
+  background: linear-gradient(135deg, #5a276d, #1a4464);
+  box-shadow:
+    inset 3px 0 var(--magenta),
+    0 0 19px #c04fcf36;
+}
+.studio-nav button[aria-current="page"] svg,
+.studio-nav button.active svg,
+.studio-nav button[aria-pressed="true"] svg {
+  color: var(--cyan);
+  filter: drop-shadow(0 0 5px #59eaff80);
+}
+#app .studio-contextbar h1 {
+  color: #fff;
+  text-shadow: 0 0 20px #a384ff40;
+}
+#app .studio-contextbar .eyebrow {
+  color: var(--magenta);
+}
+.studio-subnav > nav {
+  background: #1a2033;
+  border-color: #445274;
+}
+.studio-subnav button[aria-current="page"],
+.studio-subnav button.active,
+.studio-subnav button[aria-selected="true"],
+.studio-subnav button[aria-pressed="true"] {
+  color: #fff;
+  background: linear-gradient(140deg, #51305f, #25425e);
+  border-color: #8b69b6;
+  box-shadow: inset 0 -2px var(--magenta);
+}
+#app .studio-trackbar .track {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--track) 12%, var(--panel)),
+    var(--panel) 68%
+  );
+  border-color: color-mix(in srgb, var(--track) 36%, var(--line2));
+  box-shadow: inset 3px 0 var(--track);
+}
+#app .studio-trackbar .track.active {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--track) 24%, var(--panel)),
+    var(--panel) 74%
+  );
+  border-color: var(--track);
+  box-shadow:
+    inset 4px 0 var(--track),
+    0 0 18px color-mix(in srgb, var(--track) 23%, transparent);
+}
+#app .studio-trackbar .track-name {
+  color: var(--track);
+}
+#app .studio-trackbar .track-switches button.on {
+  color: #fff;
+  background: color-mix(in srgb, var(--track) 30%, var(--panel2));
+  border-color: var(--track);
+}
+#app .studio-transport-context > span:last-child {
+  color: var(--lime);
+}
+#app .studio-footer,
+.studio-shell > footer {
+  background: #111626;
+  border-top-color: #3d4a6a;
+}
+@media (max-width: 820px) {
+  .studio-nav {
+    background: linear-gradient(110deg, #1b1930f7, #122438f7);
+    border-top-color: #73589c;
+    border-right: 0;
+  }
+  .studio-nav button[aria-current="page"],
+  .studio-nav button.active,
+  .studio-nav button[aria-pressed="true"] {
+    box-shadow:
+      inset 0 2px var(--magenta),
+      0 0 15px #c04fcf35;
+  }
+}

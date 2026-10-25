@@ -1,8 +1,8 @@
-# КИБЕР VENGANCE — graphite studio
+# КИБЕР VENGANCE — neon studio
 
 ## Visual direction
 
-A musical instrument with a clear workspace hierarchy. The electronic identity remains: graphite surfaces, cyan interaction accents, magenta recording accents and the existing instrument colors. Glows, decorative cuts and competing gradients no longer establish hierarchy. Spacing, alignment, surface contrast and typography do.
+A musical instrument with a clear workspace hierarchy and a visible cyberpunk pulse. The base is deep blue-black rather than neutral graphite. Cyan identifies primary actions, magenta marks recording and the live position, amber/lime/violet add selective warmth and energy, and every instrument retains its own color. The header carries a narrow spectrum line; navigation, track cards and musical surfaces use restrained gradients and glows. Spacing, alignment and typography still establish the hierarchy, so color does not compete with editing values.
 
 The design is implemented by `src/ui/styles/tokens.css`, `shell.css` and `components.css`. Import in this order after retained instrument-coordinate geometry. The geometry stylesheet must be in a lower-priority CSS cascade layer; the studio system is deliberately unlayered. Components use the shared tokens rather than introducing per-screen palettes.
 
@@ -10,7 +10,7 @@ The design is implemented by `src/ui/styles/tokens.css`, `shell.css` and `compon
 
 Body and action text: 14 px; prominent text and touch form values: 16 px; supporting labels: 12–13 px. Musical values use a system monospace and tabular numerals. Uppercase is limited to short category labels and the brand. Action buttons have a 44 px minimum target. The navigation and dense non-touch secondary indicators have separately documented geometry; the keyboard and piano roll preserve their instrument coordinates.
 
-Cyan identifies the active destination, selection and primary action. Magenta identifies recording and the live position marker. A track color identifies the instrument; it should not replace disabled, error or recording state semantics. Text and outlines accompany state colors.
+Cyan identifies primary actions and focus. Magenta identifies recording and the live position marker. The active destination combines a bright label, an outline and an inset accent; an instrument's color identifies its track, notes and mixer/launcher channel. Color does not replace disabled, error or recording state semantics. Text and outlines accompany state colors.
 
 ## Workspace
 
