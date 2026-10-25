@@ -222,3 +222,9 @@ Final refactor validation: `node scripts/with-null-audio.mjs npm run check:full`
 ## Neon visual restoration (2026-10-25)
 
 The studio keeps the four-workspace layout while restoring a stronger cyberpunk identity. Shared tokens now use a blue-black base and brighter cyan, magenta, amber, lime and violet accents. Navigation and track cards have clear active states; headers, the piano roll, keyboards, launcher, mixer and Scratch Deck use restrained gradients or glows. The changes are CSS-only and do not alter audio, touch behavior, project files or storage. See `docs/DESIGN.md` for color semantics.
+
+## Scratch Deck module loading correction (2026-10-25)
+
+Scratch Deck loads Vite-transformed source in development and a Vite-bundled, hashed processor URL in production. The former document-relative `./scratch-worklet.js` request returned the HTML fallback in development, producing Firefox's `expected expression, got '<'` error on import and mix capture. Development must avoid the classic worker wrapper because AudioWorklet has no `importScripts`. Firefox regression tests cover both actions from fresh pages against development and production servers. Project data and audio processing are unchanged.
+
+Resumed validation after the interrupted session: `npm run check:full` passed on 2026-10-25 with 26 core tests and 14 Chromium/Firefox workflows, with no skips. Firefox independently initialized the deck through local WAV import and Capture Mix in development and production. The static build and offline cache include the hashed processor. Tests required execution outside the restricted process sandbox; this host used its existing audio service, without the optional PulseAudio null-sink wrapper. Physical sound output was not assessed.

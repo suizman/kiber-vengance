@@ -1,3 +1,4 @@
+import scratchWorkletUrl from "./scratch-worklet.ts?worker&url";
 import {
   activeClip,
   audioRegionRate,
@@ -166,7 +167,13 @@ export class AudioEngine {
   async initScratchDeck() {
     if (this.scratchNode || !this.ctx?.audioWorklet) return;
     try {
-      await this.ctx.audioWorklet.addModule("./scratch-worklet.js");
+      // Vite serves transformed TypeScript in dev. Its worker URL wrapper injects
+      // importScripts there, which AudioWorkletGlobalScope does not provide.
+      // Production uses the standalone, hashed processor emitted by Vite.
+      const moduleUrl = import.meta.env.DEV
+        ? `${import.meta.env.BASE_URL}src/scratch-worklet.ts`
+        : scratchWorkletUrl;
+      await this.ctx.audioWorklet.addModule(moduleUrl);
       this.scratchNode = new AudioWorkletNode(this.ctx, "kv-scratch-deck", {
         numberOfInputs: 0,
         numberOfOutputs: 1,

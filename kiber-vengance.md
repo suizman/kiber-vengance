@@ -327,6 +327,7 @@ Focus reduce el ruido visual, los racks plegables conservan preferencias y `Ctrl
 
 ### Arquitectura final
 
+- El módulo del Scratch Deck usa la fuente transformada por Vite en desarrollo y una URL versionada generada por el bundler en producción. No debe resolverse respecto al documento: una ruta inexistente puede devolver HTML y provocar el error `expected expression, got '<'` en Firefox. Las pruebas Firefox comprueban importación y Capture Mix en ambos entornos.
 - TypeScript estricto compilado a módulos ES estáticos.
 - `model` define contratos; `core` concentra lógica musical pura; `audio` contiene Web Audio y render offline; `app` coordina UI y persistencia.
 - Scheduling anticipado basado en el reloj de audio, buses FX persistentes y liberación explícita de voces evitan cortes y crecimiento del grafo.
