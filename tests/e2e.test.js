@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { launchBrowser, preview, goToView } from './browser-support.js';
+import { launchBrowser, preview, goToView, setSoundInspector } from './browser-support.js';
 import { createServer } from 'vite';
 
 const server=preview(4199),{url,ready}=server;
@@ -70,3 +70,150 @@ test('complete composition, live input, persistence and export work in Firefox',
   const stored=await page.evaluate(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')));assert.equal(stored.version,6);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));
   await page.reload();await page.locator('.note-block').first().waitFor();assert.equal(await page.locator('#clipSelect option').count(),count+1);assert.deepEqual(errors,[]);
 });
+
+for (const kind of ['firefox', 'chromium']) {
+  test(`${kind} keeps clip sounds through editing, history, reload and WAV rendering`, async t => {
+    await ready();
+    const browser = await launchBrowser(kind); t.after(() => browser.close());
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.addInitScript(() => {
+      globalThis.__clipMidi = { onmidimessage: null };
+      Object.defineProperty(globalThis.navigator, 'requestMIDIAccess', { configurable: true, value: async () => ({ inputs: new Map([['test', globalThis.__clipMidi]]) }) });
+    });
+    await page.goto(`${url}/?qa=1`);
+    await page.locator('#clipSelect option').first().waitFor({ state: 'attached' });
+    const ids = await page.locator('#clipSelect option').evaluateAll(options => options.map(option => option.value));
+    await setSoundInspector(page, true);
+    await page.locator('#preset').selectOption('Neon Talon');
+    await page.locator('#clipSelect').selectOption(ids[1]);
+    assert.equal(await page.locator('#preset').inputValue(), 'Razor Choir');
+    await page.locator('#preset').selectOption('Solar Vengeance');
+    await setSoundInspector(page, false); await page.locator('#undoBtn').click(); await setSoundInspector(page, true);
+    assert.equal(await page.locator('#preset').inputValue(), 'Razor Choir');
+    await setSoundInspector(page, false); await page.locator('#redoBtn').click(); await setSoundInspector(page, true);
+    assert.equal(await page.locator('#preset').inputValue(), 'Solar Vengeance');
+    await page.locator('#clipSelect').selectOption(ids[0]);
+    assert.equal(await page.locator('#preset').inputValue(), 'Neon Talon');
+    await setSoundInspector(page, false); await page.keyboard.press('Shift+n'); await setSoundInspector(page, true);
+    assert.equal(await page.locator('#preset').inputValue(), 'Neon Talon');
+    await page.locator('#preset').selectOption('Razor Choir');
+    await page.locator('#clipSelect').selectOption(ids[0]);
+    assert.equal(await page.locator('#preset').inputValue(), 'Neon Talon');
+    await page.waitForFunction(() => {
+      const p = JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6') || 'null');
+      return p?.clips.some(c => c.instrument?.preset === 'Solar Vengeance');
+    });
+    await page.evaluate(() => {
+      const key = 'kiber-vengance-project-v6', p = JSON.parse(globalThis.localStorage.getItem(key));
+      p.midiMappings = [{ id: 'clip-cutoff', channel: 0, controller: 21, target: 'track.lead.cutoff', min: 0, max: 1 }];
+      globalThis.localStorage.setItem(key, JSON.stringify(p));
+    });
+    await page.reload(); await setSoundInspector(page, true);
+    await page.locator('#clipSelect').selectOption(ids[1]);
+    assert.equal(await page.locator('#preset').inputValue(), 'Solar Vengeance');
+    await page.waitForFunction(() => typeof globalThis.__clipMidi?.onmidimessage === 'function');
+    await page.evaluate(() => globalThis.__clipMidi.onmidimessage({ data: [0xb0, 21, 64] }));
+    await page.locator('#clipSelect').selectOption(ids[0]);
+    assert.equal(+await page.locator('[data-dial="cutoff"] [role="slider"]').getAttribute('aria-valuenow'), 5600);
+    await page.locator('#clipSelect').selectOption(ids[1]);
+    assert.ok(Math.abs(+await page.locator('[data-dial="cutoff"] [role="slider"]').getAttribute('aria-valuenow') - (120 + 64 / 127 * 11880)) < 1);
+    await setSoundInspector(page, false);
+    await page.locator('#menuBtn').click(); await page.locator('#presetLibraryBtn').click();
+    await page.locator('#saveUserPresetBtn').click();
+    await page.locator('[data-request-dialog] input[name=name]').fill('Clip Solar');
+    await page.locator('[data-request-dialog] button[type=submit]').click();
+    const saved = await page.evaluate(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-user-presets-v1')).at(-1));
+    assert.equal(saved.instrument.preset, 'Solar Vengeance');
+    assert.equal(saved.instrument.volume, undefined);
+    const beforeMixer = await page.evaluate(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).tracks.lead);
+    // Old user banks bundled mixer state: importing one must not mute/change the track.
+    const legacyPreset = { ...saved, id: 'legacy-clip-test', name: 'Legacy Clip', instrument: { ...saved.instrument, preset: 'Legacy Clip', wave: 'triangle', volume: 0, pan: -1, mute: true, solo: true } };
+    await page.locator('#importPresetBank').setInputFiles({ name: 'legacy-bank.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'kiber-vengance-preset-bank', presets: [legacyPreset] })) });
+    await page.locator('[data-preset-id="legacy-clip-test"] [data-preset-load]').click();
+    await setSoundInspector(page, true);
+    assert.equal(await page.locator('#preset').inputValue(), 'Legacy Clip');
+    assert.equal(await page.locator('#waveSelect').inputValue(), 'triangle');
+    await page.locator('#clipSelect').selectOption(ids[0]);
+    assert.equal(await page.locator('#preset').inputValue(), 'Neon Talon');
+    await page.waitForFunction(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).clips.some(c => c.instrument?.preset === 'Legacy Clip'));
+    const afterMixer = await page.evaluate(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).tracks.lead);
+    assert.deepEqual(afterMixer, beforeMixer);
+    const results = await page.evaluate(async () => {
+      const { createEmptyProject, activeClip, duplicateClip, makeNote } = await import('/core.js');
+      const { renderWav, AudioEngine } = await import('/audio.js');
+      const p = createEmptyProject(); p.tempo = 120; p.swing = 0; p.masterSettings.bypass = true;
+      for (const clip of p.clips) clip.bars = 1;
+      const a = activeClip(p, 'lead'); a.notes = [makeNote(0, 60, 4)]; a.character.lfo.enabled = false;
+      Object.assign(a.instrument, { wave: 'sine', osc2Wave: 'off', unison: 1, attack: .005, release: .05 });
+      const b = duplicateClip(p, a.id); b.instrument.wave = 'square';
+      p.tracks.lead.solo = true;
+      p.arrangement = [a, b].map(c => ({ id: c.id, name: c.name, repeats: 1, clipIds: { ...p.activeClipIds, lead: c.id } }));
+      const render = async () => {
+        const blob = await renderWav(p, { song: true, dry: true, tailSeconds: 0, bitDepth: 32, sampleRate: 44100 });
+        const ctx = new globalThis.OfflineAudioContext(2, 1, 44100);
+        return (await ctx.decodeAudioData(await blob.arrayBuffer())).getChannelData(0);
+      };
+      const mixed = await render(); b.instrument.wave = 'sine'; const allSine = await render();
+      a.instrument.wave = 'square'; b.instrument.wave = 'square'; const allSquare = await render();
+      const diff = (x, y, start) => {
+        let total = 0; for (let i = start; i < start + 4000; i++) total += Math.abs(x[i] - y[i]);
+        return total / 4000;
+      };
+      // A live voice also keeps its original envelope when its clip is edited.
+      const engine = new AudioEngine(); engine.project = p;
+      p.activeClipIds.lead = a.id; a.instrument.release = .8;
+      await engine.startLive('held', 'lead', 60);
+      const voice = engine.liveVoices.get('held'); a.instrument.release = .1;
+      p.activeClipIds.lead = b.id; engine.setProject(p);
+      const heldRelease = voice.cfg.release;
+      const held = engine.liveVoices.has('held');
+      engine.stopLive('held', true); await engine.ctx.close();
+      return { firstMatch: diff(mixed, allSine, 5000), secondMatch: diff(mixed, allSquare, 93200),
+        firstDiff: diff(mixed, allSquare, 5000), secondDiff: diff(mixed, allSine, 93200), heldRelease, held };
+    });
+    assert.ok(results.firstMatch < 1e-6, JSON.stringify(results));
+    assert.ok(results.secondMatch < 1e-6, JSON.stringify(results));
+    assert.ok(results.firstDiff > .001, JSON.stringify(results));
+    assert.ok(results.secondDiff > .001, JSON.stringify(results));
+    assert.equal(results.heldRelease, .8); assert.equal(results.held, true);
+  });
+}
+
+for (const kind of ['firefox', 'chromium']) {
+  test(`${kind} clip transport pauses and resumes at its cursor`, async t => {
+    await ready(); const browser = await launchBrowser(kind); t.after(() => browser.close());
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.goto(`${url}/?qa=1`); await page.locator('.note-block').first().waitFor();
+    const button = page.locator('#clipStartBtn');
+    assert.equal(await button.getAttribute('aria-label'), 'Play or resume active clips');
+    await page.locator('#clipPosition').fill('8'); await button.click();
+    await page.waitForFunction(() => globalThis.__kvDiagnostics().schedulerActive && globalThis.__kvDiagnostics().position >= 11);
+    assert.equal(await button.getAttribute('aria-label'), 'Pause active clips');
+    await button.click();
+    assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).schedulerActive, false);
+    const paused = +await page.locator('#clipPosition').inputValue();
+    assert.ok(paused >= 8);
+    await page.waitForTimeout(300);
+    assert.equal(+await page.locator('#clipPosition').inputValue(), paused);
+    assert.equal(await button.textContent(), '▶ CLIP');
+    await button.click();
+    await page.waitForFunction(start => {
+      const d = globalThis.__kvDiagnostics();
+      return d.schedulerActive && !d.songMode && d.position >= start && d.position < start + 4;
+    }, paused);
+    await page.locator('#pauseBtn').click();
+    assert.equal(await button.textContent(), '▶ CLIP');
+    await page.locator('#playBtn').click();
+    assert.equal(await button.getAttribute('aria-label'), 'Pause active clips');
+    await page.locator('#playBtn').click();
+    assert.equal(await button.textContent(), '▶ CLIP');
+    await goToView(page, 'arrange'); await page.locator('#globalStartBtn').click();
+    await goToView(page, 'forge');
+    assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).songMode, true);
+    assert.equal(await button.textContent(), '▶ CLIP');
+    await button.click();
+    await page.waitForFunction(() => globalThis.__kvDiagnostics().schedulerActive && !globalThis.__kvDiagnostics().songMode);
+    await button.click();
+    assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).schedulerActive, false);
+  });
+}

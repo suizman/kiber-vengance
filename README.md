@@ -107,7 +107,7 @@ stereo RMS/peak meters, peak hold, approximate momentary LUFS, dB faders,
 pre-gain, pan, pre/post sends, track colors, Solo/Mute, master FX bypass, and a
 loudness-matched A/B comparison. v6 adds group assignment, kick-triggered sidechain ducking, target LUFS/ceiling controls, and a mono check. Bus-level faders affect sustained voices.
 
-Every clip preserves its own **character**: the Motion Engine arpeggiator and LFO, Signal Processing bypass and complete effect chain, and the six Vector Control macros. When switching clips, all three racks restore their independent values; duplicating or mutating a clip copies its character, while creating a new one starts from the active character. The base synthesizer and channel volume/pan remain instrument/track settings.
+Every clip preserves its own **character**: the Motion Engine arpeggiator and LFO, Signal Processing bypass and complete effect chain, and the six Vector Control macros. When switching clips, all three racks restore their independent values; duplicating or mutating a clip copies its character, while creating a new one starts from the active character. The preset and base synthesizer also belong to each clip; channel volume/pan remain track settings.
 
 Each track card includes `S` (**Solo**) and `M` (**Mute**). Solo is exclusive: enabling it makes only that instrument audible, switches buses immediately even with sustained voices, and restores the complete mix when pressed again. It can also be enabled on the selected track by searching for `Solo` in `Ctrl/Cmd + K`. The state is respected when exporting WAV.
 
@@ -162,3 +162,12 @@ require prior written permission from КИБЕР VENGANCE.
 This policy does not claim ownership of music independently created by users
 with the application. It does not grant any trademark rights in the КИБЕР
 VENGANCE name, logo, or other brand assets.
+
+
+### A different sound for each clip
+
+Select a clip, open **Sound**, and choose Razor Choir, Neon Talon, Solar Vengeance or another preset. The clip remembers its preset, oscillators, filter, envelope, glide, unison and detune alongside its effects/macros. Switching clips restores their individual settings. New and duplicated clips inherit an independent copy; loading a factory or saved preset preserves the track mixer.
+
+Existing projects acquire the same instrument in every clip on their track when loaded, so their original sound is preserved. JSON/Project Package and WAV/stems retain the new sounds; custom patches are not encoded in MIDI. Use the updated application to reopen these projects. Live effect tails remain on the shared track bus and can be colored by subsequent clip effects.
+
+The **▶ CLIP** button beside the clip start locator becomes **Ⅱ PAUSE** during clip playback. Click it to pause at the current position, then click again to resume. It plays the active clips together; use Solo to hear only the selected track.

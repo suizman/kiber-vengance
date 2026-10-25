@@ -79,6 +79,7 @@ export interface Clip {
   notes: NoteEvent[];
   automation: Automation;
   character: ClipCharacter;
+  instrument: InstrumentState;
 }
 export interface TrackState {
   volume: number;
@@ -104,6 +105,24 @@ export interface TrackState {
   color: string;
   groupId?: string | null;
 }
+// Mixer settings remain on TrackState; its instrument fields also support legacy files.
+export type InstrumentState = Pick<
+  TrackState,
+  | "preset"
+  | "wave"
+  | "osc2Wave"
+  | "osc2Mix"
+  | "filterType"
+  | "cutoff"
+  | "resonance"
+  | "attack"
+  | "decay"
+  | "sustain"
+  | "release"
+  | "glide"
+  | "unison"
+  | "detune"
+>;
 export interface Scene {
   id: string;
   name: string;

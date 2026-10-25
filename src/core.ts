@@ -7,6 +7,7 @@ import type {
   Clip,
   ClipCharacter,
   EffectChain,
+  InstrumentState,
   MacroState,
   NoteEvent,
   NoteExpression,
@@ -135,8 +136,59 @@ export function createClip(
     notes: [],
     automation: { cutoff: {}, volume: {}, pan: {} },
     character: characterDefaults(track),
+    instrument: instrumentSettings(track),
   };
 }
+/** Copy only sound parameters, never mixer or routing state from preset banks. */
+export function instrumentSettings(
+  track: TrackId,
+  source: Partial<TrackState> = {},
+): InstrumentState {
+  const defaults = trackDefaults()[track];
+  const keys = [
+    "preset",
+    "wave",
+    "osc2Wave",
+    "osc2Mix",
+    "filterType",
+    "cutoff",
+    "resonance",
+    "attack",
+    "decay",
+    "sustain",
+    "release",
+    "glide",
+    "unison",
+    "detune",
+  ] as const;
+  return Object.fromEntries(
+    keys
+      .filter((key) => source[key] !== undefined || defaults[key] !== undefined)
+      .map((key) => [key, source[key] ?? defaults[key]]),
+  ) as InstrumentState;
+}
+
+/** A voice gets its own snapshot; subsequent clip edits cannot change its release. */
+export function clipTrackState(
+  project: Project,
+  clip: Clip,
+  step?: number,
+): TrackState {
+  const cfg = {
+    ...project.tracks[clip.track],
+    ...instrumentSettings(
+      clip.track,
+      clip.instrument || project.tracks[clip.track],
+    ),
+  };
+  if (step !== undefined) {
+    for (const lane of project.automationLanes || [])
+      if (lane.target === `track.${clip.track}.cutoff`)
+        cfg.cutoff = 120 + evaluateAutomationLane(lane, step, 0.5) * 11880;
+  }
+  return cfg;
+}
+
 export function clipLengthSteps(clip: Clip): number {
   return (
     Math.max(1, clip.bars) * Math.max(1, clip.stepsPerBar || STEPS_PER_BAR)
@@ -704,6 +756,7 @@ function migrateLegacy(raw: LegacyProject, base: Project): Project {
         pattern.bars || 1,
       );
       clip.character = legacyCharacter(raw, track);
+      clip.instrument = instrumentSettings(track, raw.tracks?.[track]);
       clip.notes = (pattern.notes?.[track] || []).map(
         (n) =>
           normalizeClip(
@@ -763,7 +816,16 @@ export function migrateProject(value: unknown): Project {
     };
   }
   const clips = (source.clips || base.clips).map((c: any) =>
-    normalizeClip(c, legacyCharacter(source, c.track)),
+    normalizeClip(
+      {
+        ...c,
+        instrument: instrumentSettings(
+          c.track,
+          c.instrument || tracks[c.track as TrackId],
+        ),
+      },
+      legacyCharacter(source, c.track),
+    ),
   );
   for (const track of TRACKS)
     if (!clips.some((c) => c.track === track))
@@ -1427,6 +1489,9 @@ export function generateBacking(
         `${names[index] || `BASE ${index + 1}`} · ${TRACK_META[track].label}`,
         4,
         meterSteps(project.meter),
+      );
+      generated.instrument = structuredClone(
+        activeClip(project, track).instrument,
       );
       generateClip(
         project,

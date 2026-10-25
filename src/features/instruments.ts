@@ -17,6 +17,7 @@ import {
   createEmptyProject,
   migrateProject,
   activeClip,
+  instrumentSettings,
   clipsForTrack,
   createClip,
   clipLengthSteps,
@@ -108,7 +109,7 @@ type UserPreset = {
   name: string;
   track: TrackId;
   tags: string[];
-  instrument: TrackState;
+  instrument: import("../model.js").InstrumentState;
   character: any;
 };
 
@@ -176,7 +177,8 @@ export function renderTracks(ctx: RuntimeContext) {
 
 export function renderInspector(ctx: RuntimeContext) {
   const meta = TRACK_META[ctx.selectedTrack],
-    cfg = ctx.project.tracks[ctx.selectedTrack];
+    cfg = ctx.clip().instrument,
+    mixer = ctx.project.tracks[ctx.selectedTrack];
   document.documentElement.style.setProperty("--track", meta.color);
   ctx.$("#trackName").textContent = meta.label;
   ctx.$("#trackType").textContent =
@@ -185,8 +187,12 @@ export function renderInspector(ctx: RuntimeContext) {
       : ctx.selectedTrack === "guitar"
         ? msg("ui_b022c81cc782")
         : msg("ui_b78e09c7fe9b");
-  ctx.$("#preset").innerHTML = ctx.presets[ctx.selectedTrack]
-    .map((p) => `<option ${p === cfg.preset ? "selected" : ""}>${p}</option>`)
+  const names = [...new Set([...ctx.presets[ctx.selectedTrack], cfg.preset])];
+  ctx.$("#preset").innerHTML = names
+    .map(
+      (p) =>
+        `<option ${p === cfg.preset ? "selected" : ""}>${ctx.esc(p)}</option>`,
+    )
     .join("");
   ctx.$("#waveSelect").hidden = ctx.selectedTrack === "drums";
   ctx.$("#osc2WaveSelect").hidden = ctx.selectedTrack === "drums";
@@ -234,7 +240,7 @@ export function renderInspector(ctx: RuntimeContext) {
     }
     mountDial(host, {
       label,
-      value: cfg[key],
+      value: (key === "volume" || key === "pan" ? mixer : cfg)[key],
       min,
       max,
       step,
@@ -242,7 +248,7 @@ export function renderInspector(ctx: RuntimeContext) {
       format: (value) => String(format(key, value)),
       onStart: ctx.snapshot,
       onChange: (value) => {
-        cfg[key] = value;
+        (key === "volume" || key === "pan" ? mixer : cfg)[key] = value;
         ctx.engine.setProject(ctx.project);
       },
       onCommit: () => ctx.changed(),
@@ -272,7 +278,7 @@ export function renderInspector(ctx: RuntimeContext) {
 }
 
 export function applyPreset(ctx: RuntimeContext, track: TrackId, name: string) {
-  const c = ctx.project.tracks[track],
+  const c = activeClip(ctx.project, track).instrument,
     fx = activeClip(ctx.project, track).character.fx,
     bank: any = {
       lead: {
@@ -460,7 +466,7 @@ export function applyPreset(ctx: RuntimeContext, track: TrackId, name: string) {
     },
     patch = bank[track][name] || {},
     { fx: fxPatch, ...instrument } = patch;
-  Object.assign(c, instrument);
+  Object.assign(c, instrumentSettings(track, { ...c, ...instrument }));
   if (fxPatch) Object.assign(fx, fxPatch);
   c.preset = name;
 }
@@ -738,9 +744,9 @@ export function renderPresetLibrary(ctx: RuntimeContext) {
       if (item.id.startsWith("builtin:"))
         ctx.applyPreset(item.track, item.name);
       else {
-        Object.assign(
-          ctx.project.tracks[item.track],
-          structuredClone((item as UserPreset).instrument),
+        activeClip(ctx.project, item.track).instrument = instrumentSettings(
+          item.track,
+          (item as UserPreset).instrument,
         );
         activeClip(ctx.project, item.track).character = structuredClone(
           (item as UserPreset).character,
@@ -795,7 +801,7 @@ export async function saveCurrentPreset(ctx: RuntimeContext) {
       .tags!.split(",")
       .map((tag) => tag.trim())
       .filter(Boolean),
-    instrument: structuredClone(ctx.project.tracks[ctx.selectedTrack]),
+    instrument: structuredClone(ctx.clip().instrument),
     character: structuredClone(ctx.clip().character),
   });
   ctx.saveUserPresets(items);

@@ -39,3 +39,17 @@ Do not reintroduce per-panel font-size patches. New actions use the shared butto
 ## Validation boundaries
 
 These files define the system and component states; visual acceptance requires screenshots and real workflow checks after integration. CSS alone does not establish audio behavior, focus management, responsive overflow safety or physical iOS validation.
+
+
+## Sonido independiente por clip (2026-10-25)
+
+El inspector Sound edita el preset y los parámetros del instrumento del clip activo: osciladores, filtro, ADSR, glide, unison y detune. Su indicación de ámbito es bilingüe. Volumen, panorama, mute/solo, pre-gain y routing siguen siendo de pista y no se alteran al cargar presets, incluidos los bancos antiguos. Clips nuevos, duplicados y generados conservan copias independientes del instrumento de origen.
+
+El campo aditivo `clip.instrument` mantiene el formato v6 y migra los proyectos anteriores copiando su instrumento de pista a cada clip. Se conserva en historial, autoguardado, JSON y paquetes; reproducción, launcher, arreglo, captura del Scratch Deck y WAV/stems usan el instrumento de cada clip. Las voces sostenidas conservan los parámetros con los que nacieron. Los buses de efectos en directo siguen siendo compartidos por pista: no se reinician sus colas, aunque los nuevos efectos pueden modificar su color. MIDI no incorpora estos patches de síntesis; se requiere WAV o proyecto/paquete para conservar el sonido completo. Versiones antiguas de la aplicación no interpretan instrumentos distintos por clip.
+
+MIDI Learn para cutoff actúa sobre el instrumento del clip activo; sus destinos de volumen y panorama permanecen en la pista. La automatización global de cutoff se evalúa sobre la voz sin sobrescribir los parámetros guardados del clip.
+
+
+## Local clip play/pause (2026-10-25)
+
+The clip locator button toggles between `▶ CLIP` and `Ⅱ PAUSE` (`Ⅱ PAUSA` in Spanish). During clip playback it pauses through the shared transport, retaining the clip cursor; pressing it again resumes there. Its visible state, accessible label and help follow global play/pause/stop and language changes. While song playback is running it remains a clip-start action and switches to clip playback, preserving the previous behavior. Startup disables the local button until audio initialization completes to prevent duplicate starts. This controls the active-clip mix, not a solo of the selected track.

@@ -103,7 +103,7 @@ type UserPreset = {
   name: string;
   track: TrackId;
   tags: string[];
-  instrument: TrackState;
+  instrument: import("../model.js").InstrumentState;
   character: any;
 };
 

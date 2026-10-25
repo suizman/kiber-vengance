@@ -103,7 +103,7 @@ type UserPreset = {
   name: string;
   track: TrackId;
   tags: string[];
-  instrument: TrackState;
+  instrument: import("../model.js").InstrumentState;
   character: any;
 };
 
@@ -810,13 +810,13 @@ export function applyMidiMapping(
     ctx.project.master = Math.max(0, Math.min(1, value));
   else {
     const match = /^track\.([^.]+)\.(volume|pan|cutoff)$/.exec(mapping.target);
-    if (match && TRACKS.includes(match[1] as TrackId))
-      (ctx.project.tracks[match[1] as TrackId] as any)[match[2]!] =
-        match[2] === "cutoff"
-          ? 120 + value * 11880
-          : match[2] === "pan"
-            ? value * 2 - 1
-            : value;
+    if (match && TRACKS.includes(match[1] as TrackId)) {
+      const track = match[1] as TrackId;
+      if (match[2] === "cutoff")
+        activeClip(ctx.project, track).instrument.cutoff = 120 + value * 11880;
+      else if (match[2] === "pan") ctx.project.tracks[track].pan = value * 2 - 1;
+      else ctx.project.tracks[track].volume = value;
+    }
   }
   ctx.engine.setProject(ctx.project);
   ctx.renderMixer();

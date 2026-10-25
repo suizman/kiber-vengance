@@ -228,3 +228,21 @@ The studio keeps the four-workspace layout while restoring a stronger cyberpunk 
 Scratch Deck loads Vite-transformed source in development and a Vite-bundled, hashed processor URL in production. The former document-relative `./scratch-worklet.js` request returned the HTML fallback in development, producing Firefox's `expected expression, got '<'` error on import and mix capture. Development must avoid the classic worker wrapper because AudioWorklet has no `importScripts`. Firefox regression tests cover both actions from fresh pages against development and production servers. Project data and audio processing are unchanged.
 
 Resumed validation after the interrupted session: `npm run check:full` passed on 2026-10-25 with 26 core tests and 14 Chromium/Firefox workflows, with no skips. Firefox independently initialized the deck through local WAV import and Capture Mix in development and production. The static build and offline cache include the hashed processor. Tests required execution outside the restricted process sandbox; this host used its existing audio service, without the optional PulseAudio null-sink wrapper. Physical sound output was not assessed.
+
+
+## Instrument presets per clip (2026-10-25)
+
+Each clip now stores `instrument`: preset, oscillator waves/mix, filter, ADSR, glide, unison and detune. Sound edits and factory/user preset loading affect the active clip only. Level, pan, mute, solo, pre-gain, sends and routing remain on the track; loading a preset never overwrites them, including older user banks containing mixer fields. New clips and duplicates inherit independent instrument copies; generated backing clips and fills inherit their source instrument. Autosave, history, snapshots, JSON and packages retain the settings.
+
+This is an additive v6 field. Loading v2–v6 projects without it copies the old track instrument into each clip, preserving the existing sound. Legacy track instrument fields remain readable for compatibility but no longer drive normalized clips. New files require this application revision to reproduce different instruments per clip; older builds ignore the field. Live keys, clip playback, launcher, arrangement, Scratch Capture Mix and offline WAV/stems resolve the sounding clip's instrument. Voices retain their instrument snapshot, including release, when the clip or preset changes. Global cutoff automation applies to the resolved voice without overwriting saved clip settings. MIDI Learn cutoff edits the active clip instrument; MIDI volume/pan mappings still target the track.
+
+Live effects still use the existing persistent bus per track: switching presets does not rebuild it or clear delay/reverb buffers, but changes to clip effects can color an existing tail. Fully isolated live effect tails per clip are not implemented. MIDI exports notes/expression, not these custom synthesizer patches; use WAV or a project/package to preserve the sound.
+
+Validation: `npm run check:full` passed with 28 core tests and 16 Chromium/Firefox workflows, without skips. New coverage verifies v2–v6 migration, independent copies, song/active-clip scheduling, cutoff automation, preset switching and history, new-clip inheritance, reload, saving/importing user banks without mixer changes, simulated MIDI CC cutoff isolation, real offline WAV segment comparisons and live held-voice envelope retention. Physical MIDI/audio hardware remains unverified.
+
+
+## Local clip play/pause (2026-10-25)
+
+The clip locator button toggles between `▶ CLIP` and `Ⅱ PAUSE` (`Ⅱ PAUSA` in Spanish). During clip playback it pauses through the shared transport, retaining the clip cursor; pressing it again resumes there. Its visible state, accessible label and help follow global play/pause/stop and language changes. While song playback is running it remains a clip-start action and switches to clip playback, preserving the previous behavior. Startup disables the local button until audio initialization completes to prevent duplicate starts. This controls the active-clip mix, not a solo of the selected track.
+
+Validation: `npm run check:full` passed with 28 core tests and 18 Chromium/Firefox workflows, no skips. Both browsers verify local pause, stable paused cursor, resume from that cursor, synchronization with global transport and switching from song to clip playback.

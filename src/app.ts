@@ -1523,7 +1523,6 @@ staticCopy.push(
   ['[data-view="mix"]', "MIX", "MEZCLA"],
   ["#exportAsBtn", "EXPORT AS", "EXPORTAR COMO"],
   ["#globalStartBtn", "▶ SONG", "▶ CANCIÓN"],
-  ["#clipStartBtn", "▶ CLIP", "▶ CLIP"],
   [
     "#arrangeDescription",
     "Each section combines five independent clips. Click the timeline to set the global start; edit, repeat and reorder the complete song.",
@@ -1748,8 +1747,8 @@ const controlDescriptions: Record<string, [string, string, string, string]> = {
   preset: [
     "Sound preset",
     "Preset de sonido",
-    "Load a designed starting sound for the selected track.",
-    "Carga un sonido inicial diseñado para la pista seleccionada.",
+    "Load a sound for the active clip. Track level and pan stay unchanged.",
+    "Carga un sonido para el clip activo. El nivel y panorama de la pista se conservan.",
   ],
   waveSelect: [
     "Main oscillator",
@@ -2409,7 +2408,7 @@ type UserPreset = {
   name: string;
   track: TrackId;
   tags: string[];
-  instrument: TrackState;
+  instrument: import("./model.js").InstrumentState;
   character: any;
 };
 const USER_PRESETS = "kiber-vengance-user-presets-v1",
@@ -3080,6 +3079,7 @@ $("#newClipBtn").onclick = () => {
       meterSteps(project.meter),
     );
   c.character = structuredClone(source.character);
+  c.instrument = structuredClone(source.instrument);
   project.clips.push(c);
   project.activeClipIds[selectedTrack] = c.id;
   selectedNotes.clear();
@@ -3555,6 +3555,7 @@ if ("serviceWorker" in navigator && !query.has("qa"))
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 
 function syncStudioUi() {
+  workflow.syncClipTransportButton(runtime);
   if (!copyQueued) {
     copyQueued = true;
     queueMicrotask(() => {

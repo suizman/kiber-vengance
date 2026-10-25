@@ -65,6 +65,7 @@ import {
 import { AudioEngine, renderWav } from "../audio.js";
 
 import type {
+  Clip,
   AudioLane,
   AudioRegion,
   AutomationLane,
@@ -108,7 +109,7 @@ type UserPreset = {
   name: string;
   track: TrackId;
   tags: string[];
-  instrument: TrackState;
+  instrument: import("../model.js").InstrumentState;
   character: any;
 };
 
@@ -375,6 +376,12 @@ export function setupArrangeTools(ctx: RuntimeContext) {
         1,
         meterSteps(ctx.project.meter),
       );
+    const sourceDrum =
+      ctx.project.clips.find(
+        (clip: Clip) => clip.id === source.clipIds.drums,
+      ) || activeClip(ctx.project, "drums");
+    drum.instrument = structuredClone(sourceDrum.instrument);
+    drum.character = structuredClone(sourceDrum.character);
     generateClip(ctx.project, drum, "drums", 1);
     drum.notes.push(makeNote(Math.max(0, drum.stepsPerBar - 2), 6, 1, 1));
     ctx.project.clips.push(drum);

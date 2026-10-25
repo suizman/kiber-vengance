@@ -103,7 +103,7 @@ type UserPreset = {
   name: string;
   track: TrackId;
   tags: string[];
-  instrument: TrackState;
+  instrument: import("../model.js").InstrumentState;
   character: any;
 };
 
@@ -227,6 +227,7 @@ export function applyLanguage(ctx: RuntimeContext, render = false) {
   if (render) ctx.renderAll();
   if (ctx.pendingDeleteClipId) ctx.updateDeleteClipDialog();
   ctx.installControlHelp();
+  syncClipTransportButton(ctx);
   if (ctx.helpMode) ctx.showHelpIntro();
 }
 
@@ -777,10 +778,21 @@ export function setupStudioExtensions(ctx: RuntimeContext) {
     ctx.activateView("arrange");
     ctx.togglePlay(true);
   };
-  ctx.$("#clipStartBtn").onclick = () => {
-    if (ctx.engine.playing) ctx.engine.stop();
-    ctx.activateView("forge");
-    ctx.togglePlay(false);
+  ctx.$("#clipStartBtn").onclick = async () => {
+    if (ctx.engine.playing && !ctx.engine.songMode) {
+      ctx.pausePlayback();
+      return;
+    }
+    const button = ctx.$("#clipStartBtn");
+    button.disabled = true;
+    try {
+      if (ctx.engine.playing) ctx.engine.stop();
+      ctx.activateView("forge");
+      await ctx.togglePlay(false);
+    } finally {
+      button.disabled = false;
+      syncClipTransportButton(ctx);
+    }
   };
   ctx.$("#performanceRecordBtn").onclick = ctx.togglePerformanceCapture;
   ctx.$("#performanceSaveBtn").onclick = () =>
@@ -1056,6 +1068,26 @@ export function setupProjectTemplates(ctx: RuntimeContext) {
   };
 }
 
+export function syncClipTransportButton(
+  ctx: RuntimeContext,
+  running = ctx.engine.playing,
+) {
+  const button = ctx.$("#clipStartBtn");
+  if (!button) return;
+  const playing = Boolean(running && !ctx.engine.songMode);
+  const label = ctx.L(
+    playing ? "Pause active clips" : "Play or resume active clips",
+    playing ? "Pausar clips activos" : "Reproducir o reanudar clips activos",
+  );
+  button.textContent = playing ? ctx.L("Ⅱ PAUSE", "Ⅱ PAUSA") : "▶ CLIP";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-description", label);
+  button.dataset.helpTitle = label;
+  button.dataset.helpBody = label;
+  button.classList.toggle("active", playing);
+}
+
 export function syncTransportButtons(
   ctx: RuntimeContext,
   running = ctx.engine.playing,
@@ -1082,6 +1114,7 @@ export function syncTransportButtons(
     ctx.L("Arm note recording", "Preparar grabación de notas"),
   );
   ctx.$("#playBtn").classList.toggle("active", running);
+  syncClipTransportButton(ctx, running);
   ctx.$("#pauseBtn").disabled = !running;
   ctx.$("#pauseBtn").classList.toggle("active", false);
 }

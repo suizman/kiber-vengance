@@ -1,6 +1,7 @@
 import scratchWorkletUrl from "./scratch-worklet.ts?worker&url";
 import {
   activeClip,
+  clipTrackState,
   audioRegionRate,
   automationValue,
   clipLengthSteps,
@@ -412,16 +413,17 @@ export class AudioEngine {
     for (const id of [...this.samplerVoices.keys()]) this.stopSampler(id, true);
     this.samplerBuffer = null;
   }
-  private pendingSampler = new Map<string,symbol>();
+  private pendingSampler = new Map<string, symbol>();
   async startSampler(
     id: string,
     pitch: number,
     velocity = 0.8,
     settings: SamplerInstrument = this.project.sampler,
   ) {
-    const request=Symbol();this.pendingSampler.set(id,request);
+    const request = Symbol();
+    this.pendingSampler.set(id, request);
     await this.init();
-    if(this.pendingSampler.get(id)!==request)return false;
+    if (this.pendingSampler.get(id) !== request) return false;
     const buffer = this.samplerBuffer;
     if (!buffer) return false;
     this.stopSampler(id, true);
@@ -730,7 +732,7 @@ export class AudioEngine {
         local =
           (this.songMode ? this.sceneStep : this.position) %
           clipLengthSteps(clip),
-        cfg = this.project.tracks[track],
+        cfg = clipTrackState(this.project, clip, this.position),
         character = clip.character;
       this.updateEffectBus(track, cfg, character, time);
       if (
@@ -788,9 +790,8 @@ export class AudioEngine {
             param = match[2]!;
           if (param === "volume")
             this.buses[track]?.output.gain.setTargetAtTime(value, time, 0.015);
-          else
-            (this.project.tracks[track] as any)[param] =
-              param === "cutoff" ? 120 + value * 11880 : value * 2 - 1;
+          else if (param === "pan")
+            this.project.tracks[track].pan = value * 2 - 1;
         }
       }
     }
@@ -1241,7 +1242,11 @@ export class AudioEngine {
     this.setProject(this.project);
     this.stopLive(id, true);
     const now = this.ctx.currentTime,
-      cfg = this.project.tracks[track],
+      cfg = clipTrackState(
+        this.project,
+        activeClip(this.project, track),
+        this.position,
+      ),
       character = activeClip(this.project, track).character,
       macros = character.macros;
     if (track === "drums") {
@@ -2144,12 +2149,17 @@ export async function renderWav(
     if (
       !project.tracks[e.track].mute &&
       (!soloActive || project.tracks[e.track].solo)
-    )
+    ) {
+      const clip =
+        project.clips.find((clip) => clip.id === e.clipId) ||
+        activeClip(project, e.track);
+      const cfg = clipTrackState(project, clip, e.step + regionStart);
       e.track === "drums"
-        ? drumEvent(e, project.tracks.drums)
+        ? drumEvent(e, cfg)
         : e.track === "guitar"
-          ? guitarEvent(e, project.tracks.guitar)
-          : toneEvent(e, project.tracks[e.track]);
+          ? guitarEvent(e, cfg)
+          : toneEvent(e, cfg);
+    }
   const audioSolo = (project.audioLanes || []).some((lane) => lane.solo);
   for (const lane of project.audioLanes || []) {
     if (lane.mute || (audioSolo && !lane.solo)) continue;

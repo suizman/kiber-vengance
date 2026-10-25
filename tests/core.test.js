@@ -146,3 +146,54 @@ test('diagnostics keep the effects graph at exactly five persistent buses', () =
 test('metronome emits accented bar clicks while music is scheduled', () => {const p=createProject();TRACKS.forEach(t=>p.tracks[t].mute=true);const e=new AudioEngine();e.project=p;e.position=0;e.songMode=false;e.metronome=true;let accents=[];e.click=(_time,accent)=>accents.push(accent);e.scheduleMusicStep(0);e.position=4;e.scheduleMusicStep(.1);assert.deepEqual(accents,[true,false])});
 
 test('transport seeks to exact clip and global arrangement positions',()=>{const p=createProject(),e=new AudioEngine();e.project=p;assert.equal(e.seek(9,false),9);const firstLength=sceneLengthSteps(p,p.arrangement[0]);assert.equal(e.seek(firstLength+5,true),firstLength+5);assert.ok(e.sceneIndex>0||e.sceneRepeat>0);assert.equal(e.sceneStep,5);assert.equal(e.seek(playbackEvents(p,{song:true}).durationSteps,true),0)});
+
+test('legacy instruments migrate into independent clips without copying mixer state', () => {
+  for (const version of [3, 4, 5, 6]) {
+    const legacy = createProject(); legacy.version = version;
+    for (const clip of legacy.clips) delete clip.instrument;
+    Object.assign(legacy.tracks.lead, { preset: 'Custom legacy', cutoff: 1234, release: 1.7, volume: .31, pan: -.4 });
+    const project = migrateProject(legacy), [a, b] = clipsForTrack(project, 'lead');
+    assert.equal(a.instrument.preset, 'Custom legacy');
+    assert.equal(b.instrument.cutoff, 1234);
+    assert.equal(a.instrument.release, 1.7);
+    assert.equal(a.instrument.volume, undefined);
+    assert.equal(project.tracks.lead.volume, .31);
+    a.instrument.cutoff = 7777;
+    assert.equal(b.instrument.cutoff, 1234);
+    const restored = migrateProject(JSON.parse(JSON.stringify(project)));
+    assert.equal(restored.clips.find(c => c.id === a.id).instrument.cutoff, 7777);
+    assert.equal(restored.clips.find(c => c.id === b.id).instrument.cutoff, 1234);
+    const copy = duplicateClip(project, a.id); copy.instrument.release = .2;
+    assert.equal(a.instrument.release, 1.7);
+  }
+  const legacy = migrateProject({ version: 2, tracks: { lead: { preset: 'Old lead', cutoff: 2222 } }, patterns: [{ id: 'old', notes: {} }] });
+  assert.equal(activeClip(legacy, 'lead').instrument.cutoff, 2222);
+});
+
+test('song scheduling and clip launches use each instrument and preserve voice snapshots', () => {
+  const project = createProject(), [a, b] = clipsForTrack(project, 'lead');
+  for (const clip of [a, b]) { clip.notes = [makeNote(0, 60, 4)]; clip.character.arp.enabled = false; }
+  a.instrument.preset = 'A'; a.instrument.release = 1.5;
+  b.instrument.preset = 'B'; b.instrument.release = .1;
+  project.tracks.lead.solo = true;
+  project.arrangement = [a, b].map(clip => ({ id: clip.id, name: clip.name, repeats: 1, clipIds: { ...project.activeClipIds, lead: clip.id } }));
+  const engine = new AudioEngine(), voices = [];
+  engine.project = project; engine.ctx = { currentTime: 0 }; engine.songMode = true;
+  engine.sceneStep = 0; engine.position = 0; engine.updateEffectBus = () => {}; engine.scheduleAudioRegions = () => {};
+  engine.voice = (...args) => voices.push(args[5]);
+  engine.sceneIndex = 0; engine.scheduleMusicStep(.1);
+  engine.sceneIndex = 1; engine.scheduleMusicStep(.2);
+  engine.songMode = false; project.activeClipIds.lead = b.id; engine.scheduleMusicStep(.3);
+  assert.deepEqual(voices.map(cfg => cfg.preset), ['A', 'B', 'B']);
+  a.instrument.release = .01;
+  assert.equal(voices[0].release, 1.5);
+  assert.equal(voices[1].release, .1);
+  assert.equal(voices[0].volume, project.tracks.lead.volume);
+  const cutoff = createAutomationLane('track.lead.cutoff');
+  cutoff.points = [{ id: 'cut', step: 0, value: .25, curve: 'linear' }];
+  project.automationLanes.push(cutoff);
+  const originalCutoff = b.instrument.cutoff;
+  engine.scheduleMusicStep(.4);
+  assert.equal(voices.at(-1).cutoff, 3090);
+  assert.equal(b.instrument.cutoff, originalCutoff);
+});
