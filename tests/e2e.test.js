@@ -217,3 +217,32 @@ for (const kind of ['firefox', 'chromium']) {
     assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).schedulerActive, false);
   });
 }
+
+for (const kind of ['firefox', 'chromium']) {
+  test(`${kind} loads every clip in an arrangement section into Compose`, async t => {
+    await ready();
+    const browser = await launchBrowser(kind);
+    t.after(() => browser.close());
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.goto(`${url}/?qa=1`);
+    await page.locator('.note-block').first().waitFor();
+    await goToView(page, 'arrange');
+    const section = page.locator('.scene').nth(1),
+      expected = await section.locator('[data-scene-track]').evaluateAll(selects =>
+        Object.fromEntries(selects.map(select => [select.dataset.sceneTrack, select.value])),
+      );
+    await section.locator('[data-action="load-compose"]').click();
+    assert.equal(await page.locator('#app').getAttribute('data-active-view'), 'forge');
+    assert.equal(await page.locator('#studioInspector').getAttribute('aria-hidden'), 'true');
+    for (const [track, clipId] of Object.entries(expected)) {
+      await page.locator(`[data-track="${track}"]`).click();
+      assert.equal(await page.locator('#clipSelect').inputValue(), clipId);
+    }
+    await page.locator('#languageSelect').selectOption('es');
+    await goToView(page, 'arrange');
+    assert.match(
+      await page.locator('.scene').nth(1).locator('[data-action="load-compose"]').textContent(),
+      /CARGAR EN COMPOSE/,
+    );
+  });
+}

@@ -567,6 +567,10 @@
     height: 28px;
     padding: 0;
   }
+  .scene-actions .scene-load-compose {
+    width: auto;
+    padding: 0 8px;
+  }
   .arrange-actions {
     display: flex;
     gap: 8px;

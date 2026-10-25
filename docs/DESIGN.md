@@ -49,6 +49,8 @@ El campo aditivo `clip.instrument` mantiene el formato v6 y migra los proyectos 
 
 MIDI Learn para cutoff actúa sobre el instrumento del clip activo; sus destinos de volumen y panorama permanecen en la pista. La automatización global de cutoff se evalúa sobre la voz sin sobrescribir los parámetros guardados del clip.
 
+Cada tarjeta de sección de Arrange ofrece `LOAD TO COMPOSE` / `CARGAR EN COMPOSE` como acción primaria contextual. Activa simultáneamente los cinco clips asignados, cierra el inspector Sound y abre el editor Compose, conservando la pista seleccionada. La acción cambia el contexto de edición, no el contenido musical ni la mezcla.
+
 
 ## Local clip play/pause (2026-10-25)
 

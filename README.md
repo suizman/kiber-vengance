@@ -171,3 +171,5 @@ Select a clip, open **Sound**, and choose Razor Choir, Neon Talon, Solar Vengean
 Existing projects acquire the same instrument in every clip on their track when loaded, so their original sound is preserved. JSON/Project Package and WAV/stems retain the new sounds; custom patches are not encoded in MIDI. Use the updated application to reopen these projects. Live effect tails remain on the shared track bus and can be colored by subsequent clip effects.
 
 The **▶ CLIP** button beside the clip start locator becomes **Ⅱ PAUSE** during clip playback. Click it to pause at the current position, then click again to resume. It plays the active clips together; use Solo to hear only the selected track.
+
+In Arrange, **LOAD TO COMPOSE** activates all five clips assigned to that section and opens the Compose editor. This provides a direct way to edit a complete section without selecting each track's clip manually.

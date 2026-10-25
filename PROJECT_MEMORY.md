@@ -246,3 +246,9 @@ Validation: `npm run check:full` passed with 28 core tests and 16 Chromium/Firef
 The clip locator button toggles between `▶ CLIP` and `Ⅱ PAUSE` (`Ⅱ PAUSA` in Spanish). During clip playback it pauses through the shared transport, retaining the clip cursor; pressing it again resumes there. Its visible state, accessible label and help follow global play/pause/stop and language changes. While song playback is running it remains a clip-start action and switches to clip playback, preserving the previous behavior. Startup disables the local button until audio initialization completes to prevent duplicate starts. This controls the active-clip mix, not a solo of the selected track.
 
 Validation: `npm run check:full` passed with 28 core tests and 18 Chromium/Firefox workflows, no skips. Both browsers verify local pause, stable paused cursor, resume from that cursor, synchronization with global transport and switching from song to clip playback.
+
+## Load arrangement section into Compose (2026-10-25)
+
+Every Arrange section exposes `LOAD TO COMPOSE` / `CARGAR EN COMPOSE`. It copies the section's five clip assignments into the active clip set, clears note selection, closes the Sound inspector and opens the Compose clip editor while preserving the selected track. It does not alter the section, notes or mixer. This is navigation/session state and participates in autosave like changing an individual Active Clip selector. Firefox and Chromium verify all five resulting selectors and the bilingual label.
+
+Validation: `npm run check:full` passed with 28 core tests and 20 Chromium/Firefox workflows, without skips. The accessibility audit also covers the new action's visible and spoken labels.

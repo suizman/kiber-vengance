@@ -164,7 +164,7 @@ export function renderArrangement(ctx: RuntimeContext) {
   ctx.$("#arrangement").innerHTML = ctx.project.arrangement
     .map(
       (s: any, i: number) =>
-        `<article class="scene ${ctx.selectedScenes.has(i) ? "selected" : ""} ${ctx.currentScene === i && ctx.engine.playing ? "playing" : ""}" data-scene="${i}" tabindex="0"><div class="scene-top"><span class="drag-handle" draggable="true">⠿</span><input data-scene-name aria-label="${msg("ui_f2c6b564bd81")} ${i + 1}" value="${ctx.esc(s.name)}"><button data-action="remove" aria-label="${msg("ui_e7eaff78b315")} ${i + 1}" ${ctx.project.arrangement.length === 1 ? "disabled" : ""}>×</button></div><div class="scene-clips">${TRACKS.map((t) => `<label style="--track:${TRACK_META[t].color}"><span>${TRACK_META[t].label}</span><select data-scene-track="${t}">${options(t, s.clipIds[t])}</select></label>`).join("")}</div><div class="scene-bottom"><label class="scene-repeats"><span>${msg("ui_830d819ef9a5")}</span><input data-repeats type="number" min="1" max="16" value="${s.repeats}"></label><div class="scene-actions"><button data-action="left" aria-label="${msg("ui_f1e7f81f8b87")}" ${i === 0 ? "disabled" : ""}>←</button><button data-action="duplicate" aria-label="${msg("ui_2dc7e40019d0")}">⧉</button><button data-action="right" aria-label="${msg("ui_0d1132856d9d")}" ${i === ctx.project.arrangement.length - 1 ? "disabled" : ""}>→</button></div><em>${String(i + 1).padStart(2, "0")}</em></div></article>`,
+        `<article class="scene ${ctx.selectedScenes.has(i) ? "selected" : ""} ${ctx.currentScene === i && ctx.engine.playing ? "playing" : ""}" data-scene="${i}" tabindex="0"><div class="scene-top"><span class="drag-handle" draggable="true">⠿</span><input data-scene-name aria-label="${msg("ui_f2c6b564bd81")} ${i + 1}" value="${ctx.esc(s.name)}"><button data-action="remove" aria-label="${msg("ui_e7eaff78b315")} ${i + 1}" ${ctx.project.arrangement.length === 1 ? "disabled" : ""}>×</button></div><div class="scene-clips">${TRACKS.map((t) => `<label style="--track:${TRACK_META[t].color}"><span>${TRACK_META[t].label}</span><select data-scene-track="${t}">${options(t, s.clipIds[t])}</select></label>`).join("")}</div><div class="scene-bottom"><label class="scene-repeats"><span>${msg("ui_830d819ef9a5")}</span><input data-repeats type="number" min="1" max="16" value="${s.repeats}"></label><div class="scene-actions"><button class="scene-load-compose" data-action="load-compose" aria-label="${translate("LOAD TO COMPOSE", "CARGAR EN COMPOSE")}: ${ctx.esc(s.name)}">${translate("LOAD TO COMPOSE", "CARGAR EN COMPOSE")}</button><button data-action="left" aria-label="${msg("ui_f1e7f81f8b87")}" ${i === 0 ? "disabled" : ""}>←</button><button data-action="duplicate" aria-label="${msg("ui_2dc7e40019d0")}">⧉</button><button data-action="right" aria-label="${msg("ui_0d1132856d9d")}" ${i === ctx.project.arrangement.length - 1 ? "disabled" : ""}>→</button></div><em>${String(i + 1).padStart(2, "0")}</em></div></article>`,
     )
     .join("");
   ctx.$$(".scene").forEach((card) => {
@@ -193,6 +193,20 @@ export function renderArrangement(ctx: RuntimeContext) {
       (b: any) =>
         (b.onclick = () => {
           const a = b.dataset.action;
+          if (a === "load-compose") {
+            ctx.project.activeClipIds = { ...s.clipIds };
+            ctx.selectedNotes.clear();
+            ctx.soundPanel = false;
+            ctx.changed(true);
+            ctx.activateView("forge");
+            ctx.setDefaultScroll();
+            ctx.toast(
+              translate(
+                `${s.name} loaded in Compose`,
+                `${s.name} cargada en Compose`,
+              ),
+            );
+          }
           if (a === "remove" && ctx.project.arrangement.length > 1) {
             ctx.snapshot();
             removeArrangementScene(ctx.project, i);

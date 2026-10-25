@@ -736,6 +736,11 @@ dialog :is(button, select, input, label) {
   width: auto;
   padding: 7px;
 }
+#app .scene-actions .scene-load-compose {
+  color: var(--cyan);
+  border-color: color-mix(in srgb, var(--cyan) 65%, var(--line));
+  padding-inline: 12px;
+}
 #app .scene-repeats input {
   width: 64px;
 }
