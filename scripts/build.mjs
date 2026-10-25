@@ -1,10 +1,14 @@
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, writeFile, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-
-const required = ['index.html', 'styles.css', 'app.js', 'core.js', 'audio.js', 'scratch-worklet.js', 'manifest.webmanifest', 'icon.svg', 'sw.js'];
-for (const file of required) await access(resolve('dist', file));
-const html = await readFile(resolve('dist/index.html'), 'utf8');
-for (const needle of ['КИБЕР VENGANCE', 'styles.css', 'app.js']) {
-  if (!html.includes(needle)) throw new Error(`index.html is missing ${needle}`);
-}
-console.log(`КИБЕР VENGANCE static build verified (${required.length} assets).`);
+const required=['index.html','core.js','audio.js','scratch-worklet.js','manifest.webmanifest','icon.svg'];
+for(const file of required)await access(resolve('dist',file));
+const html=await readFile('dist/index.html','utf8');if(!html.includes('КИБЕР VENGANCE'))throw new Error('Missing brand');
+const files=(await readdir('dist',{recursive:true})).filter(file=>/\.(html|js|css|svg|webmanifest)$/.test(file)&&file!=='sw.js');
+const digest=createHash('sha256');for(const file of files)digest.update(await readFile(`dist/${file}`));
+const version=digest.digest('hex').slice(0,12);
+await writeFile('dist/sw.js',`const CACHE='kv-studio-${version}';const ASSETS=${JSON.stringify(files.map(f=>'./'+f))};
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('kv-studio-')||k.startsWith('kiber-vengance-'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return r}).catch(async()=>{const hit=await caches.match(e.request);if(hit)return hit;if(e.request.mode==='navigate')return caches.match('./index.html');return Response.error()}))});`);
+console.log(`Studio build verified: ${files.length} assets, offline cache ${version}`);

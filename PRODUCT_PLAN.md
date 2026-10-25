@@ -133,3 +133,9 @@ Clips abre el editor y Sonido muestra los racks bajo demanda. En móvil hay tran
 Scratch input/control additions and the prioritized consistency backlog are documented in UX_REVIEW.md. Physical microphone/Safari validation remains required.
 
 Consistency pass: implemented waveform seeking, direct deck persistence, shared control scale, creation Undo and validated timing dialogs. UX_REVIEW.md tracks remaining component, translation and navigation architecture work explicitly.
+
+## Studio interface refactor (2026-10-25)
+
+The approved four-workspace interface is implemented using Vite, a Preact shell and shared keyboards/dials/dialogs. Ten feature controllers preserve the music workflows and project schema v6. Signal KV is the selected SVG identity. Common typography, focus/disabled states, inspector, bilingual catalog and pointer lifecycles replace the previous navigation/control patches. Hidden panels render on demand; inactive animations stop and waveform envelopes are cached. Native edit prompts are replaced by validated cancelable dialogs. See `docs/REFACTOR.md` for feature parity, implementation decisions, performance evidence and real-device limits. Earlier descriptions of Forge/Audio/Perform as top-level tabs describe the previous interface.
+
+Final refactor validation: `node scripts/with-null-audio.mjs npm run check:full` passed, including 12/12 Chromium/Firefox workflows with no skips. Hardware input/output and physical Safari remain unverified. Initial DOM is 1,342 nodes versus the 1,790-node local baseline. Full evidence and limitations: `docs/REFACTOR.md`.

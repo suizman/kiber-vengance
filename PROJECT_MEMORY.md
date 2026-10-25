@@ -208,3 +208,9 @@ Microphone capture loads a temporary scratch buffer, stops playback after captur
 
 ## Consistency and waveform seeking
 Scratch waveform supports touch/mouse seeking and keyboard arrows/Home/End without starting paused audio. Seeking clears stutter. Keep in project persists a scratch copy as an audio region. Shared control typography/targets/focus states and bilingual main action labels are applied. Audio additions and several creation operations now snapshot history. Tempo/meter use validated cancelable dialogs. See UX_REVIEW.md for implementation boundaries. Dedicated Chromium simulated-microphone, waveform seek and save workflow passed; check passed; physical Safari remains unverified.
+
+## Studio interface refactor (2026-10-25)
+
+The approved four-workspace interface is implemented using Vite, a Preact shell and shared keyboards/dials/dialogs. Ten feature controllers preserve the music workflows and project schema v6. Signal KV is the selected SVG identity. Common typography, focus/disabled states, inspector, bilingual catalog and pointer lifecycles replace the previous navigation/control patches. Hidden panels render on demand; inactive animations stop and waveform envelopes are cached. Native edit prompts are replaced by validated cancelable dialogs. See `docs/REFACTOR.md` for feature parity, implementation decisions, performance evidence and real-device limits. Earlier descriptions of Forge/Audio/Perform as top-level tabs describe the previous interface.
+
+Final refactor validation: `node scripts/with-null-audio.mjs npm run check:full` passed, including 12/12 Chromium/Firefox workflows with no skips. Hardware input/output and physical Safari remain unverified. Initial DOM is 1,342 nodes versus the 1,790-node local baseline. Full evidence and limitations: `docs/REFACTOR.md`.

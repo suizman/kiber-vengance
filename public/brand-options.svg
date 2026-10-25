@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520" fill="none">
+ <rect width="1000" height="520" rx="24" fill="#101217"/>
+ <text x="48" y="58" fill="#a9b3c3" font-family="Arial,sans-serif" font-size="13" letter-spacing="3">КИБЕР VENGANCE / IDENTITY STUDY</text>
+ <text x="48" y="96" fill="#f0f3f7" font-family="Arial,sans-serif" font-size="28" font-weight="600">Two marks. One instrument.</text>
+ <rect x="48" y="132" width="432" height="330" rx="16" fill="#171c24" stroke="#343d4b"/>
+ <rect x="520" y="132" width="432" height="330" rx="16" fill="#171c24" stroke="#343d4b"/>
+ <g transform="translate(182 170) scale(2.5)"><path d="M15 15v34M16 33l16-18M16 33l13 16M34 16l9 32 11-32" stroke="#66e5d6" stroke-width="5" stroke-linecap="square" stroke-linejoin="miter"/><path d="M51 49h3" stroke="#f078bd" stroke-width="4"/></g>
+ <g transform="translate(654 170) scale(2.5)"><path d="M12 15v34M12 32l19-17M12 32l19 17M34 16l10 33 10-33" stroke="#f0f3f7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 8h50M7 56h50" stroke="#f078bd" stroke-width="2"/></g>
+ <text x="80" y="378" fill="#66e5d6" font-family="Arial,sans-serif" font-size="17" font-weight="600">01 / Signal — selected</text>
+ <text x="80" y="408" fill="#a9b3c3" font-family="Arial,sans-serif" font-size="14">Precise cuts. Open silhouette. Clear at 24 px.</text>
+ <text x="552" y="378" fill="#f0f3f7" font-family="Arial,sans-serif" font-size="17" font-weight="600">02 / Frame</text>
+ <text x="552" y="408" fill="#a9b3c3" font-family="Arial,sans-serif" font-size="14">Softer geometry inside an equipment frame.</text>
+ <text x="48" y="494" fill="#7c899c" font-family="Arial,sans-serif" font-size="12">Both marks support single-color output. Existing КИБЕР VENGANCE name retained.</text>
+</svg>

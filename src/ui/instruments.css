@@ -1,0 +1,4229 @@
+/* Instrument/editor geometry. Visual tokens and components live in styles/. */
+@layer instrument-geometry {
+  button:disabled {
+    opacity: 0.28;
+    cursor: not-allowed;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+  .boot {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    z-index: 50;
+  }
+  .boot-mark,
+  .about-mark {
+    transform: skew(-6deg);
+  }
+  .brand-icon {
+    transform: skew(-7deg);
+    padding-right: 13px;
+  }
+  .project-head {
+    padding: 0 20px;
+    min-width: 0;
+  }
+  .project-head label,
+  .tempo span,
+  .count-in span {
+    display: block;
+  }
+  .project-head input {
+    max-width: 200px;
+    padding: 4px 0;
+  }
+  .project-head #saveState {
+    margin-left: 8px;
+  }
+  .tempo,
+  .count-in {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 8px;
+  }
+  .tempo input {
+    width: 44px;
+  }
+  .count-in select {
+    width: 62px;
+  }
+  .master-control {
+    width: 85px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 3px 6px;
+    align-items: center;
+  }
+  .master-control input {
+    grid-column: 1/-1;
+  }
+  .rail-label {
+    height: 38px;
+    padding: 14px 15px 0;
+  }
+  .track {
+    position: relative;
+    width: 100%;
+    height: 78px;
+    padding: 13px 14px;
+  }
+  .track::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    inset-block: 0;
+    width: 2px;
+  }
+  .track-head {
+    display: flex;
+    justify-content: space-between;
+  }
+  .track small {
+    display: block;
+    max-width: 135px;
+    overflow: hidden;
+    white-space: nowrap;
+    margin-top: 4px;
+  }
+  .track-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .track-meter {
+    height: 2px;
+    flex: 1;
+    background: #2c2a25;
+  }
+  .track-meter i {
+    display: block;
+    height: 100%;
+    background: var(--track);
+  }
+  .mute {
+    width: 20px;
+    height: 17px;
+    padding: 0;
+  }
+  .add {
+    margin: 13px;
+    width: calc(100% - 26px);
+    height: 34px;
+  }
+  .view {
+    display: none;
+    min-height: 0;
+    overflow: auto;
+  }
+  .view.active {
+    display: block;
+  }
+  .eyebrow {
+    display: block;
+    margin-bottom: 5px;
+  }
+  .inspector {
+    min-height: 106px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 22px;
+  }
+  .voice-title {
+    min-width: 190px;
+  }
+  .inspector h1,
+  .section-title h1,
+  .performance h1 {
+    margin: 0 0 8px;
+  }
+  .preset-row {
+    display: flex;
+    gap: 6px;
+  }
+  .preset-row select {
+    max-width: 135px;
+    padding: 4px;
+  }
+  .synth-controls {
+    display: flex;
+    gap: 13px;
+    overflow: auto;
+    padding: 2px;
+  }
+  .knob-control {
+    min-width: 48px;
+  }
+  .knob {
+    --v: 50%;
+    width: 39px;
+    height: 39px;
+    position: relative;
+    margin: auto;
+  }
+  .knob::after {
+    content: "";
+    position: absolute;
+    inset: 5px;
+  }
+  .knob::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    width: 1px;
+    height: 8px;
+    left: 50%;
+    top: 5px;
+    transform-origin: 50% 14px;
+    transform: rotate(calc(-130deg + var(--n) * 260deg));
+  }
+  .knob-control input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .knob-control label {
+    display: block;
+    margin-top: 5px;
+  }
+  .arp-rack,
+  .fx-rack,
+  .macro-strip {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 9px 22px;
+  }
+  .arp-rack > div:first-child,
+  .fx-title,
+  .macro-strip > div:first-child {
+    width: 175px;
+    flex: none;
+  }
+  .arp-rack > label {
+    margin-left: 18px;
+    display: grid;
+    gap: 5px;
+  }
+  .arp-rack select {
+    height: 28px;
+    min-width: 88px;
+    padding: 0 8px;
+  }
+  .arp-rack.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .switch {
+    display: flex;
+    align-items: center;
+  }
+  .switch input {
+    accent-color: var(--amber);
+  }
+  .fx-title button {
+    margin-left: 10px;
+    padding: 5px 7px;
+  }
+  .fx-controls {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    padding-left: 20px;
+  }
+  .fx-unit {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+  }
+  .fx-unit input {
+    grid-column: 1/-1;
+  }
+  .macros {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    padding-left: 20px;
+  }
+  .macro label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 7px;
+  }
+  input[type="range"] {
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    margin: 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 9px;
+    height: 14px;
+  }
+  .editor-head {
+    min-height: 52px;
+    padding: 8px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .editor-head > div {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .editor-head button,
+  .editor-head label {
+    height: 28px;
+    padding: 0 8px;
+  }
+  .editor-head label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .editor-head select {
+    height: 27px;
+  }
+  .editor-head #clipSelect {
+    min-width: 170px;
+  }
+  .editor-head #zoomRange {
+    width: 70px;
+  }
+  .composition-tools {
+    min-height: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 18px;
+    gap: 12px;
+  }
+  .composition-tools > div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .composition-tools select,
+  .composition-tools input,
+  .composition-tools button {
+    height: 27px;
+    padding: 0 8px;
+  }
+  .selection-editor input[type="number"] {
+    width: 50px;
+  }
+  .selection-editor input[type="range"] {
+    width: 65px;
+  }
+  .piano-shell {
+    height: 360px;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    grid-template-rows: 24px 1fr;
+    overflow: hidden;
+  }
+  .roll-corner {
+    display: grid;
+    place-items: center;
+  }
+  .roll-ruler {
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .ruler-content {
+    height: 24px;
+    position: relative;
+    will-change: transform;
+  }
+  .ruler-content span {
+    position: absolute;
+    inset-block: 0;
+    padding: 7px 4px;
+    white-space: nowrap;
+  }
+  .piano-labels {
+    overflow: hidden;
+    position: relative;
+  }
+  .piano-labels > div {
+    will-change: transform;
+  }
+  .pitch-label {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 7px;
+    border-bottom: 1px solid #292720;
+    background: #151513;
+    font: 700 7px Inter;
+    color: #77736a;
+  }
+  .pitch-label.in-scale {
+    color: #c0b9aa;
+    background: #1b1914;
+  }
+  .pitch-label:nth-child(12n + 1) {
+    border-top: 1px solid #77705f;
+  }
+  .roll-pane {
+    overflow: auto;
+  }
+  .sequencer {
+    position: relative;
+    cursor: crosshair;
+  }
+  .note-block {
+    position: absolute;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--track) 70%, #fff);
+    background: color-mix(
+      in srgb,
+      var(--track) calc(35% + var(--vel) * 35%),
+      #171610
+    );
+    box-shadow: inset 0 1px #ffffff33;
+    z-index: 2;
+  }
+  .note-block:hover {
+    filter: brightness(1.2);
+  }
+  .note-block.selected {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+    z-index: 3;
+  }
+  .note-resize {
+    position: absolute;
+    right: -1px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+  }
+  .roll-playhead,
+  .automation-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--amber);
+    box-shadow: 0 0 8px #ffb43b88;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .automation-head {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+  }
+  .automation-head > div {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .automation-head .eyebrow {
+    margin: 0;
+  }
+  .automation-head select,
+  .automation-head button {
+    height: 25px;
+  }
+  .automation-pane {
+    height: 76px;
+    overflow: hidden;
+    margin-left: 64px;
+  }
+  .automation-lane {
+    height: 100%;
+    position: relative;
+    cursor: crosshair;
+  }
+  .automation-step {
+    position: absolute;
+    bottom: 0;
+    height: calc(var(--value) * 100%);
+    pointer-events: none;
+  }
+  .automation-step.point::before {
+    content: "";
+    position: absolute;
+    left: -3px;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+  }
+  .section-title {
+    padding: 30px 34px 22px;
+  }
+  .section-title p,
+  .performance p {
+    margin: 4px 0;
+  }
+  .song-stats {
+    margin-top: 14px;
+  }
+  .arrangement {
+    padding: 26px 34px;
+    display: flex;
+    gap: 8px;
+    overflow: auto;
+    min-height: 315px;
+    scroll-snap-type: x proximity;
+  }
+  .scene {
+    min-width: 270px;
+    height: 260px;
+    padding: 13px;
+    scroll-snap-align: center;
+    position: relative;
+  }
+  .scene::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 3px;
+    opacity: 0.5;
+  }
+  .scene.playing {
+    transform: translateY(-3px);
+  }
+  .scene.dragging {
+    opacity: 0.4;
+  }
+  .scene-top {
+    display: grid;
+    grid-template-columns: 20px 1fr 25px;
+    gap: 7px;
+    align-items: center;
+    margin-bottom: 11px;
+  }
+  .drag-handle {
+    cursor: grab;
+  }
+  .scene-top input {
+    min-width: 0;
+  }
+  .scene-top button {
+    width: 25px;
+    height: 25px;
+    padding: 0;
+  }
+  .scene-clips {
+    display: grid;
+    gap: 6px;
+  }
+  .scene-clips label {
+    display: grid;
+    grid-template-columns: 78px 1fr;
+    align-items: center;
+    padding-left: 7px;
+  }
+  .scene-clips select {
+    min-width: 0;
+    height: 28px;
+    padding: 0 5px;
+  }
+  .scene-bottom {
+    display: grid;
+    grid-template-columns: 60px 1fr 28px;
+    align-items: end;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .scene-repeats span {
+    display: block;
+    margin-bottom: 3px;
+  }
+  .scene-repeats input {
+    width: 52px;
+    height: 28px;
+    padding: 0 6px;
+  }
+  .scene-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .scene-actions button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+  }
+  .arrange-actions {
+    display: flex;
+    gap: 8px;
+    margin: 0 34px 30px;
+  }
+  .scene-add {
+    height: 38px;
+    padding: 0 15px;
+  }
+  .performance {
+    padding: 34px;
+  }
+  .performance-orb {
+    width: 200px;
+    height: 200px;
+    margin: 20px auto;
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  .performance-orb::before,
+  .performance-orb::after {
+    content: "";
+    position: absolute;
+    inset: 18px;
+  }
+  .performance-orb::after {
+    inset: 45px;
+  }
+  .performance-orb span,
+  .performance-orb b {
+    transform: skew(-7deg);
+  }
+  .performance-orb b {
+    position: absolute;
+    transform: translateX(25px) skew(-7deg);
+  }
+  .performance-orb i {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+  }
+  .perform-macros {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
+    max-width: 750px;
+    margin: auto;
+  }
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  dialog {
+    width: min(540px, calc(100% - 30px));
+    max-height: 85vh;
+    overflow: auto;
+    padding: 27px;
+  }
+  dialog h2 {
+    margin: 5px 0 8px;
+  }
+  .dialog-close {
+    position: absolute;
+    right: 11px;
+    top: 11px;
+    width: 30px;
+    height: 30px;
+  }
+  .export-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .export-grid button {
+    height: 80px;
+    padding: 14px;
+  }
+  .export-grid b {
+    display: block;
+  }
+  #renderStatus {
+    margin-top: 11px;
+    min-height: 14px;
+  }
+  .help-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 17px;
+  }
+  .help-grid div {
+    padding: 11px 5px;
+  }
+  .help-grid b,
+  .help-grid span {
+    display: block;
+  }
+  .help-grid span {
+    margin-top: 4px;
+  }
+  #projectMenu > button:not(.dialog-close),
+  #projectMenu > .file-button {
+    display: block;
+    width: 100%;
+    padding: 11px;
+    margin: 6px 0;
+    cursor: pointer;
+  }
+  input[type="file"] {
+    display: none;
+  }
+  .versions-head {
+    margin-top: 20px;
+    padding-bottom: 7px;
+  }
+  .versions-list > div {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 6px;
+    align-items: center;
+    padding: 9px 0;
+  }
+  .versions-list b,
+  .versions-list small {
+    display: block;
+  }
+  .versions-list small {
+    margin-top: 3px;
+  }
+  .versions-list button {
+    height: 27px;
+  }
+  #toast {
+    position: fixed;
+    right: 18px;
+    bottom: 41px;
+    padding: 11px 15px;
+    transform: translateY(80px);
+    opacity: 0;
+    z-index: 60;
+  }
+  #toast.show {
+    transform: none;
+    opacity: 1;
+  }
+  @keyframes rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes pulse {
+    50% {
+      transform: scale(1.8);
+      opacity: 0.5;
+    }
+  }
+  @media (max-width: 1100px) {
+    .project-head {
+      display: none;
+    }
+    .master-control {
+      display: none;
+    }
+    .inspector {
+      display: block;
+    }
+    .voice-title {
+      margin-bottom: 13px;
+    }
+    .synth-controls {
+      max-width: 100%;
+    }
+    .arp-rack > div:first-child,
+    .fx-title,
+    .macro-strip > div:first-child {
+      width: 135px;
+    }
+    .composition-tools {
+      flex-wrap: wrap;
+    }
+    .selection-editor {
+      width: 100%;
+      justify-content: flex-end;
+    }
+    .signal-health {
+      display: none;
+    }
+  }
+  @media (max-width: 760px) {
+    .rail-label,
+    .track small,
+    .track-foot {
+      display: none;
+    }
+    .track {
+      min-width: 116px;
+      height: 44px;
+      padding: 14px;
+    }
+    .view {
+      overflow: visible;
+    }
+    .inspector {
+      padding: 14px;
+    }
+    .synth-controls {
+      overflow: auto;
+    }
+    .arp-rack,
+    .fx-rack,
+    .macro-strip {
+      display: block;
+      padding: 12px;
+    }
+    .arp-rack > div:first-child,
+    .fx-title,
+    .macro-strip > div:first-child {
+      width: auto;
+      margin-bottom: 10px;
+    }
+    .arp-rack > label {
+      display: inline-grid;
+      margin: 5px;
+    }
+    .fx-controls,
+    .macros {
+      padding: 0;
+      grid-template-columns: 1fr 1fr;
+    }
+    .editor-head {
+      overflow: auto;
+    }
+    .editor-head > div:first-child {
+      min-width: 220px;
+    }
+    .composition-tools {
+      display: block;
+    }
+    .composition-tools > div {
+      margin: 7px 0;
+      overflow: auto;
+    }
+    .piano-shell {
+      height: 340px;
+      grid-template-columns: 54px 1fr;
+    }
+    .automation-pane {
+      margin-left: 54px;
+    }
+    .perform-macros {
+      grid-template-columns: 1fr 1fr;
+    }
+    .section-title {
+      padding: 24px 18px;
+    }
+    .arrangement {
+      padding: 20px 15px;
+    }
+    .scene {
+      min-width: 255px;
+    }
+    .arrange-actions {
+      margin-inline: 15px;
+      flex-wrap: wrap;
+    }
+  }
+  .arp-rack {
+    flex-wrap: wrap;
+    row-gap: 7px;
+  }
+  .arp-rack input[type="range"] {
+    width: 82px;
+  }
+  .macros,
+  .perform-macros {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .count-in input {
+    width: 46px;
+    height: 28px;
+    padding: 0 5px;
+  }
+  @media (max-width: 760px) {
+    .macros,
+    .perform-macros {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .knob-control {
+    position: relative;
+  }
+  .knob-control input {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .fx-controls {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .compat-report {
+    display: grid;
+    gap: 1px;
+    margin: 18px 0;
+  }
+  .compat-report div {
+    display: grid;
+    grid-template-columns: 135px 1fr;
+    gap: 12px;
+    padding: 9px;
+  }
+  .compat-report b {
+    overflow-wrap: anywhere;
+  }
+  #copyCompatBtn {
+    width: 100%;
+    height: 38px;
+  }
+  @media (max-width: 760px) {
+    .fx-controls {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* Remaster: faster operation + pressure-industrial identity */
+  button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .editor-head button,
+  .generators button,
+  .scene-add {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 7px) 0,
+      100% 7px,
+      100% 100%,
+      7px 100%,
+      0 calc(100% - 7px)
+    );
+  }
+  @keyframes recordPressure {
+    50% {
+      box-shadow:
+        0 0 0 3px #ff4b3230,
+        0 0 24px #ff4b3255;
+    }
+  }
+  .mode-actions {
+    display: flex;
+    align-items: center;
+    height: 100%;
+  }
+  .command-trigger kbd {
+    padding: 3px 4px;
+    margin-right: 5px;
+  }
+  .track {
+    overflow: hidden;
+  }
+  .track::after {
+    content: "";
+    position: absolute;
+    right: -18px;
+    top: -26px;
+    width: 54px;
+    height: 80px;
+    transform: rotate(25deg);
+  }
+  .track.active::before {
+    width: 4px;
+  }
+  .collapsible-rack {
+    position: relative;
+  }
+  .rack-toggle {
+    position: absolute;
+    right: 9px;
+    top: 8px;
+    width: 25px;
+    height: 25px;
+    padding: 0;
+    z-index: 3;
+  }
+  .voice-title .rack-toggle {
+    right: auto;
+    left: 164px;
+    top: 12px;
+  }
+  .collapsible-rack.collapsed {
+    min-height: 42px;
+    height: 42px;
+    overflow: hidden;
+  }
+  .collapsible-rack.collapsed > :not(:first-child) {
+    display: none;
+  }
+  .inspector.collapsed {
+    padding-block: 7px;
+    display: flex;
+  }
+  .inspector.collapsed .voice-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .inspector.collapsed .eyebrow,
+  .inspector.collapsed .preset-row {
+    display: none;
+  }
+  .inspector.collapsed h1 {
+    margin: 0;
+  }
+  .inspector.collapsed .rack-toggle {
+    left: 190px;
+    top: 8px;
+  }
+  .arp-rack.collapsed > div:first-child,
+  .fx-rack.collapsed .fx-title,
+  .macro-strip.collapsed > div:first-child {
+    width: 100%;
+  }
+  .focus-mode #synthRack,
+  .focus-mode #motionRack,
+  .focus-mode #effectsRack,
+  .focus-mode #macroRack {
+    display: none;
+  }
+  .editor-head {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+  }
+  .editor-head::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+  .fx-rack::before,
+  .macro-strip::before,
+  .arp-rack::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80px;
+    height: 1px;
+  }
+  .note-block {
+    border-left: 3px solid #fff6;
+    box-shadow:
+      inset 0 1px #ffffff33,
+      2px 2px 0 #000;
+  }
+  .note-block.selected {
+    outline-color: var(--pressure);
+    box-shadow: 0 0 13px #ff4b3260;
+  }
+  .roll-playhead,
+  .automation-playhead {
+    background: var(--pressure);
+    box-shadow: 0 0 12px #ff4b32;
+  }
+  .scene {
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+  }
+  .section-title {
+    position: relative;
+    overflow: hidden;
+  }
+  .section-title::after {
+    content: "ARRANGE // IMPACT SEQUENCE";
+    position: absolute;
+    right: 25px;
+    top: 25px;
+    transform: rotate(90deg);
+    transform-origin: right top;
+  }
+  .command-dialog {
+    width: min(650px, calc(100% - 24px));
+    padding: 0;
+  }
+  .command-head {
+    height: 55px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+  }
+  .command-head .eyebrow {
+    margin: 0;
+  }
+  .command-head kbd {
+    margin-left: auto;
+    padding: 5px 7px;
+  }
+  .command-search {
+    height: 58px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+  }
+  .command-search input {
+    width: 100%;
+    height: 100%;
+  }
+  .command-results {
+    max-height: 360px;
+    overflow: auto;
+    padding: 7px;
+  }
+  .command-item {
+    width: 100%;
+    height: 48px;
+    padding: 0 11px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+  .command-item span {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .command-item span i {
+    width: 26px;
+  }
+  .command-item kbd {
+    align-self: center;
+  }
+  .command-help {
+    margin: 0;
+    padding: 10px 18px;
+  }
+  @media (max-width: 760px) {
+    .mode-actions {
+      flex: none;
+    }
+    .collapsible-rack.collapsed {
+      display: flex;
+      height: 42px;
+    }
+    .inspector.collapsed {
+      display: flex;
+    }
+    .rack-toggle {
+      display: block;
+    }
+    .editor-head {
+      top: 40px;
+    }
+    .command-results {
+      max-height: 52vh;
+    }
+    .command-dialog {
+      margin-top: 8vh;
+    }
+    .section-title::after {
+      display: none;
+    }
+    .track.active {
+      min-width: 140px;
+    }
+  }
+
+  /* SPECTRAL DECK — cyberpunk product system */
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  .editor-head button,
+  .generators button,
+  .scene-add {
+    clip-path: none;
+  }
+  .eyebrow {
+    margin-bottom: 6px;
+  }
+  .brand-icon {
+    padding: 0;
+  }
+  .project-head {
+    padding-inline: 18px;
+  }
+  .project-head input {
+    max-width: 210px;
+  }
+  .project-head #saveState {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .project-head #saveState::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+  }
+  .tempo,
+  .count-in {
+    height: 32px;
+    padding-left: 9px;
+  }
+  .rail-label {
+    height: 34px;
+    padding: 6px 8px 0;
+  }
+  .rail-label::after {
+    content: " / 04 CHANNELS";
+  }
+  #tracks {
+    display: grid;
+    gap: 7px;
+  }
+  .track {
+    height: 78px;
+    padding: 13px;
+  }
+  .track::before {
+    inset: 10px auto 10px 0;
+    width: 3px;
+  }
+  .track::after {
+    right: -22px;
+    top: -20px;
+    width: 64px;
+    opacity: 0.55;
+  }
+  .track:hover {
+    transform: translateX(2px);
+  }
+  .track.active::before {
+    width: 4px;
+  }
+  .track-meter {
+    height: 3px;
+    border-radius: 3px;
+    background: #252d48;
+    overflow: hidden;
+  }
+  .track-meter i {
+    border-radius: 3px;
+    box-shadow: 0 0 10px var(--track);
+  }
+  .add {
+    height: 39px;
+    margin: 10px 0 0;
+    width: 100%;
+  }
+  .view {
+    padding-bottom: 20px;
+  }
+  .inspector,
+  .arp-rack,
+  .fx-rack,
+  .macro-strip {
+    margin-inline: 14px;
+  }
+  .inspector {
+    min-height: 126px;
+    margin-top: 14px;
+    padding: 18px 20px;
+  }
+  .voice-title {
+    min-width: 235px;
+  }
+  .preset-row {
+    gap: 7px;
+  }
+  .preset-row select {
+    height: 29px;
+    max-width: 145px;
+    padding-inline: 7px;
+  }
+  .synth-controls {
+    gap: 15px;
+    padding: 5px;
+  }
+  .knob-control {
+    min-width: 52px;
+  }
+  .knob {
+    width: 42px;
+    height: 42px;
+  }
+  .arp-rack,
+  .fx-rack,
+  .macro-strip {
+    min-height: 70px;
+    margin-top: 9px;
+    padding: 10px 16px;
+  }
+  .arp-rack::before,
+  .fx-rack::before,
+  .macro-strip::before {
+    display: none;
+  }
+  .arp-rack > div:first-child,
+  .fx-title,
+  .macro-strip > div:first-child {
+    width: 184px;
+  }
+  .arp-rack select {
+    height: 30px;
+  }
+  .switch input {
+    accent-color: var(--cyan);
+  }
+  .rack-toggle {
+    right: 11px;
+    top: 10px;
+  }
+  .voice-title .rack-toggle {
+    left: 195px;
+    top: 14px;
+  }
+  .fx-controls,
+  .macros {
+    gap: 16px;
+  }
+  input[type="range"] {
+    height: 3px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 10px;
+    height: 16px;
+  }
+  .editor-head {
+    min-height: 58px;
+    margin: 14px 14px 0;
+    padding: 9px 12px;
+  }
+  .editor-head::before {
+    width: 3px;
+    top: 10px;
+    bottom: 10px;
+  }
+  .editor-head #clipSelect {
+    height: 31px;
+  }
+  .composition-tools {
+    min-height: 53px;
+    margin-inline: 14px;
+    padding: 8px 12px;
+  }
+  .composition-tools select,
+  .composition-tools input,
+  .composition-tools button {
+    height: 30px;
+  }
+  .piano-shell {
+    height: 390px;
+    margin-inline: 14px;
+    grid-template-columns: 68px 1fr;
+  }
+  .roll-corner,
+  .roll-ruler {
+    background: #0d1222;
+    border-color: #27304d;
+  }
+  .pitch-label {
+    background: #0c1020;
+    border-color: #1a233d;
+    color: #68748e;
+  }
+  .pitch-label.in-scale {
+    color: #c1cae0;
+    background: #11172a;
+  }
+  .note-block {
+    border: 1px solid color-mix(in srgb, var(--track) 72%, #fff);
+    border-left: 3px solid #fff8;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--track) calc(44% + var(--vel) * 35%), #111629),
+      color-mix(in srgb, var(--track) 22%, #0b1020)
+    );
+    box-shadow:
+      inset 0 1px #ffffff55,
+      0 3px 10px #02040b;
+  }
+  .note-block.selected {
+    outline: 2px solid #fff;
+    box-shadow:
+      0 0 0 2px var(--track),
+      0 0 18px color-mix(in srgb, var(--track) 60%, transparent);
+  }
+  .roll-playhead,
+  .automation-playhead {
+    background: var(--magenta);
+    box-shadow:
+      0 0 12px var(--magenta),
+      0 0 24px #8b7cff;
+  }
+  .automation-head {
+    height: 40px;
+    margin-inline: 14px;
+  }
+  .automation-pane {
+    height: 86px;
+    margin-left: 82px;
+    margin-right: 14px;
+  }
+  .section-title {
+    margin: 14px;
+    padding: 28px 30px;
+  }
+  .section-title::after {
+    content: "SEQUENCE MATRIX // LIVE";
+  }
+  .song-stats {
+    display: inline-flex;
+    padding: 7px 10px;
+  }
+  .arrangement {
+    padding: 10px 14px 22px;
+    gap: 12px;
+  }
+  .scene {
+    min-width: 284px;
+    height: 268px;
+    clip-path: none;
+  }
+  .scene::before {
+    height: 3px;
+  }
+  .arrange-actions {
+    margin-inline: 14px;
+  }
+  .performance {
+    margin: 14px;
+    padding: 30px;
+  }
+  .performance-orb {
+    width: 220px;
+    height: 220px;
+  }
+  .perform-macros {
+    max-width: 900px;
+  }
+  @media (max-width: 1100px) {
+    .master-control {
+      display: none;
+    }
+    .arp-rack > div:first-child,
+    .fx-title,
+    .macro-strip > div:first-child {
+      width: 150px;
+    }
+  }
+  @media (max-width: 760px) {
+    .track {
+      min-width: 125px;
+      height: 49px;
+      padding: 14px 12px;
+    }
+    .track.active {
+      min-width: 150px;
+    }
+    .inspector,
+    .arp-rack,
+    .fx-rack,
+    .macro-strip {
+      margin-inline: 8px;
+    }
+    .inspector {
+      margin-top: 8px;
+      padding: 14px;
+    }
+    .voice-title {
+      min-width: 210px;
+    }
+    .voice-title .rack-toggle {
+      left: auto;
+      right: 10px;
+    }
+    .synth-controls {
+      padding-top: 8px;
+    }
+    .arp-rack,
+    .fx-rack,
+    .macro-strip {
+      margin-top: 6px;
+      padding: 10px;
+    }
+    .collapsible-rack.collapsed {
+      height: 46px;
+      min-height: 46px;
+    }
+    .editor-head {
+      top: 48px;
+      margin: 8px 8px 0;
+    }
+    .composition-tools {
+      margin-inline: 8px;
+    }
+    .piano-shell {
+      height: 365px;
+      margin-inline: 8px;
+      grid-template-columns: 58px 1fr;
+    }
+    .automation-head {
+      margin-inline: 8px;
+    }
+    .automation-pane {
+      margin-left: 66px;
+      margin-right: 8px;
+    }
+    .section-title,
+    .performance {
+      margin: 8px;
+      padding: 22px 17px;
+    }
+    .arrangement {
+      padding-inline: 8px;
+    }
+    .arrange-actions {
+      margin-inline: 8px;
+    }
+    .fx-controls,
+    .macros,
+    .perform-macros {
+      gap: 12px;
+    }
+  }
+
+  /* КИБЕР VENGANCE signal-core identity */
+  .brand-symbols {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .brand-emblem {
+    display: block;
+    overflow: visible;
+  }
+  .logo-frame {
+    fill: #070a17;
+    stroke: url(#kvFrame);
+    stroke-width: 2;
+  }
+  .logo-notch {
+    fill: none;
+    stroke: #7382aa;
+    stroke-width: 2;
+    opacity: 0.66;
+  }
+  .logo-k {
+    fill: none;
+    stroke: url(#kvSpectrum);
+    stroke-width: 11;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  .logo-v {
+    fill: none;
+    stroke: #f5f7ff;
+    stroke-width: 10;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  .logo-signal {
+    fill: none;
+    stroke: #a7ff5b;
+    stroke-width: 2.4;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+    stroke-dasharray: 17 8;
+  }
+  .logo-core-halo {
+    fill: #a7ff5b22;
+    stroke: #a7ff5b66;
+    stroke-width: 1;
+    transform-origin: 60px 47px;
+  }
+  .logo-core {
+    fill: #f8ffff;
+    transform-origin: 60px 47px;
+  }
+  .brand-icon {
+    width: 58px;
+    height: 48px;
+  }
+  .brand-icon svg {
+    width: 58px;
+    height: 45px;
+  }
+  .brand-word {
+    gap: 0;
+  }
+  .boot {
+    overflow: hidden;
+  }
+  .boot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .boot-mark,
+  .about-mark {
+    transform: none;
+  }
+  .boot-mark {
+    width: 168px;
+    margin: auto;
+  }
+  .boot-mark .brand-emblem {
+    width: 100%;
+  }
+  .boot p {
+    position: relative;
+    margin-top: 20px;
+  }
+  .boot p::after {
+    content: "";
+    display: block;
+    width: 0;
+    height: 2px;
+    margin: 13px auto 0;
+  }
+  .about-mark {
+    width: 148px;
+    margin: 0 auto 14px;
+  }
+  .about-mark .brand-emblem {
+    width: 100%;
+  }
+  .performance-orb.compact .brand-emblem {
+    width: 72px;
+  }
+  .record-label .brand-emblem {
+    width: 68px;
+    height: 55px;
+    opacity: 0.48;
+    filter: drop-shadow(0 0 8px #2ee8ff66);
+  }
+  .record-label small {
+    z-index: 2;
+  }
+  .record-label::after {
+    content: "К/V";
+    position: absolute;
+    top: 17px;
+    color: #f2f6ff;
+    font: 900 7px var(--display-font);
+    letter-spacing: 0.12em;
+  }
+  @keyframes kvSignal {
+    to {
+      stroke-dashoffset: -50;
+    }
+  }
+  @keyframes kvCore {
+    50% {
+      transform: scale(1.75);
+      opacity: 0.42;
+    }
+  }
+  @keyframes kvSurge {
+    35% {
+      transform: scale(1.08) skewX(-2deg);
+      filter: brightness(1.5) drop-shadow(0 0 20px #2ee8ff88);
+    }
+    70% {
+      transform: scale(0.985) skewX(1deg);
+    }
+  }
+  @keyframes kvBootAssemble {
+    0% {
+      opacity: 0;
+      transform: scale(0.62) rotate(-7deg);
+      filter: blur(12px);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(1.06) rotate(1deg);
+      filter: blur(0);
+    }
+    100% {
+      transform: none;
+    }
+  }
+  @keyframes kvBootLine {
+    70% {
+      width: 190px;
+    }
+    100% {
+      width: 156px;
+    }
+  }
+  @keyframes kvBootGrid {
+    0% {
+      opacity: 0;
+      transform: scale(1.3);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (max-width: 1100px) {
+    .brand-icon {
+      width: 50px;
+    }
+    .brand-icon svg {
+      width: 50px;
+    }
+  }
+  @media (max-width: 760px) {
+    .brand-icon {
+      width: 45px;
+      height: 42px;
+    }
+    .brand-icon svg {
+      width: 45px;
+    }
+    .boot-mark {
+      width: 138px;
+    }
+    .about-mark {
+      width: 124px;
+    }
+  }
+
+  /* Prism Keys — tactile chromatic sampler */
+  .sampler-octave {
+    display: grid;
+    grid-template-columns: auto minmax(54px, 1fr) auto;
+    align-items: center;
+    gap: 4px;
+  }
+  .sampler-octave button {
+    min-width: 54px;
+    padding: 0 7px;
+  }
+  .sampler-octave output {
+    display: grid;
+    place-items: center;
+    height: 34px;
+    padding: 0 7px;
+    white-space: nowrap;
+  }
+  .sampler-live-status {
+    position: sticky;
+    z-index: 6;
+    left: 8px;
+    bottom: 8px;
+    display: grid;
+    width: max-content;
+    min-width: 112px;
+    height: 27px;
+    margin: -35px 0 8px 8px;
+    padding: 0 10px;
+    place-items: center;
+    pointer-events: none;
+  }
+  @keyframes sampler-hit {
+    0% {
+      filter: brightness(2) saturate(1.5);
+      box-shadow:
+        inset 0 0 34px #fff,
+        0 0 34px hsl(var(--key-hue) 100% 65%);
+    }
+    100% {
+      filter: brightness(1.1);
+    }
+  }
+  .sampler-lab {
+    display: flex;
+    flex-direction: column;
+  }
+  @media (max-width: 760px) {
+    .sampler-keyboard-shell {
+      order: 1;
+    }
+    .sampler-controls {
+      order: 2;
+    }
+    .sampler-hint {
+      order: 3;
+    }
+  }
+  .sampler-lab {
+    max-width: 1180px;
+    margin: 0 auto 18px;
+    padding: 18px;
+  }
+  .sampler-lab > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  .sampler-lab h2 {
+    margin: 2px 0 4px;
+  }
+  .sampler-lab header p {
+    max-width: 500px;
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sampler-lab header small {
+    display: block;
+    margin-top: 5px;
+  }
+  .sampler-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+  }
+  .sampler-actions button,
+  .sampler-actions .file-button {
+    height: 36px;
+    padding: 0 12px;
+  }
+  .sampler-lab canvas {
+    display: block;
+    width: 100%;
+    height: 76px;
+    margin: 14px 0 12px;
+  }
+  .sampler-controls {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(112px, 1fr));
+    gap: 7px;
+    margin-bottom: 13px;
+  }
+  .sampler-controls label {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 8px;
+  }
+  .sampler-controls input,
+  .sampler-controls select {
+    grid-column: 1/-1;
+    min-width: 0;
+    height: 27px;
+  }
+  .sampler-controls input[type="range"] {
+    height: 4px;
+  }
+  .sampler-controls .switch {
+    grid-template-columns: auto 1fr;
+    align-content: center;
+  }
+  .sampler-controls .switch input {
+    grid-column: auto;
+  }
+  .sampler-keyboard-shell {
+    position: relative;
+    height: 170px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-color: #53658f #090e1d;
+    overscroll-behavior-inline: contain;
+  }
+  .sampler-keyboard {
+    position: relative;
+    height: 164px;
+    min-width: 1080px;
+    margin: auto;
+  }
+  .sampler-hint {
+    margin: 9px 1px 0;
+  }
+  @media (max-width: 1100px) {
+    .sampler-controls {
+      grid-template-columns: repeat(4, minmax(105px, 1fr));
+    }
+  }
+  @media (max-width: 760px) {
+    .sampler-lab {
+      margin: 0 8px 14px;
+      padding: 13px 10px;
+    }
+    .sampler-lab > header {
+      flex-direction: column;
+    }
+    .sampler-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .sampler-actions > * {
+      flex: 1;
+      justify-content: center;
+    }
+    .sampler-controls {
+      grid-template-columns: repeat(2, minmax(105px, 1fr));
+    }
+    .sampler-keyboard-shell {
+      height: 156px;
+    }
+    .sampler-keyboard {
+      height: 150px;
+    }
+  }
+
+  /* v6 hybrid studio, routing and adaptive-density pass */
+  .ui-scale-control {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 0;
+    padding: 9px 11px;
+  }
+  .ui-scale-control select {
+    height: 30px;
+  }
+  .audio-studio {
+    min-height: 100%;
+    padding: 22px 24px 40px;
+  }
+  .audio-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    max-width: 1280px;
+    margin: auto;
+  }
+  .audio-head h1 {
+    margin: 0;
+  }
+  .audio-head p {
+    margin: 7px 0 0;
+  }
+  .audio-actions {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .audio-actions button,
+  .audio-actions .file-button {
+    display: grid;
+    place-items: center;
+    height: 36px;
+    padding: 0 12px;
+  }
+  .audio-ruler {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr auto 1fr auto;
+    align-items: center;
+    gap: 9px;
+    max-width: 1280px;
+    margin: 18px auto 7px;
+    padding-left: 224px;
+  }
+  .audio-ruler i {
+    height: 1px;
+  }
+  .audio-lanes {
+    display: grid;
+    gap: 8px;
+    max-width: 1280px;
+    margin: auto;
+  }
+  .audio-empty {
+    display: grid;
+    place-items: center;
+    min-height: 230px;
+  }
+  .audio-lane {
+    display: grid;
+    grid-template-columns: 210px minmax(520px, 1fr);
+    min-height: 128px;
+    overflow: hidden;
+  }
+  .audio-lane-head {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-content: start;
+    gap: 8px;
+    padding: 14px;
+  }
+  .audio-lane-head input[type="text"] {
+    grid-column: 1/-1;
+    min-width: 0;
+    height: 31px;
+  }
+  .audio-lane-head button {
+    height: 28px;
+    padding: 0 8px;
+  }
+  .audio-lane-head label {
+    grid-column: 1/-1;
+    display: grid;
+    grid-template-columns: 35px 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+  .audio-track {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    padding: 12px;
+    overflow-x: auto;
+  }
+  .audio-region {
+    position: relative;
+    flex: none;
+    display: grid;
+    grid-template-rows: auto 44px auto;
+    min-width: 170px;
+    width: calc(max(4, var(--length)) * 16px);
+    max-width: 620px;
+    padding: 9px;
+    overflow: hidden;
+  }
+  .audio-region header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .audio-region b {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .audio-region header button {
+    width: 22px;
+    height: 20px;
+    padding: 0;
+  }
+  .mini-wave {
+    position: relative;
+    overflow: hidden;
+    mask: linear-gradient(160deg, transparent 7%, #000 8% 92%, transparent 93%);
+  }
+  .mini-wave::after {
+    content: "";
+    position: absolute;
+    inset: 48% 0 auto;
+    height: 1px;
+  }
+  .audio-region-controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(55px, 1fr));
+    gap: 6px;
+    margin-top: 7px;
+  }
+  .audio-region-controls label {
+    display: grid;
+    gap: 3px;
+  }
+  .audio-region-controls input,
+  .audio-region-controls select {
+    width: 100%;
+    min-width: 0;
+    height: 25px;
+    padding: 0 4px;
+  }
+  .audio-region-controls .wide {
+    grid-column: span 2;
+  }
+  .audio-lab {
+    display: grid;
+    grid-template-columns: 180px repeat(4, max-content);
+    align-items: end;
+    gap: 9px;
+    max-width: 1280px;
+    margin: 14px auto 0;
+    padding: 14px;
+  }
+  .audio-lab h2 {
+    margin: 0;
+  }
+  .audio-lab label {
+    display: grid;
+    gap: 5px;
+  }
+  .audio-lab select,
+  .audio-lab button {
+    height: 33px;
+    padding: 0 9px;
+  }
+  .global-automation {
+    grid-column: 1/-1;
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+  }
+  .automation-card,
+  .modulation-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 5px;
+    min-width: 230px;
+    padding: 9px;
+  }
+  .automation-card small,
+  .modulation-card small {
+    grid-column: 1/-1;
+  }
+  .automation-card button,
+  .modulation-card button {
+    height: 24px;
+  }
+  .mix-groups {
+    display: flex;
+    gap: 9px;
+    max-width: 1180px;
+    margin: 13px auto 0;
+  }
+  .mix-group {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr repeat(2, minmax(90px, 180px));
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .mix-group label {
+    display: grid;
+    gap: 4px;
+  }
+  .mix-group input,
+  .mix-group select {
+    height: 27px;
+  }
+  .master-strip {
+    grid-template-columns: auto minmax(170px, 1fr) 180px auto auto minmax(
+        105px,
+        0.45fr
+      ) minmax(105px, 0.45fr);
+  }
+  .master-strip p {
+    grid-column: 1/-1;
+  }
+  .master-strip label:has(input[type="number"]) {
+    grid-template-columns: auto 64px auto;
+  }
+  .master-strip input[type="number"] {
+    height: 28px;
+    min-width: 0;
+  }
+  @media (max-width: 1550px) {
+    .project-head {
+      display: none;
+    }
+  }
+  @media (max-width: 1320px) {
+    .project-head {
+      display: none;
+    }
+    .audio-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .master-strip {
+      grid-template-columns: auto 1fr 160px auto auto;
+    }
+    .master-strip label:has(input[type="number"]) {
+      grid-column: span 2;
+    }
+    .audio-lab {
+      grid-template-columns: 1fr 1fr;
+    }
+    .audio-lab > div,
+    .global-automation {
+      grid-column: 1/-1;
+    }
+  }
+  @media (max-width: 900px) {
+    .audio-studio {
+      padding: 16px 9px;
+    }
+    .audio-actions {
+      justify-content: flex-start;
+    }
+    .audio-ruler {
+      padding-left: 0;
+    }
+    .audio-lane {
+      grid-template-columns: 1fr;
+      min-height: 0;
+    }
+    .audio-lane-head {
+      grid-template-columns: 1fr auto auto;
+    }
+    .audio-track {
+      min-height: 150px;
+    }
+    .mix-groups {
+      margin-inline: 8px;
+    }
+    .master-strip {
+      grid-template-columns: 1fr;
+    }
+    .master-strip label:has(input[type="number"]) {
+      grid-column: auto;
+    }
+    .mode-actions {
+      flex: none;
+    }
+  }
+  @media (max-width: 760px) {
+    .audio-actions > * {
+      flex: 1;
+      min-width: 130px;
+    }
+    .audio-lab {
+      grid-template-columns: 1fr;
+    }
+    .audio-lab > * {
+      grid-column: 1;
+    }
+    .audio-region {
+      width: 270px;
+    }
+    .mix-group {
+      grid-template-columns: 1fr;
+    }
+    .signal-health {
+      display: none;
+    }
+  }
+  @media (max-width: 820px) {
+    .global-locator {
+      width: 100%;
+      padding-left: 8px;
+    }
+    .global-locator output {
+      display: none;
+    }
+    .track {
+      min-width: 126px;
+      width: 126px;
+      height: 49px;
+      padding: 12px 11px;
+    }
+    .mode-actions {
+      flex: none;
+    }
+    .mixer {
+      width: 100%;
+    }
+    .mixer-head {
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .mixer-channels {
+      display: flex;
+      width: 100%;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+    }
+    .mixer-channel {
+      min-width: 145px;
+      scroll-snap-align: start;
+    }
+    .mix-groups,
+    .master-strip {
+      margin-inline: 8px;
+    }
+    .audio-studio {
+      width: 100%;
+    }
+  }
+
+  /* Precision knob interaction */
+  .knob {
+    touch-action: none;
+    user-select: none;
+    cursor: ns-resize;
+  }
+  .knob.adjusting {
+    transform: scale(1.06);
+  }
+  .knob-nudge {
+    display: none;
+  }
+  .knob-control input {
+    inset: auto;
+  }
+  @media (max-width: 760px) {
+    .track {
+      min-width: 126px;
+      width: 126px;
+      height: 49px;
+      padding: 13px 11px;
+    }
+    .track.active {
+      min-width: 142px;
+      width: 142px;
+    }
+    .track-head {
+      align-items: center;
+    }
+    .synth-controls {
+      gap: 8px;
+      scroll-snap-type: x proximity;
+    }
+    .knob-control {
+      min-width: 92px;
+      display: grid;
+      grid-template-columns: 23px 46px 23px;
+      grid-template-rows: 50px auto auto;
+      align-items: center;
+      justify-items: center;
+      padding: 7px 0 5px;
+      scroll-snap-align: start;
+    }
+    .knob {
+      width: 46px;
+      height: 46px;
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .knob-nudge {
+      display: grid;
+      place-items: center;
+      width: 23px;
+      height: 34px;
+      padding: 0;
+    }
+    .knob-nudge:first-child {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .knob-nudge:nth-of-type(2) {
+      grid-column: 3;
+      grid-row: 1;
+    }
+    .knob-control label,
+    .knob-control output {
+      grid-column: 1/-1;
+    }
+    .knob-control label {
+      grid-row: 2;
+      margin-top: 5px;
+    }
+    .knob-control output {
+      grid-row: 3;
+    }
+  }
+
+  /* Spectral identity, bilingual guidance and contextual learning */
+  .brand-icon {
+    width: 50px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .brand-icon svg {
+    width: 50px;
+    height: 38px;
+    overflow: visible;
+  }
+  .logo-k {
+    fill: url(#brandGradient);
+  }
+  .brand-icon::before {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+  .logo-v {
+    fill: #f6f8ff;
+  }
+  .logo-cut {
+    fill: #a7ff5b;
+  }
+  .brand-word {
+    display: grid;
+    gap: 1px;
+  }
+  .language-switcher select {
+    width: 49px;
+    height: 38px;
+    padding: 0 8px;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .help-mode [data-help-body] {
+    outline-color: #2ee8ff35;
+  }
+  .help-mode [data-help-body]:hover,
+  .help-mode [data-help-body]:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  .context-help {
+    position: fixed;
+    right: 18px;
+    bottom: 44px;
+    width: min(340px, calc(100vw - 24px));
+    z-index: 75;
+    padding: 18px 46px 16px 18px;
+  }
+  .context-help[hidden] {
+    display: none;
+  }
+  .context-help > button:first-child {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+  }
+  .context-help b {
+    display: block;
+  }
+  .context-help p {
+    margin: 7px 0 12px;
+  }
+  .manual-link {
+    height: 28px;
+    padding-inline: 10px;
+  }
+  .menu-language {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    width: 100%;
+    margin: 14px 0;
+    padding: 10px 11px;
+  }
+  .menu-language select {
+    height: 31px;
+    min-width: 104px;
+    padding-inline: 9px;
+  }
+  .tutorial-dialog {
+    position: fixed;
+    inset: auto 24px 48px auto;
+    width: min(410px, calc(100vw - 32px));
+    margin: 0;
+    padding: 23px;
+    z-index: 90;
+    overflow: visible;
+  }
+  .tutorial-dialog::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .tutorial-dialog h2 {
+    margin: 6px 0 9px;
+  }
+  .tutorial-dialog p {
+    min-height: 48px;
+    margin: 0;
+  }
+  .tutorial-visual {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .tutorial-visual i {
+    height: 3px;
+    flex: 1;
+  }
+  .tutorial-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  .tutorial-actions > span {
+    display: flex;
+    gap: 7px;
+  }
+  .tutorial-actions button {
+    height: 34px;
+    padding-inline: 14px;
+  }
+  .tutorial-target {
+    position: relative;
+    z-index: 72;
+    outline: 3px solid var(--cyan);
+    outline-offset: 5px;
+  }
+  .tutorial-active .context-help {
+    display: none;
+  }
+  @media (max-width: 1100px) {
+    .language-switcher {
+      display: none;
+    }
+    .guide-trigger::after {
+      content: "?";
+    }
+    .brand-icon {
+      width: 44px;
+    }
+    .brand-icon svg {
+      width: 44px;
+    }
+  }
+  @media (max-width: 760px) {
+    .brand-icon {
+      width: 42px;
+    }
+    .brand-icon svg {
+      width: 42px;
+    }
+    .tutorial-dialog {
+      inset: auto 8px 36px 8px;
+      width: auto;
+    }
+    .tutorial-target {
+      outline-offset: 2px;
+    }
+    .context-help {
+      right: 8px;
+      bottom: 36px;
+      width: calc(100vw - 16px);
+    }
+  }
+
+  /* Five-piece studio + backing generator */
+  .rail-label::after {
+    content: " / 05 CHANNELS";
+  }
+  .backing-dialog {
+    width: min(590px, calc(100% - 24px));
+  }
+  .backing-options {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 1.2fr;
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .backing-options label {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 12px;
+  }
+  .backing-options label > span {
+    grid-column: 1/-1;
+  }
+  .backing-options select {
+    grid-column: 1/-1;
+    width: 100%;
+    height: 34px;
+  }
+  .backing-options input {
+    min-width: 0;
+  }
+  .backing-warning {
+    padding: 10px 12px;
+  }
+  .backing-dialog #generateBackingBtn {
+    width: 100%;
+    height: 44px;
+  }
+  .scene {
+    height: 306px;
+  }
+  .scene-clips {
+    gap: 5px;
+  }
+  .delete-clip-dialog {
+    width: min(470px, calc(100% - 24px));
+  }
+  .delete-clip-warning {
+    padding: 10px 12px;
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .dialog-actions button {
+    height: 40px;
+    padding: 0 18px;
+  }
+  .selection-marquee {
+    position: absolute;
+    z-index: 8;
+    pointer-events: none;
+  }
+  .track {
+    padding: 0;
+  }
+  .track-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 13px 14px;
+  }
+  .track-switches {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    z-index: 3;
+    display: flex;
+    gap: 4px;
+  }
+  .solo,
+  .track-switches .mute {
+    width: 20px;
+    height: 17px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+  .track.solo-muted {
+    opacity: 0.52;
+  }
+  .track.solo-muted:hover {
+    opacity: 0.8;
+  }
+  .track-foot {
+    position: relative;
+    z-index: 1;
+    padding-right: 50px;
+  }
+  @media (max-width: 760px) {
+    .track {
+      padding: 0;
+    }
+    .track-select {
+      padding: 12px 11px;
+    }
+    .track-switches {
+      right: 8px;
+      bottom: 5px;
+    }
+    .track-switches .solo,
+    .track-switches .mute {
+      width: 19px;
+      height: 16px;
+    }
+  }
+  @media (max-width: 760px) {
+    .backing-options {
+      grid-template-columns: 1fr 1fr;
+    }
+    .backing-options label:last-child {
+      grid-column: 1/-1;
+    }
+    .scene {
+      height: 306px;
+    }
+    .generators {
+      min-width: max-content;
+    }
+    .composition-tools > div {
+      padding-bottom: 2px;
+    }
+  }
+  @media (max-width: 760px) {
+    .editor-head > div:first-child {
+      min-width: 315px;
+      flex: none;
+    }
+    .editor-head > div:last-child {
+      flex: none;
+    }
+  }
+
+  /* Per-clip character scope */
+  .clip-scope {
+    display: inline-flex;
+    margin-top: 5px;
+    padding: 3px 6px;
+  }
+  .fx-title .clip-scope {
+    margin-right: 6px;
+  }
+  @media (max-width: 760px) {
+    .clip-scope {
+      padding: 2px 5px;
+    }
+  }
+
+  /* One-tap full-song exports */
+  .quick-export-bar {
+    display: flex;
+    gap: 4px;
+    padding: 3px;
+  }
+  @media (max-width: 760px) {
+    .quick-export-bar {
+      gap: 2px;
+      padding: 2px;
+    }
+  }
+
+  /* Perform Scratch Deck */
+  .performance {
+    min-height: calc(100% - 28px);
+    padding: 24px;
+    overflow: hidden;
+  }
+  .performance-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    max-width: 1260px;
+    margin: auto;
+  }
+  .performance-head h1 {
+    margin-bottom: 5px;
+  }
+  .performance-head p {
+    margin: 0;
+    max-width: 690px;
+  }
+  .performance-orb.compact {
+    width: 88px;
+    height: 88px;
+    flex: none;
+    margin: 0;
+  }
+  .performance-orb.compact::before,
+  .performance-orb.compact::after {
+    inset: 9px;
+  }
+  .perform-stage {
+    max-width: 1260px;
+    margin: 22px auto 0;
+    display: grid;
+    grid-template-columns: minmax(250px, 0.72fr) minmax(520px, 1.28fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+  .perform-instrument {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 16px;
+  }
+  .perform-macros {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0;
+    gap: 18px 14px;
+  }
+  .scratch-deck {
+    position: relative;
+    min-width: 0;
+    padding: 18px;
+  }
+  .scratch-deck::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .scratch-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+  }
+  .scratch-head h2 {
+    margin: 0;
+  }
+  .scratch-capture {
+    display: flex;
+    align-items: flex-end;
+    gap: 7px;
+  }
+  .scratch-capture label {
+    display: grid;
+    gap: 4px;
+  }
+  .scratch-capture select,
+  .scratch-capture button {
+    height: 34px;
+  }
+  .scratch-capture select {
+    padding-inline: 8px;
+  }
+  .scratch-capture button {
+    padding-inline: 12px;
+  }
+  .scratch-wave-shell {
+    position: relative;
+    height: 72px;
+    margin: 14px 0;
+    overflow: hidden;
+  }
+  .scratch-wave-shell canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .scratch-wave-shell > i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    transform: translateX(-1px);
+    will-change: left;
+  }
+  .scratch-wave-shell > span {
+    position: absolute;
+    left: 10px;
+    bottom: 7px;
+    pointer-events: none;
+  }
+  .scratch-console {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+  .turntable-shell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 250px;
+  }
+  .scratch-platter {
+    --rotation: 0deg;
+    position: relative;
+    width: 238px;
+    height: 238px;
+    border: 8px solid #161e35;
+    border-radius: 50%;
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+    transform: rotate(var(--rotation));
+    background: repeating-radial-gradient(
+      circle,
+      #111522 0 2px,
+      #060912 3px 5px
+    );
+    box-shadow:
+      0 0 0 1px #435071,
+      0 22px 35px #02030ba8,
+      inset 0 0 38px #000,
+      0 0 44px #8b7cff1f;
+    will-change: transform;
+  }
+  .scratch-platter:not(.disabled):active {
+    cursor: grabbing;
+    box-shadow:
+      0 0 0 2px var(--cyan),
+      0 18px 32px #02030bcc,
+      inset 0 0 38px #000,
+      0 0 52px #2ee8ff2b;
+  }
+  .scratch-platter.disabled {
+    opacity: 0.35;
+    filter: saturate(0.25);
+    cursor: not-allowed;
+  }
+  .vinyl-grooves {
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle,
+      transparent 0 3px,
+      #ffffff0c 4px,
+      #0000 5px 8px
+    );
+  }
+  .vinyl-mark {
+    position: absolute;
+    width: 5px;
+    height: 34px;
+    left: calc(50% - 2px);
+    top: 15px;
+    border-radius: 4px;
+    background: linear-gradient(var(--magenta), var(--cyan));
+    box-shadow: 0 0 13px var(--magenta);
+  }
+  .record-label {
+    position: absolute;
+    inset: 66px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #526080;
+    border-radius: 50%;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 34% 25%, #2ee8ff77, transparent 22%),
+      conic-gradient(from 25deg, #141f3e, #64235c, #173f58, #141f3e);
+    box-shadow: inset 0 0 24px #02030b;
+  }
+  .record-label svg {
+    width: 54px;
+    height: 54px;
+    fill: #ffffff14;
+  }
+  .record-label b {
+    position: absolute;
+    font: 900 20px var(--display-font);
+    letter-spacing: -0.12em;
+  }
+  .record-label small {
+    position: absolute;
+    bottom: 18px;
+    color: #b8c4dd;
+    font: 800 6px var(--ui-font);
+  }
+  .spindle {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    left: calc(50% - 5px);
+    top: calc(50% - 5px);
+    border: 2px solid #eff6ff;
+    border-radius: 50%;
+    background: #59667d;
+    box-shadow: 0 0 11px #fff8;
+  }
+  .deck-speed {
+    position: absolute;
+    right: 0;
+    bottom: 9px;
+    display: grid;
+    padding: 6px 8px;
+  }
+  .scratch-controls {
+    display: grid;
+    gap: 17px;
+  }
+  .scratch-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 7px;
+  }
+  .scratch-actions button {
+    height: 37px;
+  }
+  .deck-slider {
+    display: grid;
+    gap: 8px;
+  }
+  .deck-slider span {
+    display: flex;
+    justify-content: space-between;
+  }
+  .crossfader input {
+    height: 5px;
+  }
+  .crossfader input::-webkit-slider-thumb {
+    width: 16px;
+    height: 23px;
+  }
+  .scratch-hint {
+    margin: 0;
+    padding: 9px 11px;
+  }
+  .scratch-deck.scratching::after {
+    content: "MANUAL CONTROL";
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+  }
+  @keyframes capture-pulse {
+    50% {
+      filter: brightness(1.55);
+      opacity: 0.65;
+    }
+  }
+  @media (max-width: 1100px) {
+    .perform-stage {
+      grid-template-columns: 1fr;
+    }
+    .perform-instrument {
+      min-height: 210px;
+    }
+    .perform-macros {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .scratch-console {
+      grid-template-columns: 260px 1fr;
+    }
+  }
+  @media (max-width: 760px) {
+    .performance {
+      padding: 16px 10px;
+    }
+    .performance-head {
+      align-items: flex-start;
+    }
+    .performance-orb.compact {
+      width: 64px;
+      height: 64px;
+    }
+    .perform-stage {
+      margin-top: 14px;
+    }
+    .perform-instrument {
+      padding: 12px;
+    }
+    .perform-macros {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .scratch-deck {
+      padding: 14px 10px;
+    }
+    .scratch-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .scratch-capture {
+      width: 100%;
+    }
+    .scratch-capture label {
+      flex: 1;
+    }
+    .scratch-capture select {
+      width: 100%;
+    }
+    .scratch-console {
+      grid-template-columns: 1fr;
+    }
+    .turntable-shell {
+      min-height: 238px;
+    }
+    .scratch-platter {
+      width: 220px;
+      height: 220px;
+    }
+    .record-label {
+      inset: 61px;
+    }
+    .scratch-controls {
+      gap: 14px;
+    }
+    .scratch-actions {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .scratch-wave-shell {
+      height: 64px;
+    }
+  }
+
+  /* Studio workflow: locators, mix console, deliberate export and live takes */
+  .global-locator,
+  .clip-locator {
+    display: grid;
+    grid-template-columns: auto minmax(160px, 1fr) auto auto;
+    align-items: center;
+    gap: 11px;
+    padding: 7px 14px;
+  }
+  .global-locator {
+    z-index: 5;
+    padding-left: 224px;
+  }
+  .global-locator label,
+  .clip-locator label {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .global-locator label span,
+  .clip-locator label span {
+    white-space: nowrap;
+  }
+  .global-locator button,
+  .clip-locator button {
+    height: 25px;
+    padding: 0 10px;
+  }
+  .global-locator output,
+  .clip-locator output {
+    min-width: 118px;
+  }
+  .clip-locator {
+    margin: 0 14px;
+  }
+  .clip-locator + * {
+    margin-top: 9px;
+  }
+  .arrange-timeline {
+    position: relative;
+    display: flex;
+    min-height: 62px;
+    margin: 0 14px 4px;
+    padding: 8px;
+    overflow-x: auto;
+  }
+  .arrange-timeline button {
+    position: relative;
+    flex: 0 0 max(90px, var(--scene-width));
+    height: 44px;
+    padding: 7px 9px;
+    overflow: hidden;
+  }
+  .arrange-timeline b,
+  .arrange-timeline span {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .arrange-timeline span {
+    margin-top: 5px;
+  }
+  .arrange-playhead {
+    position: absolute;
+    z-index: 3;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: var(--magenta);
+    box-shadow: 0 0 12px var(--magenta);
+    pointer-events: none;
+  }
+  .mixer {
+    min-height: 100%;
+    padding: 26px;
+  }
+  .mixer-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 20px;
+    max-width: 1180px;
+    margin: 0 auto 20px;
+  }
+  .mixer-head h1 {
+    margin: 0;
+  }
+  .mixer-head p {
+    margin: 6px 0 0;
+  }
+  .mix-reference {
+    display: flex;
+    gap: 7px;
+  }
+  .mix-reference button {
+    height: 34px;
+    padding: 0 13px;
+  }
+  .mixer-channels {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 10px;
+    max-width: 1180px;
+    margin: auto;
+  }
+  .mixer-channel {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    grid-template-rows: auto 160px repeat(3, auto) auto;
+    gap: 10px 12px;
+    padding: 15px;
+  }
+  .mixer-channel::before {
+    content: "";
+    position: absolute;
+  }
+  .mixer-channel header {
+    grid-column: 1/-1;
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 10px;
+  }
+  .mixer-channel canvas {
+    grid-row: 2;
+    align-self: stretch;
+    width: 32px;
+    height: 150px;
+  }
+  .mixer-channel label {
+    grid-column: 1/-1;
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .mixer-channel .mix-fader {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+  }
+  .mixer-channel .mix-fader input {
+    width: 140px;
+    transform: rotate(-90deg);
+    margin: 66px -50px 50px;
+  }
+  .mixer-channel > div {
+    grid-column: 1/-1;
+    display: flex;
+    gap: 6px;
+  }
+  .mixer-channel > div button {
+    flex: 1;
+    height: 32px;
+  }
+  .mixer-channel.muted {
+    opacity: 0.58;
+  }
+  .master-strip {
+    display: grid;
+    grid-template-columns: auto minmax(220px, 1fr) 230px auto;
+    align-items: center;
+    gap: 20px;
+    max-width: 1180px;
+    margin: 14px auto 0;
+    padding: 17px 20px;
+  }
+  .master-strip .eyebrow {
+    margin: 0;
+  }
+  .master-strip label {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .master-strip canvas {
+    width: 220px;
+    height: 56px;
+  }
+  .master-strip p {
+    margin: 0;
+  }
+  .performance-record {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 6px;
+    align-items: center;
+  }
+  .performance-record button {
+    height: 34px;
+    padding: 0 11px;
+  }
+  .performance-record span {
+    grid-column: 1/-1;
+  }
+  .export-dialog {
+    width: min(720px, calc(100% - 24px));
+  }
+  .export-options {
+    display: flex;
+    gap: 10px;
+    margin: 17px 0;
+  }
+  .export-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+  }
+  .export-options select {
+    height: 28px;
+  }
+  .export-grid .export-choice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    padding: 14px;
+  }
+  .export-grid .export-choice b,
+  .export-grid .export-choice span {
+    grid-column: 1/-1;
+  }
+  .export-grid .export-choice button {
+    height: 34px;
+    padding: 0 9px;
+  }
+  .export-grid .stems {
+    grid-column: 1/-1;
+  }
+  .export-targets-head {
+    margin-top: 20px;
+    padding-bottom: 7px;
+  }
+  .export-targets > div {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  .export-targets b,
+  .export-targets small {
+    display: block;
+  }
+  .export-targets small {
+    margin-top: 3px;
+  }
+  .export-targets button {
+    height: 26px;
+  }
+  @media (max-width: 1100px) {
+    .global-locator {
+      padding-left: 204px;
+    }
+    .mixer {
+      padding: 18px;
+    }
+    .mixer-channels {
+      grid-template-columns: repeat(5, minmax(115px, 1fr));
+      overflow-x: auto;
+    }
+    .mixer-channel {
+      min-width: 125px;
+    }
+    .performance-head {
+      flex-wrap: wrap;
+    }
+    .performance-record {
+      margin-left: auto;
+    }
+  }
+  @media (max-width: 760px) {
+    .global-locator {
+      padding: 7px 8px;
+      grid-template-columns: auto 1fr auto;
+    }
+    .global-locator output {
+      display: none;
+    }
+    .global-locator label span,
+    .clip-locator label span {
+      display: none;
+    }
+    .global-locator button:first-child,
+    .clip-locator button:first-child {
+      padding-inline: 8px;
+    }
+    .global-locator button:first-child::after,
+    .clip-locator button:first-child::after {
+      content: "▶";
+    }
+    .clip-locator {
+      margin-inline: 8px;
+      grid-template-columns: auto 1fr auto;
+    }
+    .clip-locator output {
+      display: none;
+    }
+    .arrange-timeline {
+      margin-inline: 8px;
+    }
+    .mixer {
+      padding: 14px 8px;
+    }
+    .mixer-head {
+      align-items: flex-start;
+    }
+    .mixer-head p {
+      display: none;
+    }
+    .mixer-channels {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+    }
+    .mixer-channel {
+      min-width: 150px;
+      scroll-snap-align: start;
+    }
+    .master-strip {
+      grid-template-columns: 1fr;
+      padding: 14px;
+    }
+    .master-strip canvas {
+      width: 100%;
+    }
+    .performance-record {
+      order: 3;
+      width: 100%;
+      grid-template-columns: 1fr 1fr;
+    }
+    .export-grid {
+      grid-template-columns: 1fr;
+    }
+    .export-grid .stems {
+      grid-column: auto;
+    }
+  }
+
+  /* v5 production workflow */
+  .launcher {
+    min-height: 100%;
+    padding: 26px;
+  }
+  .launcher-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 22px;
+    max-width: 1180px;
+    margin: 0 auto 20px;
+  }
+  .launcher-head h1 {
+    margin: 0;
+  }
+  .launcher-head p {
+    max-width: 650px;
+    margin: 6px 0 0;
+  }
+  .launcher-actions {
+    display: flex;
+    align-items: end;
+    gap: 7px;
+  }
+  .launcher-actions label {
+    display: grid;
+    gap: 5px;
+  }
+  .launcher-actions select,
+  .launcher-actions button {
+    height: 36px;
+  }
+  .launcher-actions button {
+    padding: 0 12px;
+  }
+  .launcher-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(140px, 1fr));
+    gap: 10px;
+    max-width: 1180px;
+    margin: auto;
+  }
+  .launcher-track {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    padding: 12px;
+  }
+  .launcher-track header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 9px;
+  }
+  .launcher-track header button {
+    width: 31px;
+    height: 25px;
+  }
+  .launcher-cell {
+    position: relative;
+    min-height: 55px;
+    padding: 9px 10px;
+  }
+  .launcher-cell b,
+  .launcher-cell small {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .launcher-cell small {
+    margin-top: 5px;
+  }
+  .launcher-cell.queued::after {
+    content: "QUEUED";
+    position: absolute;
+    right: 6px;
+    bottom: 5px;
+  }
+  .launcher-status {
+    max-width: 1180px;
+    margin: 12px auto 0;
+    padding: 9px 11px;
+  }
+  .arrange-toolbar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 0 14px 8px;
+    padding: 8px;
+    overflow-x: auto;
+  }
+  .arrange-toolbar button {
+    height: 29px;
+    padding: 0 9px;
+    white-space: nowrap;
+  }
+  .arrange-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .arrange-toolbar input[type="number"] {
+    width: 58px;
+    height: 27px;
+  }
+  .arrange-toolbar input[type="range"] {
+    width: 90px;
+  }
+  .arrange-timeline {
+    transform-origin: left center;
+  }
+  .arrange-markers {
+    position: relative;
+    display: flex;
+    gap: 5px;
+    margin: 0 14px 8px;
+    min-height: 24px;
+  }
+  .arrange-marker {
+    height: 23px;
+    padding: 0 8px;
+  }
+  .mixer-channel {
+    grid-template-rows: auto 160px repeat(5, auto) auto;
+  }
+  .mix-meter-pair {
+    grid-row: 2;
+    display: flex;
+    gap: 3px;
+  }
+  .mix-meter-pair canvas {
+    width: 14px;
+  }
+  .mixer-channel label[data-precision] {
+    grid-template-columns: 48px 1fr 39px;
+  }
+  .mixer-channel input[type="color"] {
+    width: 28px;
+    height: 20px;
+    padding: 0;
+  }
+  .master-strip > button {
+    height: 32px;
+  }
+  .performance-takes {
+    display: flex;
+    gap: 8px;
+    max-width: 1260px;
+    margin: 14px auto 0;
+    overflow-x: auto;
+  }
+  .performance-take {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: center;
+    gap: 7px;
+    min-width: 300px;
+    padding: 9px 10px;
+  }
+  .performance-take small {
+    display: block;
+    margin-top: 3px;
+  }
+  .performance-take button {
+    height: 27px;
+    padding: 0 8px;
+  }
+  .export-options {
+    flex-wrap: wrap;
+  }
+  .stem-selection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 14px;
+    padding: 9px 11px;
+  }
+  .export-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .export-progress progress {
+    flex: 1;
+    height: 7px;
+    accent-color: var(--cyan);
+  }
+  .export-progress button {
+    height: 29px;
+  }
+  .library-dialog {
+    width: min(900px, calc(100% - 24px));
+  }
+  .library-tools {
+    display: flex;
+    gap: 7px;
+    margin: 14px 0;
+  }
+  .library-tools input {
+    flex: 1;
+  }
+  .library-tools button,
+  .library-tools .file-button {
+    height: 36px;
+    padding: 0 11px;
+  }
+  .preset-library {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-height: 55vh;
+    overflow: auto;
+  }
+  .preset-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 7px;
+    padding: 12px;
+  }
+  .preset-card b,
+  .preset-card small {
+    display: block;
+  }
+  .preset-card small {
+    margin-top: 4px;
+  }
+  .preset-card button {
+    height: 29px;
+  }
+  .sample-slots {
+    display: grid;
+    gap: 8px;
+    max-height: 60vh;
+    overflow: auto;
+  }
+  .sample-slot {
+    display: grid;
+    grid-template-columns: 100px minmax(150px, 1fr) repeat(
+        5,
+        minmax(65px, 0.5fr)
+      ) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 9px;
+  }
+  .sample-slot label {
+    display: grid;
+    gap: 3px;
+  }
+  .compact-mode .inspector,
+  .compact-mode .arp-rack,
+  .compact-mode .fx-rack,
+  .compact-mode .macro-strip {
+    padding-block: 7px;
+  }
+  .compact-mode .synth-controls {
+    gap: 5px;
+  }
+  .compact-mode .knob-control {
+    transform: scale(0.9);
+  }
+  @media (max-width: 900px) {
+    .launcher-grid {
+      display: flex;
+      overflow-x: auto;
+    }
+    .launcher-track {
+      min-width: 180px;
+    }
+    .launcher-head {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .sample-slot {
+      grid-template-columns: 85px 1fr;
+    }
+    .sample-slot label {
+      grid-column: span 1;
+    }
+    .preset-library {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 760px) {
+    .launcher {
+      padding: 16px 9px;
+    }
+    .launcher-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+    .launcher-grid {
+      grid-template-columns: none;
+    }
+    .arrange-toolbar {
+      margin-inline: 8px;
+    }
+    .preset-library {
+      grid-template-columns: 1fr;
+    }
+    .sample-slot {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .take-event-list {
+    display: grid;
+    gap: 6px;
+    max-height: 52vh;
+    overflow: auto;
+  }
+  .take-event {
+    display: grid;
+    grid-template-columns: 80px 110px 1fr 120px 30px;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+  }
+  .take-event input {
+    height: 28px;
+  }
+  .take-event button {
+    height: 28px;
+  }
+
+  /* Final specificity for the new brand system. */
+  .brand-icon {
+    width: 58px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .brand-icon svg {
+    width: 58px;
+    height: 45px;
+  }
+  .logo-k {
+    fill: none;
+    stroke: url(#kvSpectrum);
+    stroke-width: 11;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  .logo-v {
+    fill: none;
+    stroke: #f5f7ff;
+    stroke-width: 10;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  .brand-word {
+    display: grid;
+    gap: 0;
+  }
+  .performance-orb.compact .brand-emblem {
+    width: 72px;
+    height: auto;
+  }
+  .record-label .brand-emblem {
+    width: 68px;
+    height: 55px;
+    fill: none;
+  }
+  @media (max-width: 1100px) {
+    .brand-icon {
+      width: 50px;
+    }
+    .brand-icon svg {
+      width: 50px;
+    }
+  }
+  @media (max-width: 760px) {
+    .brand-icon {
+      width: 45px;
+      height: 42px;
+    }
+    .brand-icon svg {
+      width: 45px;
+    }
+    .boot-mark {
+      width: 138px;
+    }
+    .about-mark {
+      width: 124px;
+    }
+  }
+
+  /* Mobile uses document scrolling; only editors and control strips scroll locally. */
+  @media (max-width: 820px) {
+    .view {
+      overflow: visible;
+    }
+  }
+
+  /* Composition-first studio */
+  .editor-tools,
+  .export-simple {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .editor-tools button,
+  .export-simple button {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+  .editor-tools {
+    margin: 12px 14px;
+  }
+  .export-simple {
+    margin: 18px 0;
+  }
+  .export-simple button {
+    flex: 1;
+    min-width: 160px;
+  }
+  .export-advanced {
+    margin: 12px 0;
+    padding-top: 12px;
+  }
+  .export-advanced summary {
+    cursor: pointer;
+    min-height: 44px;
+    padding: 10px 0;
+  }
+  #saveWarning:not([hidden]) {
+    padding: 10px;
+  }
+  #toast {
+    max-width: calc(100vw - 24px);
+  }
+  #toast button {
+    margin-left: 12px;
+    padding: 8px 14px;
+    min-height: 44px;
+  }
+  @media (max-width: 820px) {
+    .editor-head {
+      position: static;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      overflow: visible;
+      gap: 10px;
+      padding: 12px;
+      margin: 8px;
+    }
+    .editor-head > div:first-child,
+    .editor-head > div:last-child {
+      min-width: 0;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .editor-head select,
+    .editor-head button,
+    .editor-head label,
+    .composition-tools button,
+    .composition-tools select,
+    .composition-tools input[type="number"] {
+      min-height: 44px;
+      height: auto;
+    }
+    .editor-head #clipSelect {
+      min-width: 0;
+      max-width: 100%;
+      flex: 1;
+    }
+    .editor-head > div:first-child > .eyebrow {
+      width: 100%;
+    }
+    .editor-tools {
+      margin: 10px 8px;
+      gap: 6px;
+    }
+    .editor-tools button {
+      flex: 1;
+      padding: 10px;
+    }
+    .composition-tools {
+      padding: 8px;
+    }
+    .composition-tools > div {
+      flex-wrap: wrap;
+      overflow: visible;
+    }
+    .generators {
+      min-width: 0;
+    }
+    .selection-editor input[type="range"] {
+      min-height: 22px;
+    }
+    .piano-shell {
+      height: 360px;
+      margin-inline: 8px;
+      grid-template-columns: 44px minmax(0, 1fr);
+    }
+    .roll-pane {
+      min-width: 0;
+      min-height: 0;
+      touch-action: pan-x pan-y;
+    }
+    .track-select {
+      min-height: 44px;
+    }
+    #toast {
+      bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+      right: 12px;
+    }
+    .export-simple {
+      flex-direction: column;
+    }
+    .inspector .preset-row {
+      flex-wrap: wrap;
+    }
+    .preset-row select {
+      min-height: 44px;
+    }
+  }
+  .composition-options {
+    margin: 10px 14px;
+    padding: 10px 12px;
+  }
+  .composition-options summary {
+    cursor: pointer;
+    min-height: 36px;
+    padding: 8px 0;
+  }
+  .composition-options .harmony,
+  .composition-options .generators {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    min-width: 0;
+  }
+  .composition-options button,
+  .composition-options select {
+    min-height: 44px;
+    padding: 8px;
+  }
+  @media (max-width: 820px) {
+    .composition-options {
+      margin: 8px;
+    }
+  }
+
+  /* Transport pause and reusable Scratch Deck sources */
+  .audio-region-actions {
+    display: flex;
+    flex: none;
+    gap: 4px;
+  }
+  .audio-region header .audio-region-actions button {
+    width: auto;
+    min-width: 22px;
+    padding: 0 6px;
+  }
+  .scratch-capture .scratch-import {
+    display: grid;
+    place-items: center;
+    height: 34px;
+    padding: 0 12px;
+    cursor: pointer;
+  }
+  .scratch-capture .scratch-import input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .scratch-capture .scratch-import:focus-within {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  @media (max-width: 760px) {
+    .scratch-capture {
+      flex-wrap: wrap;
+    }
+    .scratch-capture .scratch-import {
+      flex-basis: 100%;
+    }
+  }
+
+  /* Fast musical taps must not trigger the browser's double-tap zoom. Pinch zoom remains available. */
+  .selection-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 14px 14px;
+  }
+  .selection-actions button {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+  .automation-disclosure {
+    margin: 12px 14px;
+    overflow: hidden;
+  }
+  .automation-disclosure summary {
+    min-height: 44px;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .automation-disclosure .automation-head {
+    margin: 0;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 44px;
+    gap: 8px;
+    padding: 8px;
+  }
+  .automation-disclosure .automation-pane {
+    margin-inline: 44px 0;
+  }
+  /* Shared readable control typography across all studio views and dialogs. */
+  .view label,
+  .view small,
+  .view output,
+  .view select,
+  .view input,
+  .view
+    button:not(.key):not(.note-block):not(.sampler-key):not(.knob):not(
+      .knob-nudge
+    ),
+  dialog label,
+  dialog input,
+  dialog select,
+  dialog button,
+  dialog p {
+    font-family: var(--ui-font);
+    font-size: 12px;
+    line-height: 1.4;
+    letter-spacing: normal;
+  }
+  .view select,
+  dialog select,
+  dialog input:not([type="checkbox"]):not([type="range"]):not([type="file"]),
+  dialog button {
+    min-height: 36px;
+  }
+  .synth-controls {
+    gap: 12px;
+  }
+  .knob-control {
+    min-width: 68px;
+  }
+  .fx-controls,
+  .macros {
+    gap: 14px;
+  }
+  .arp-rack {
+    gap: 8px;
+  }
+  .arp-rack > label {
+    margin-left: 8px;
+  }
+  .preset-row {
+    flex-wrap: wrap;
+  }
+  .export-options {
+    gap: 8px;
+  }
+  @media (max-width: 820px) {
+    .selection-actions {
+      margin: 8px;
+    }
+    .selection-actions button {
+      flex: 1;
+      min-width: 95px;
+    }
+    .automation-disclosure {
+      margin: 12px 8px;
+    }
+    .view input:not([type="range"]):not([type="checkbox"]):not([type="color"]),
+    .view select,
+    dialog input:not([type="range"]):not([type="checkbox"]):not([type="color"]),
+    dialog select {
+      min-height: 44px;
+    }
+    .view
+      button:not(.key):not(.note-block):not(.sampler-key):not(.knob):not(
+        .knob-nudge
+      ):not(.rack-toggle),
+    dialog button {
+      min-height: 44px;
+    }
+    .view .preset-row select {
+      max-width: 100%;
+    }
+    .view .scene {
+      height: auto;
+      min-height: 340px;
+    }
+    .view .scene-clips label {
+      grid-template-columns: 82px minmax(0, 1fr);
+    }
+    .view .fx-controls,
+    .view .macros {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .view .knob-control {
+      min-width: 92px;
+    }
+    .view .mixer-channel {
+      min-width: 190px;
+    }
+    .view .performance-take {
+      min-width: 330px;
+    }
+    .view .master-strip {
+      overflow: hidden;
+    }
+    .view .mix-fader input {
+      min-height: 0;
+    }
+    .view .audio-lane-head {
+      min-width: 0;
+    }
+    .view .audio-lane-head input[type="text"] {
+      min-width: 0;
+      width: 100%;
+    }
+    .view .take-event {
+      grid-template-columns: 1fr 1fr;
+    }
+    .view .sampler-controls label {
+      min-width: 0;
+    }
+    .view .sampler-controls select,
+    .view .sampler-controls input {
+      max-width: 100%;
+    }
+    dialog .export-options label {
+      flex-wrap: wrap;
+    }
+    dialog .export-options select {
+      max-width: 100%;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .global-locator label,
+    .clip-locator label {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+    }
+    .global-locator input[type="range"],
+    .clip-locator input[type="range"] {
+      flex: 1;
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+    }
+  }
+
+  /* Musical gestures own their surface; other controls retain pinch zoom. */
+  .knob,
+  #scratchPlatter {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  #performView button,
+  #performView input,
+  #performView [role="slider"],
+  .knob-nudge {
+    touch-action: manipulation;
+  }
+  @media (pointer: coarse) {
+    .knob {
+      min-width: 56px;
+      min-height: 56px;
+    }
+  }
+
+  .scratch-pro {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .scratch-pro label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .scratch-pro p {
+    grid-column: 1/-1;
+  }
+  .scratch-pro button,
+  .scratch-pro select,
+  #scratchMic {
+    min-height: 44px;
+  }
+  .scratch-pro input {
+    width: 100%;
+    touch-action: manipulation;
+  }
+
+  /* Shared studio control scale. Instrument geometry remains independently sized. */
+  .view button:not(.key):not(.sampler-key):not(.knob):not(.note-block),
+  dialog button,
+  .file-button {
+    font-size: var(--control-text);
+    min-height: var(--control-height);
+    line-height: 1.35;
+    letter-spacing: normal;
+  }
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 3px;
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  #scratchWaveform {
+    touch-action: none;
+    cursor: crosshair;
+  }
+  #scratchWavePlayhead,
+  #scratchStatus {
+    pointer-events: none;
+  }
+  #timingDialog form {
+    display: grid;
+    gap: 16px;
+    min-width: min(320px, 75vw);
+  }
+  #timingDialog label {
+    display: grid;
+    gap: 6px;
+  }
+  #timingDialog form > div {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+}

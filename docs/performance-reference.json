@@ -1,0 +1,92 @@
+{
+  "environment": "Chromium, localhost, 390x844, fresh page per run, no CPU/network throttling",
+  "runs": [
+    {
+      "uiVisibleCheckMs": 205.10000000009313,
+      "domContentLoadedMs": 36.39999999990687,
+      "loadMs": 58.8000000002794,
+      "domNodes": 1342
+    },
+    {
+      "uiVisibleCheckMs": 163.39999999990687,
+      "domContentLoadedMs": 40.39999999990687,
+      "loadMs": 42.1999999997206,
+      "domNodes": 1342
+    },
+    {
+      "uiVisibleCheckMs": 156,
+      "domContentLoadedMs": 23.600000000093132,
+      "loadMs": 39.799999999813735,
+      "domNodes": 1342
+    },
+    {
+      "uiVisibleCheckMs": 178.70000000018626,
+      "domContentLoadedMs": 26.40000000037253,
+      "loadMs": 48.3000000002794,
+      "domNodes": 1342
+    },
+    {
+      "uiVisibleCheckMs": 183.1999999997206,
+      "domContentLoadedMs": 25.799999999813735,
+      "loadMs": 47.39999999990687,
+      "domNodes": 1342
+    }
+  ],
+  "assets": [
+    {
+      "file": "assets/app-VrkX9jrA.js",
+      "bytes": 267411,
+      "gzipBytes": 88124
+    },
+    {
+      "file": "assets/audio-BBmRzUtD.js",
+      "bytes": 40061,
+      "gzipBytes": 12196
+    },
+    {
+      "file": "assets/core-BRAjRr-D.js",
+      "bytes": 23788,
+      "gzipBytes": 9016
+    },
+    {
+      "file": "assets/jsxRuntime-Bt-fphYe.js",
+      "bytes": 13851,
+      "gzipBytes": 5811
+    },
+    {
+      "file": "assets/studio-BskgNiug.js",
+      "bytes": 8660,
+      "gzipBytes": 3603
+    },
+    {
+      "file": "assets/studio-D2KGVVCa.css",
+      "bytes": 104934,
+      "gzipBytes": 21352
+    },
+    {
+      "file": "audio.js",
+      "bytes": 72,
+      "gzipBytes": 88
+    },
+    {
+      "file": "core.js",
+      "bytes": 1228,
+      "gzipBytes": 608
+    },
+    {
+      "file": "index.html",
+      "bytes": 32532,
+      "gzipBytes": 9437
+    },
+    {
+      "file": "scratch-worklet.js",
+      "bytes": 1998,
+      "gzipBytes": 801
+    },
+    {
+      "file": "sw.js",
+      "bytes": 1138,
+      "gzipBytes": 596
+    }
+  ]
+}

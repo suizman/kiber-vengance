@@ -1,420 +1,3641 @@
-import { createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, clipLengthSteps, meterSteps, setProjectMeter, makeNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, generateClip, generateBacking, encodeMidi, playbackEvents, History, TRACKS, TRACK_META, DRUM_NAMES, SCALES, KEYS, addArrangementScene, duplicateArrangementScene, moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake, quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, dbToGain, gainToDb, createAudioLane, createAudioRegion, audioRegionRate, createAutomationLane, detectTransientSlices, transformNotes, cryptoId, samplerDefaults } from './core.js';
-import { AudioEngine, renderWav } from './audio.js';
-import type { AudioLane, AudioRegion, AutomationLane, MidiMapping, ModulationRoute, NoteEvent, NoteExpression, PerformanceEvent, PerformanceTake, Project, SampleAsset, SamplerInstrument, TrackId, TrackState } from './model.js';
-
-declare global { interface Window { __kvErrors:string[]; __kvDiagnostics:()=>ReturnType<AudioEngine['diagnostics']>; webkitAudioContext?:typeof AudioContext; showSaveFilePicker?:(options:Record<string,unknown>)=>Promise<any> } }
-
-window.__kvErrors=[];function reportError(message:unknown){window.__kvErrors.push(String(message));const el=document.getElementById('toast');if(el){el.textContent=`ENGINE ERROR: ${String(message)}`;el.classList.add('show')}}window.addEventListener('error',e=>reportError(e.message));window.addEventListener('unhandledrejection',e=>reportError(String(e.reason?.message||e.reason)));
-
-const $=(s:string):any=>document.querySelector(s), $$=(s:string):any[]=>[...document.querySelectorAll(s)], STORAGE='kiber-vengance-project-v6', LEGACY_V5='kiber-vengance-project-v5', LEGACY_V4='kiber-vengance-project-v4', LEGACY_V3='kiber-vengance-project-v3', LEGACY='kiber-vengance-project-v2', VERSIONS='kiber-vengance-versions-v1', UI_STORAGE='kiber-vengance-ui-v1', LANGUAGE_STORAGE='kiber-vengance-language-v1';
-let project:any=loadProject(),selectedTrack:TrackId='lead',selectedNotes=new Set<string>(),currentStep=-1,currentScene=-1,transportPosition=0,globalStartStep=0,draggedScene=-1,recordArmed=false,metronome=false,saveTimer:ReturnType<typeof setTimeout>|undefined,animation=0,clipboard:NoteEvent[]=[],recording=new Map<string,any>(),rollScroll:any={},activeView='forge',commandIndex=0,pendingDeleteClipId:string|null=null,suppressSequencerClick=false,scratchBuffer:AudioBuffer|null=null,scratchAnimation=0,scratchAngle=0,scratchLastFrame=performance.now(),scratchStuttering=false,performanceTake:Blob|null=null,performanceStarted=0,performanceTimer:ReturnType<typeof setInterval>|null=null,mixerReference:any=null,mixerComparing=false,activePerformanceTakeId:string|null=null,performanceEvents:PerformanceEvent[]|null=null,exportController:AbortController|null=null,launcherCapturing=false,launcherSnapshots:Array<{name:string;clipIds:Record<TrackId,string>;repeats:number}>=[],selectedScenes=new Set<number>(),sceneClipboard:any[]=[],mixerPeaks:Partial<Record<TrackId,number>>={},lastRecovery=0;
-const clipStartSteps=new Map<string,number>();
-let samplerArmed=false,loadedSamplerAssetId:string|null=null,samplerQwertyBase=60;const samplerHeld=new Map<string,HTMLElement>();
-let toastTimer:ReturnType<typeof setTimeout>;
-let editorTool:'draw'|'select'|'navigate'='draw';let soundPanel=false;
-type Language='en'|'es';let language:Language=localStorage.getItem(LANGUAGE_STORAGE)==='es'?'es':'en',tutorialStep=0,helpMode=false;const L=(en:string,es:string)=>language==='es'?es:en;
-const history=new History<any>();
-const engine=new AudioEngine((step:number,time:number,scene:number,info:Record<string,any>={})=>{if(step===-2){$('#audioState').textContent=`COUNT ${info.countIn}`;return}currentStep=step;currentScene=scene;if(step>=0)transportPosition=Number(info.position??step);if(step<0)$('#audioState').textContent='STANDBY';else $('#audioState').textContent='RUNNING';requestAnimationFrame(()=>{updatePlayheads();updatePosition();syncLocatorsFromPlayback()})});engine.project=project;
-window.__kvDiagnostics=()=>engine.diagnostics();
-engine.onScratchGesture=(target:string,value:number|boolean)=>recordPerformanceEvent('scratch',target,value);
-const presets={lead:['Razor Choir','Neon Talon','Solar Vengeance'],guitar:['Chrome Strings','Voltage Chug','Glass Horizon'],bass:['Foundry Pulse','Black Reactor','Grind Theory'],pad:['Afterlight','Frozen Cathedral','Signal Ghost'],drums:['Titan Frame','Riot Assembly','Chrome Bones']};
-const keyMap='asdfghjk',pitchNames=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'],samplerQwertyPitches=[60,62,64,65,67,69,71,72],samplerQwertyMap:Record<string,number>={a:0,w:1,s:2,e:3,d:4,f:5,t:6,g:7,y:8,h:9,u:10,j:11,k:12};
-
-function loadProject(){for(const key of [STORAGE,LEGACY_V5,LEGACY_V4,LEGACY_V3,LEGACY])try{const value=localStorage.getItem(key);if(value)return migrateProject(JSON.parse(value))}catch{}return createProject()}
-function esc(v:any){return String(v).replace(/[&<>'"]/g,c=>(({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'} as Record<string,string>)[c]!))}
-function snapshot(){history.push(project)}
-function changed(render=false){
- project.modifiedAt=Date.now();$('#saveState').textContent=L('Saving…','Guardando…');clearTimeout(saveTimer);
- saveTimer=setTimeout(()=>{
-  try {localStorage.setItem(STORAGE,JSON.stringify(project));$('#saveState').textContent=L('Saved on this device','Guardado en este dispositivo');$('#saveWarning')?.setAttribute('hidden','');}
-  catch {$('#saveState').textContent=L('Not saved','Sin guardar');const warning=$('#saveWarning');if(warning){warning.hidden=false;warning.textContent=L('Could not save locally. Export a project package to keep your changes.','No se pudo guardar localmente. Exporta un proyecto completo para conservar los cambios.');}return;}
-  if(Date.now()-lastRecovery>60000){try{const list=loadVersions();list.unshift({id:cryptoId(),label:`AUTO RECOVERY · ${project.title}`,date:Date.now(),project:structuredClone(project)});localStorage.setItem(VERSIONS,JSON.stringify(list.slice(0,20)));lastRecovery=Date.now()}catch{toast(L('Project saved; recovery snapshot unavailable.','Proyecto guardado; copia de recuperación no disponible.'))}}
- },350);engine.setProject(project);if(project.sampler?.assetId!==loadedSamplerAssetId)void loadSamplerAsset();if(render)renderAll();syncStudioUi();
-}
-function toast(message:any,undo=false){clearTimeout(toastTimer);const el=$('#toast');el.textContent=message;if(undo){const button=document.createElement('button');button.textContent=L('Undo','Deshacer');button.onclick=()=>{$('#undoBtn').click();el.classList.remove('show')};el.append(button)}el.classList.add('show');toastTimer=setTimeout(()=>el.classList.remove('show'),undo?6000:2500)}
-function download(data:any,name:string,type='application/octet-stream'){const blob=data instanceof Blob?data:new Blob([data],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-type QuickExportKind='wav'|'midi'|'project'|'clip-wav'|'clip-midi'|'stems'|'bundle'|'performance';type QuickTarget={handle:any|null;fallback:boolean;cancelled:boolean;name:string;type:string};const quickHandles=new Map<QuickExportKind,any>(),QUICK_HANDLE_DB='kiber-vengance-file-handles-v1',LAST_EXPORT='kiber-vengance-last-export-v1';
-function quickHandleDb(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open(QUICK_HANDLE_DB,1);request.onupgradeneeded=()=>request.result.createObjectStore('handles');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
-const ASSET_DB='kiber-vengance-assets-v1';
-function assetDb(){return new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open(ASSET_DB,1);request.onupgradeneeded=()=>{request.result.createObjectStore('assets')};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
-async function putAsset(id:string,blob:Blob){const db=await assetDb();await new Promise<void>((resolve,reject)=>{const request=db.transaction('assets','readwrite').objectStore('assets').put(blob,id);request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error)})}
-async function getAsset(id:string){const db=await assetDb();return new Promise<Blob|null>((resolve,reject)=>{const request=db.transaction('assets','readonly').objectStore('assets').get(id);request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error)})}
-async function deleteAsset(id:string){const db=await assetDb();await new Promise<void>((resolve,reject)=>{const request=db.transaction('assets','readwrite').objectStore('assets').delete(id);request.onsuccess=()=>resolve();request.onerror=()=>reject(request.error)})}
-function renderExportTargets(){const target=$('#exportTargets');if(!target)return;const labels:Record<QuickExportKind,string>={wav:'Song WAV',midi:'Song MIDI',project:'Project JSON','clip-wav':'Clip WAV','clip-midi':'Clip MIDI',stems:'Stems ZIP',bundle:'Project package',performance:'Performance take'},kinds=Object.keys(labels) as QuickExportKind[];target.innerHTML=kinds.map(kind=>{const handle=quickHandles.get(kind);return `<div><span><b>${labels[kind]}</b><small>${handle?esc(handle.name||L('Linked file','Archivo vinculado')):L('No destination','Sin destino')}</small></span>${handle?`<button data-forget-target="${kind}">${L('FORGET','OLVIDAR')}</button>`:''}</div>`}).join('');$$('[data-forget-target]').forEach(button=>button.onclick=()=>forgetExportTarget(button.dataset.forgetTarget))}
-function showQuickHandle(_kind:QuickExportKind,_handle:any){renderExportTargets();$('#exportBtn').classList.toggle('bound',quickHandles.size>0)}
-async function loadQuickHandles(){if(!('indexedDB'in window))return;try{const db=await quickHandleDb(),transaction=db.transaction('handles','readonly'),store=transaction.objectStore('handles');for(const kind of ['wav','midi','project','clip-wav','clip-midi','stems','bundle','performance'] as QuickExportKind[]){const request=store.get(kind);request.onsuccess=()=>{if(request.result){quickHandles.set(kind,request.result);showQuickHandle(kind,request.result)}}}}catch{}}
-async function rememberQuickHandle(kind:QuickExportKind,handle:any){quickHandles.set(kind,handle);showQuickHandle(kind,handle);if(!('indexedDB'in window))return;try{const db=await quickHandleDb(),transaction=db.transaction('handles','readwrite');transaction.objectStore('handles').put(handle,kind)}catch{}}
-async function forgetExportTarget(kind:QuickExportKind){quickHandles.delete(kind);try{const db=await quickHandleDb(),transaction=db.transaction('handles','readwrite');transaction.objectStore('handles').delete(kind)}catch{}renderExportTargets();$('#exportBtn').classList.toggle('bound',quickHandles.size>0)}
-async function prepareQuickExport(kind:QuickExportKind,name:string,type:string,extension:string,description:string,forcePicker=false):Promise<QuickTarget>{if(!window.showSaveFilePicker)return{handle:null,fallback:true,cancelled:false,name,type};try{let handle=!forcePicker?quickHandles.get(kind):null;if(handle){let permission=await handle.queryPermission?.({mode:'readwrite'})||'prompt';if(permission!=='granted')permission=await handle.requestPermission?.({mode:'readwrite'})||'denied';if(permission!=='granted')handle=null}if(!handle){handle=await window.showSaveFilePicker({suggestedName:name,types:[{description,accept:{[type]:[extension]}}],excludeAcceptAllOption:false});await rememberQuickHandle(kind,handle)}return{handle,fallback:false,cancelled:false,name:handle.name||name,type}}catch(error){if(error instanceof DOMException&&error.name==='AbortError')return{handle:null,fallback:false,cancelled:true,name,type};throw error}}
-async function writeQuickExport(target:QuickTarget,data:any){if(target.cancelled)return false;if(target.fallback){download(data,target.name,target.type);return true}const writable=await target.handle.createWritable();await writable.write(data instanceof Blob?data:new Blob([data],{type:target.type}));await writable.close();return true}
-async function quickExportProject(forcePicker=false){await performExport('project',forcePicker)}
-function safeName(){return project.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'kiber-vengance'}
-function clip(){return activeClip(project,selectedTrack)}
-function pitches(){if(selectedTrack==='drums')return DRUM_NAMES.map((_,i)=>DRUM_NAMES.length-1-i);const m=TRACK_META[selectedTrack],out=[];for(let p=m.high;p>=m.low;p--)out.push(p);return out}
-
-const staticCopy:Array<[string,string,string]>=[
-  ['#boot p','LOADING COMPOSITION ENGINE','CARGANDO MOTOR DE COMPOSICIÓN'],['.project-head label','PROJECT','PROYECTO'],['.rail-label','INDEPENDENT CLIPS','CLIPS INDEPENDIENTES'],['#newClipBtn','＋ NEW CLIP','＋ NUEVO CLIP'],['[data-view="forge"]','FORGE','FORJA'],['[data-view="arrange"]','ARRANGE','ARREGLO'],['[data-view="perform"]','PERFORM','INTERPRETAR'],['#tutorialBtn','GUIDE','GUÍA'],['#focusBtn','FOCUS','FOCO'],['#motionRack .eyebrow','MOTION ENGINE','MOTOR DE MOVIMIENTO'],['#effectsRack .eyebrow','SIGNAL PROCESSING','PROCESADO DE SEÑAL'],['#effectsRack strong','TRACK FX','EFECTOS DE PISTA'],['#macroRack .eyebrow','VECTOR CONTROL','CONTROL VECTORIAL'],['#macroRack strong','SCULPT THE IMPACT','MODELA EL IMPACTO'],['#fxBypass','BYPASS','OMITIR'],['.editor-head .eyebrow','ACTIVE CLIP','CLIP ACTIVO'],['#duplicateBtn','DUPLICATE','DUPLICAR'],['#mutateBtn','MUTATE','MUTAR'],['#backingBtn','BACKING','BASE'],['#quantizeBtn','QUANTIZE','CUANTIZAR'],['#deleteNotesBtn','DELETE','BORRAR'],['.automation-head .eyebrow','AUTOMATION','AUTOMATIZACIÓN'],['.automation-head>span','CLICK / DRAG TO DRAW','CLIC / ARRASTRA PARA DIBUJAR'],['#clearAutomationBtn','CLEAR LANE','LIMPIAR LÍNEA'],['#arrangeDescription','Each section combines five independent clips. Edit, repeat and reorder the complete song.','Cada sección combina cinco clips independientes. Edita, repite y reordena la canción completa.'],['#addSceneBtn','＋ ADD SECTION','＋ AÑADIR SECCIÓN'],['#autoArrangeBtn','⟳ AUTO SEQUENCE','⟳ SECUENCIA AUTO'],['#performDescription','Play the instruments, capture the active mix, and cut it into the performance with the Scratch Deck.','Toca los instrumentos, captura la mezcla activa y córtala en directo con el plato de scratch.'],['#backingDialog .eyebrow','BACKING GENERATOR','GENERADOR DE BASES'],['#backingDialog h2','BUILD A PLAYABLE FOUNDATION','CREA UNA BASE PARA TOCAR'],['#backingDescription','Generate a structured bass, pad and drum arrangement while preserving your lead and guitar clips.','Genera un arreglo estructurado de bajo, pad y batería conservando tus clips de lead y guitarra.'],['#backingWarning','The current arrangement will be replaced. You can undo this action.','El arreglo actual será reemplazado. Puedes deshacer esta acción.'],['#generateBackingBtn','GENERATE BACKING','GENERAR BASE'],['#projectMenu .eyebrow','PROJECT CORE','NÚCLEO DEL PROYECTO'],['#projectMenu h2','VERSIONS & RECOVERY','VERSIONES Y RECUPERACIÓN'],['#menuLanguageLabel','INTERFACE LANGUAGE','IDIOMA DE LA INTERFAZ'],['#importProjectLabel','Import project JSON','Importar proyecto JSON'],['#newBtn','New demo project','Nuevo proyecto de demostración'],['#emptyBtn','New empty project','Nuevo proyecto vacío'],['#duplicateProjectBtn','Duplicate current project','Duplicar proyecto actual'],['#saveBtn','Create named snapshot','Crear instantánea con nombre'],['#exportProjectBtn','Export project JSON','Exportar proyecto JSON'],['#compatBtn','Compatibility report','Informe de compatibilidad'],['.versions-head','LOCAL VERSIONS','VERSIONES LOCALES'],['#exportDialog .eyebrow','COMMIT THE FULL SIGNAL','CONSOLIDA TODA LA SEÑAL'],['#exportDialog h2','EXPORT SONG','EXPORTAR CANCIÓN'],['#exportDialog>p','Render the complete arrangement, including repeated clips, automation, arpeggiators and effects.','Renderiza todo el arreglo, incluidos clips repetidos, automatización, arpegiadores y efectos.'],['#wavBtn b','SONG WAV','CANCIÓN WAV'],['#exportMidiBtn b','SONG MIDI','CANCIÓN MIDI'],['#clipWavBtn b','CLIP WAV','CLIP WAV'],['#clipMidiBtn b','CLIP MIDI','CLIP MIDI'],['#helpDialog .eyebrow','FIELD MANUAL','MANUAL DE CAMPO'],['#helpDialog h2','COMPOSITION CONTROLS','CONTROLES DE COMPOSICIÓN'],['#helpDialog .note','Drag notes to move them and use the handle on their right edge to resize. Web MIDI records note-on/off, velocity, bend, pressure and timbre.','Arrastra las notas para moverlas y usa el tirador derecho para cambiar su duración. Web MIDI graba nota, velocidad, bend, presión y timbre.'],['#aboutDialog p','A complete cinematic electro-rock composition engine built for pressure, motion and controlled impact.','Un motor completo de composición electro-rock cinematográfica creado para presión, movimiento e impacto controlado.'],['#compatDialog .eyebrow','SYSTEM DIAGNOSTICS','DIAGNÓSTICO DEL SISTEMA'],['#compatDialog h2','COMPATIBILITY REPORT','INFORME DE COMPATIBILIDAD'],['#copyCompatBtn','COPY REPORT','COPIAR INFORME'],['#commandDialog .command-head .eyebrow','RAPID EXECUTION','EJECUCIÓN RÁPIDA'],['#commandDialog .command-head b','COMMAND PALETTE','PALETA DE COMANDOS'],['.command-help','↑↓ NAVIGATE · ENTER EXECUTE · ESC CLOSE','↑↓ NAVEGAR · INTRO EJECUTAR · ESC CERRAR'],['#contextHelpEyebrow','CONTEXT HELP','AYUDA CONTEXTUAL'],['#manualBtn','KEYBOARD SHORTCUTS','ATAJOS DE TECLADO']
-];
-staticCopy.push(['#effectsRack strong','CLIP FX','EFECTOS DEL CLIP'],['#motionRack .clip-scope','ACTIVE CLIP','CLIP ACTIVO'],['#effectsRack .clip-scope','ACTIVE CLIP','CLIP ACTIVO'],['#macroRack .clip-scope','ACTIVE CLIP','CLIP ACTIVO'],['.backing-options label:nth-child(1)>span','STYLE','ESTILO'],['.backing-options label:nth-child(2)>span','SECTIONS','SECCIONES'],['.backing-options label:nth-child(3)>span','INTENSITY','INTENSIDAD'],['#deleteClipDialog .eyebrow','DESTRUCTIVE EDIT','EDICIÓN DESTRUCTIVA'],['#deleteClipDialog .delete-clip-warning','This removes the clip from the project. You can undo this action.','Esto elimina el clip del proyecto. Puedes deshacer la acción.'],['#cancelDeleteClipBtn','CANCEL','CANCELAR'],['#confirmDeleteClipBtn','DELETE CLIP','BORRAR CLIP']);
-staticCopy.push(['#scratchTitle','SCRATCH DECK','PLATO DE SCRATCH'],['#scratchCaptureBtn','CAPTURE MIX','CAPTURAR MEZCLA'],['.scratch-import span','IMPORT AUDIO','IMPORTAR AUDIO'],['#scratchBrakeBtn','BRAKE','FRENAR'],['#scratchSpinBtn','↶ SPINBACK','↶ RETROCESO'],['#scratchStutterBtn','STUTTER','REPETIR'],['.scratch-hint','Drag the vinyl in either direction. Release for motor return; wheel or ← → for precise cuts.','Arrastra el vinilo en ambas direcciones. Suelta para recuperar el motor; usa la rueda o ← → para cortes precisos.']);
-staticCopy.push(['[data-view="mix"]','MIX','MEZCLA'],['#exportAsBtn','EXPORT AS','EXPORTAR COMO'],['#globalStartBtn','▶ SONG','▶ CANCIÓN'],['#clipStartBtn','▶ CLIP','▶ CLIP'],['#arrangeDescription','Each section combines five independent clips. Click the timeline to set the global start; edit, repeat and reorder the complete song.','Cada sección combina cinco clips independientes. Pulsa la línea temporal para fijar el inicio global; edita, repite y reordena la canción.'],['#exportDialog h2','EXPORT / EXPORT AS','EXPORTAR / EXPORTAR COMO'],['#exportDialog>p','Export reuses the linked file. Export As always asks for a new destination.','Exportar reutiliza el archivo vinculado. Exportar como siempre solicita un destino nuevo.'],['.export-targets-head','EXPORT DESTINATIONS','DESTINOS DE EXPORTACIÓN'],['#forgetTargetsBtn','Forget all destinations','Olvidar todos los destinos'],['#mixCaptureBtn','CAPTURE A','CAPTURAR A'],['#mixCompareBtn','COMPARE B','COMPARAR B'],['#performanceRecordBtn','● RECORD TAKE','● GRABAR TOMA'],['#performanceSaveBtn','SAVE TAKE AS','GUARDAR TOMA COMO']);
-staticCopy.push(['[data-view="launch"]','LAUNCH','LANZAR'],['#launchView h1','CLIP LAUNCHER','LANZADOR DE CLIPS'],['#launchView .launcher-head p','Queue clips without stopping the signal, stop individual tracks, and capture the live sequence into Arrange.','Pon clips en cola sin detener la señal, para pistas individuales y captura la secuencia en directo en Arreglo.'],['#launcherCaptureBtn','● CAPTURE','● CAPTURAR'],['#launcherCommitBtn','COMMIT TO ARRANGE','ENVIAR AL ARREGLO'],['#arrangeSelectAllBtn','SELECT ALL','SELECCIONAR TODO'],['#arrangeDuplicateBtn','DUPLICATE','DUPLICAR'],['#arrangeCopyBtn','COPY','COPIAR'],['#arrangePasteBtn','PASTE','PEGAR'],['#arrangeDeleteBtn','DELETE','BORRAR'],['#arrangeFillBtn','＋ FILL','＋ FILL'],['#arrangeMarkerBtn','＋ MARKER','＋ MARCADOR'],['#masterBypassBtn','MASTER FX','FX MASTER'],['#presetLibraryBtn','Preset library','Biblioteca de presets'],['#sampleLibraryBtn','Local drum samples','Samples de batería locales'],['#compactModeBtn','Compact workspace','Espacio compacto'],['#presetDialog h2','PRESET VAULT','CÁMARA DE PRESETS'],['#sampleDialog h2','IMPACT SAMPLE SLOTS','RANURAS DE SAMPLES IMPACT'],['#saveUserPresetBtn','＋ SAVE CURRENT','＋ GUARDAR ACTUAL'],['#exportPresetBankBtn','EXPORT BANK','EXPORTAR BANCO'],['#takeQuantizeBtn','QUANTIZE EVENTS','CUANTIZAR EVENTOS'],['#cancelExportBtn','CANCEL','CANCELAR']);
-const leadingCopy:Array<[string,string,string]>=[['label:has(#barsSelect)','BARS','COMPASES'],['label:has(#gridSelect)','SNAP','AJUSTE'],['label:has(#zoomRange)','ZOOM','ZOOM'],['label:has(#keySelect)','KEY','TONALIDAD'],['label:has(#scaleSelect)','SCALE','ESCALA'],['label:has(#noteLength)','LEN','DUR'],['label:has(#noteVelocity)','VEL','VEL'],['label:has(#arpMode)','MODE','MODO'],['label:has(#arpOctaves)','OCT','OCT'],['label:has(#arpRate)','RATE','RITMO'],['label:has(#lfoTarget)','TARGET','DESTINO'],['label:has(#lfoRate)','LFO RATE','RITMO LFO'],['label:has(#lfoDepth)','DEPTH','PROFUNDIDAD']];
-const shortcutCopy:Array<[string,string]>=[['Play / stop from locator','Reproducir / parar desde el localizador'],['Perform / record','Interpretar / grabar'],['Select track','Seleccionar pista'],['Command palette','Paleta de comandos'],['Export to current destination','Exportar al destino actual'],['Open Export As','Abrir Exportar como'],['Toggle Focus mode','Activar modo Foco'],['Forge / Launch / Arrange / Mix / Perform','Forja / Lanzar / Arreglo / Mezcla / Interpretar'],['New / duplicate clip','Nuevo / duplicar clip'],['Solo / mute active track','Solo / silenciar pista activa'],['Mutate / quantize','Mutar / cuantizar'],['Undo / redo','Deshacer / rehacer'],['Multi-select notes','Selección múltiple'],['Select all notes','Seleccionar todas las notas'],['Move selected notes','Mover notas seleccionadas'],['Resize selected notes','Redimensionar notas'],['Copy / paste notes','Copiar / pegar notas'],['Delete selection','Borrar selección']];
-const controlDescriptions:Record<string,[string,string,string,string]>={
-  aboutBtn:['Brand & about','Marca e información','Open product information and version details.','Abre la información del producto y sus detalles.'],title:['Project title','Título del proyecto','Rename the current project. Changes are saved locally.','Renombra el proyecto actual. Los cambios se guardan localmente.'],rewindBtn:['Return to start','Volver al inicio','Stop playback and return the playhead to the beginning.','Detiene la reproducción y devuelve el cursor al inicio.'],playBtn:['Play / stop','Reproducir / parar','Start or stop the active clip or full arrangement. Shortcut: Space.','Inicia o detiene el clip activo o el arreglo completo. Atajo: Espacio.'],pauseBtn:['Pause at playhead','Pausar en el cursor','Pause playback and preserve the current position so Play resumes from there.','Pausa la reproducción y conserva la posición para continuar desde ahí.'],recordBtn:['Record arm','Armar grabación','Arm live recording from the computer keyboard, touch keys or MIDI.','Prepara la grabación en directo desde teclado, controles táctiles o MIDI.'],recordMode:['Recording timing','Temporización de grabación','Choose quantized timing or preserve free microtiming.','Elige tiempo cuantizado o conserva el microtiming libre.'],tempo:['Tempo','Tempo','Set song speed in beats per minute.','Ajusta la velocidad de la canción en pulsos por minuto.'],meterSelect:['Time signature','Compás','Choose the rhythmic meter used by clips and bars.','Elige el compás rítmico utilizado por clips y barras.'],swing:['Swing','Swing','Delay alternating subdivisions to add groove.','Retrasa subdivisiones alternas para añadir groove.'],countIn:['Count-in','Cuenta atrás','Choose how many bars play before armed recording starts.','Elige cuántos compases suenan antes de iniciar la grabación.'],metroBtn:['Metronome','Metrónomo','Toggle the accented timing click during playback.','Activa o desactiva el clic acentuado durante la reproducción.'],masterVolume:['Master volume','Volumen maestro','Set the final output level for the complete mix.','Ajusta el nivel final de salida de toda la mezcla.'],languageSelect:['Language','Idioma','Switch the complete interface between English and Spanish.','Cambia toda la interfaz entre inglés y español.'],exportBtn:['Export','Exportar','Render the song or active clips to WAV or MIDI.','Renderiza la canción o los clips activos a WAV o MIDI.'],menuBtn:['Project menu','Menú del proyecto','Create, import, export or restore project versions.','Crea, importa, exporta o restaura versiones del proyecto.'],tutorialBtn:['Interactive guide','Guía interactiva','Start a guided tour through the complete composition workflow.','Inicia un recorrido guiado por todo el flujo de composición.'],focusBtn:['Focus mode','Modo Foco','Hide secondary racks and dedicate more space to note editing.','Oculta paneles secundarios y dedica más espacio a editar notas.'],commandBtn:['Command palette','Paleta de comandos','Search and execute any common action from the keyboard.','Busca y ejecuta acciones habituales desde el teclado.'],undoBtn:['Undo','Deshacer','Restore the previous musical edit.','Restaura la edición musical anterior.'],redoBtn:['Redo','Rehacer','Reapply the last undone edit.','Vuelve a aplicar la última edición deshecha.'],helpBtn:['Context help','Ayuda contextual','Show a live explanation whenever a control is focused or touched.','Muestra una explicación cuando enfocas o tocas un control.'],preset:['Sound preset','Preset de sonido','Load a designed starting sound for the selected track.','Carga un sonido inicial diseñado para la pista seleccionada.'],waveSelect:['Main oscillator','Oscilador principal','Choose the waveform that defines the core timbre.','Elige la forma de onda que define el timbre principal.'],osc2WaveSelect:['Second oscillator','Segundo oscilador','Choose an additional waveform or switch oscillator two off.','Elige una onda adicional o desactiva el segundo oscilador.'],filterSelect:['Filter type','Tipo de filtro','Choose which frequencies the synthesizer filter removes.','Elige qué frecuencias elimina el filtro del sintetizador.'],arpEnabled:['Arpeggiator','Arpegiador','Turn held notes into a rhythmic sequence.','Convierte las notas mantenidas en una secuencia rítmica.'],arpMode:['Arpeggio direction','Dirección del arpegio','Choose the order in which held notes are played.','Elige el orden en el que se reproducen las notas.'],arpOctaves:['Arpeggio octaves','Octavas del arpegio','Set the pitch range covered by the arpeggiator.','Ajusta el rango tonal recorrido por el arpegiador.'],arpRate:['Arpeggio rate','Velocidad del arpegio','Choose the rhythmic subdivision for generated notes.','Elige la subdivisión rítmica de las notas generadas.'],lfoEnabled:['LFO modulation','Modulación LFO','Enable cyclic movement for the selected target.','Activa movimiento cíclico sobre el destino seleccionado.'],lfoTarget:['LFO target','Destino del LFO','Choose the sound parameter moved by the LFO.','Elige el parámetro de sonido que moverá el LFO.'],lfoRate:['LFO rate','Velocidad del LFO','Set how quickly the modulation cycle repeats.','Ajusta la velocidad con que se repite la modulación.'],lfoDepth:['LFO depth','Profundidad del LFO','Set the amount of cyclic modulation.','Ajusta la cantidad de modulación cíclica.'],fxBypass:['Effects bypass','Omitir efectos','Disable or restore all effects on the selected track.','Desactiva o restaura todos los efectos de la pista.'],clipSelect:['Active clip','Clip activo','Choose which independent pattern is edited for this track.','Elige qué patrón independiente se edita en esta pista.'],renameClipBtn:['Rename clip','Renombrar clip','Give the active clip a descriptive name.','Asigna un nombre descriptivo al clip activo.'],duplicateBtn:['Duplicate clip','Duplicar clip','Create an independent copy of the active clip.','Crea una copia independiente del clip activo.'],mutateBtn:['Mutate clip','Mutar clip','Generate a controlled variation using the Tension macro.','Genera una variación controlada usando la macro Tensión.'],backingBtn:['Backing generator','Generador de bases','Create a structured accompaniment for bass, pad and drums without changing guitar or lead clips.','Crea un acompañamiento estructurado de bajo, pad y batería sin cambiar los clips de guitarra ni lead.'],generateBackingBtn:['Generate backing','Generar base','Replace the arrangement with the selected generated backing. The edit can be undone.','Reemplaza el arreglo por la base generada seleccionada. La edición se puede deshacer.'],barsSelect:['Clip length','Duración del clip','Resize the active clip in musical bars.','Cambia la duración del clip activo en compases.'],gridSelect:['Snap grid','Rejilla de ajuste','Choose the rhythmic resolution for placing and moving notes.','Elige la resolución rítmica para colocar y mover notas.'],zoomRange:['Editor zoom','Zoom del editor','Change the horizontal width of sequencer steps.','Cambia el ancho horizontal de los pasos del secuenciador.'],keySelect:['Song key','Tonalidad','Set the root note used by scale-aware generators.','Ajusta la nota raíz usada por los generadores musicales.'],scaleSelect:['Musical scale','Escala musical','Constrain generated material to a harmonic scale.','Limita el material generado a una escala armónica.'],quantizeBtn:['Quantize','Cuantizar','Align notes to the currently selected snap grid.','Alinea las notas con la rejilla seleccionada.'],automationParam:['Automation lane','Línea de automatización','Choose which parameter is drawn below the piano roll.','Elige qué parámetro se dibuja bajo el piano roll.'],clearAutomationBtn:['Clear automation','Limpiar automatización','Remove every point from the visible automation lane.','Elimina todos los puntos de la automatización visible.'],addSceneBtn:['Add section','Añadir sección','Append a new song section using the active clips.','Añade una nueva sección usando los clips activos.'],autoArrangeBtn:['Auto sequence','Secuencia automática','Distribute available clips across the complete song.','Distribuye los clips disponibles a lo largo de la canción.']
-  ,deleteClipBtn:['Delete active clip','Borrar clip activo','Delete this clip safely. Arrangement sections are reassigned and the operation can be undone.','Borra este clip de forma segura. Las secciones del arreglo se reasignan y puedes deshacer la operación.'],confirmDeleteClipBtn:['Confirm clip deletion','Confirmar borrado del clip','Permanently remove the selected clip from this project.','Elimina el clip seleccionado de este proyecto.'],sequencer:['Piano roll','Piano roll','Click to add a note. Drag across empty space to select several notes; hold Shift to add them to the current selection.','Haz clic para añadir una nota. Arrastra sobre un espacio vacío para seleccionar varias; mantén Mayús para sumarlas a la selección actual.']
+import { requestConfirmation } from "./ui/dialogs";
+import * as workflow from "./features/workflow";
+import * as storage from "./features/storage";
+import * as performanceFeature from "./features/performance";
+import * as instruments from "./features/instruments";
+import * as audio_studio from "./features/audio-studio";
+import * as launcher from "./features/launcher";
+import * as arrangement from "./features/arrangement";
+import * as mixer from "./features/mixer";
+import * as scratch from "./features/scratch";
+import * as sampler from "./features/sampler";
+// Shared runtime state is injected into feature controllers; UI components never own audio lifetime.
+const runtime = {
+  get reportError() {
+    return reportError;
+  },
+  get $() {
+    return $;
+  },
+  get $$() {
+    return $$;
+  },
+  get STORAGE() {
+    return STORAGE;
+  },
+  get LEGACY_V5() {
+    return LEGACY_V5;
+  },
+  get LEGACY_V4() {
+    return LEGACY_V4;
+  },
+  get LEGACY_V3() {
+    return LEGACY_V3;
+  },
+  get LEGACY() {
+    return LEGACY;
+  },
+  get VERSIONS() {
+    return VERSIONS;
+  },
+  get UI_STORAGE() {
+    return UI_STORAGE;
+  },
+  get LANGUAGE_STORAGE() {
+    return LANGUAGE_STORAGE;
+  },
+  get project() {
+    return project;
+  },
+  set project(value: typeof project) {
+    project = value;
+  },
+  get selectedTrack() {
+    return selectedTrack;
+  },
+  set selectedTrack(value: typeof selectedTrack) {
+    selectedTrack = value;
+  },
+  get selectedNotes() {
+    return selectedNotes;
+  },
+  set selectedNotes(value: typeof selectedNotes) {
+    selectedNotes = value;
+  },
+  get currentStep() {
+    return currentStep;
+  },
+  set currentStep(value: typeof currentStep) {
+    currentStep = value;
+  },
+  get currentScene() {
+    return currentScene;
+  },
+  set currentScene(value: typeof currentScene) {
+    currentScene = value;
+  },
+  get transportPosition() {
+    return transportPosition;
+  },
+  set transportPosition(value: typeof transportPosition) {
+    transportPosition = value;
+  },
+  get globalStartStep() {
+    return globalStartStep;
+  },
+  set globalStartStep(value: typeof globalStartStep) {
+    globalStartStep = value;
+  },
+  get draggedScene() {
+    return draggedScene;
+  },
+  set draggedScene(value: typeof draggedScene) {
+    draggedScene = value;
+  },
+  get recordArmed() {
+    return recordArmed;
+  },
+  set recordArmed(value: typeof recordArmed) {
+    recordArmed = value;
+  },
+  get metronome() {
+    return metronome;
+  },
+  set metronome(value: typeof metronome) {
+    metronome = value;
+  },
+  get saveTimer() {
+    return saveTimer;
+  },
+  set saveTimer(value: typeof saveTimer) {
+    saveTimer = value;
+  },
+  get animation() {
+    return animation;
+  },
+  set animation(value: typeof animation) {
+    animation = value;
+  },
+  get clipboard() {
+    return clipboard;
+  },
+  set clipboard(value: typeof clipboard) {
+    clipboard = value;
+  },
+  get recording() {
+    return recording;
+  },
+  set recording(value: typeof recording) {
+    recording = value;
+  },
+  get rollScroll() {
+    return rollScroll;
+  },
+  set rollScroll(value: typeof rollScroll) {
+    rollScroll = value;
+  },
+  get activeView() {
+    return activeView;
+  },
+  set activeView(value: typeof activeView) {
+    activeView = value;
+  },
+  get commandIndex() {
+    return commandIndex;
+  },
+  set commandIndex(value: typeof commandIndex) {
+    commandIndex = value;
+  },
+  get pendingDeleteClipId() {
+    return pendingDeleteClipId;
+  },
+  set pendingDeleteClipId(value: typeof pendingDeleteClipId) {
+    pendingDeleteClipId = value;
+  },
+  get suppressSequencerClick() {
+    return suppressSequencerClick;
+  },
+  set suppressSequencerClick(value: typeof suppressSequencerClick) {
+    suppressSequencerClick = value;
+  },
+  get scratchBuffer() {
+    return scratchBuffer;
+  },
+  set scratchBuffer(value: typeof scratchBuffer) {
+    scratchBuffer = value;
+  },
+  get scratchAnimation() {
+    return scratchAnimation;
+  },
+  set scratchAnimation(value: typeof scratchAnimation) {
+    scratchAnimation = value;
+  },
+  get scratchAngle() {
+    return scratchAngle;
+  },
+  set scratchAngle(value: typeof scratchAngle) {
+    scratchAngle = value;
+  },
+  get scratchLastFrame() {
+    return scratchLastFrame;
+  },
+  set scratchLastFrame(value: typeof scratchLastFrame) {
+    scratchLastFrame = value;
+  },
+  get scratchStuttering() {
+    return scratchStuttering;
+  },
+  set scratchStuttering(value: typeof scratchStuttering) {
+    scratchStuttering = value;
+  },
+  get performanceTake() {
+    return performanceTake;
+  },
+  set performanceTake(value: typeof performanceTake) {
+    performanceTake = value;
+  },
+  get performanceStarted() {
+    return performanceStarted;
+  },
+  set performanceStarted(value: typeof performanceStarted) {
+    performanceStarted = value;
+  },
+  get performanceTimer() {
+    return performanceTimer;
+  },
+  set performanceTimer(value: typeof performanceTimer) {
+    performanceTimer = value;
+  },
+  get mixerReference() {
+    return mixerReference;
+  },
+  set mixerReference(value: typeof mixerReference) {
+    mixerReference = value;
+  },
+  get mixerComparing() {
+    return mixerComparing;
+  },
+  set mixerComparing(value: typeof mixerComparing) {
+    mixerComparing = value;
+  },
+  get activePerformanceTakeId() {
+    return activePerformanceTakeId;
+  },
+  set activePerformanceTakeId(value: typeof activePerformanceTakeId) {
+    activePerformanceTakeId = value;
+  },
+  get performanceEvents() {
+    return performanceEvents;
+  },
+  set performanceEvents(value: typeof performanceEvents) {
+    performanceEvents = value;
+  },
+  get exportController() {
+    return exportController;
+  },
+  set exportController(value: typeof exportController) {
+    exportController = value;
+  },
+  get launcherCapturing() {
+    return launcherCapturing;
+  },
+  set launcherCapturing(value: typeof launcherCapturing) {
+    launcherCapturing = value;
+  },
+  get launcherSnapshots() {
+    return launcherSnapshots;
+  },
+  set launcherSnapshots(value: typeof launcherSnapshots) {
+    launcherSnapshots = value;
+  },
+  get selectedScenes() {
+    return selectedScenes;
+  },
+  set selectedScenes(value: typeof selectedScenes) {
+    selectedScenes = value;
+  },
+  get sceneClipboard() {
+    return sceneClipboard;
+  },
+  set sceneClipboard(value: typeof sceneClipboard) {
+    sceneClipboard = value;
+  },
+  get mixerPeaks() {
+    return mixerPeaks;
+  },
+  set mixerPeaks(value: typeof mixerPeaks) {
+    mixerPeaks = value;
+  },
+  get lastRecovery() {
+    return lastRecovery;
+  },
+  set lastRecovery(value: typeof lastRecovery) {
+    lastRecovery = value;
+  },
+  get clipStartSteps() {
+    return clipStartSteps;
+  },
+  get samplerArmed() {
+    return samplerArmed;
+  },
+  set samplerArmed(value: typeof samplerArmed) {
+    samplerArmed = value;
+  },
+  get loadedSamplerAssetId() {
+    return loadedSamplerAssetId;
+  },
+  set loadedSamplerAssetId(value: typeof loadedSamplerAssetId) {
+    loadedSamplerAssetId = value;
+  },
+  get samplerQwertyBase() {
+    return samplerQwertyBase;
+  },
+  set samplerQwertyBase(value: typeof samplerQwertyBase) {
+    samplerQwertyBase = value;
+  },
+  get samplerHeld() {
+    return samplerHeld;
+  },
+  get toastTimer() {
+    return toastTimer;
+  },
+  set toastTimer(value: typeof toastTimer) {
+    toastTimer = value;
+  },
+  get editorTool() {
+    return editorTool;
+  },
+  set editorTool(value: typeof editorTool) {
+    editorTool = value;
+  },
+  get soundPanel() {
+    return soundPanel;
+  },
+  set soundPanel(value: typeof soundPanel) {
+    soundPanel = value;
+  },
+  get language() {
+    return language;
+  },
+  set language(value: typeof language) {
+    language = value;
+  },
+  get tutorialStep() {
+    return tutorialStep;
+  },
+  set tutorialStep(value: typeof tutorialStep) {
+    tutorialStep = value;
+  },
+  get helpMode() {
+    return helpMode;
+  },
+  set helpMode(value: typeof helpMode) {
+    helpMode = value;
+  },
+  get L() {
+    return L;
+  },
+  get history() {
+    return history;
+  },
+  get engine() {
+    return engine;
+  },
+  get presets() {
+    return presets;
+  },
+  get keyMap() {
+    return keyMap;
+  },
+  get pitchNames() {
+    return pitchNames;
+  },
+  get samplerQwertyPitches() {
+    return samplerQwertyPitches;
+  },
+  get samplerQwertyMap() {
+    return samplerQwertyMap;
+  },
+  get loadProject() {
+    return loadProject;
+  },
+  get esc() {
+    return esc;
+  },
+  get snapshot() {
+    return snapshot;
+  },
+  get changed() {
+    return changed;
+  },
+  get toast() {
+    return toast;
+  },
+  get download() {
+    return download;
+  },
+  get quickHandles() {
+    return quickHandles;
+  },
+  get QUICK_HANDLE_DB() {
+    return QUICK_HANDLE_DB;
+  },
+  get LAST_EXPORT() {
+    return LAST_EXPORT;
+  },
+  get quickHandleDb() {
+    return quickHandleDb;
+  },
+  get ASSET_DB() {
+    return ASSET_DB;
+  },
+  get assetDb() {
+    return assetDb;
+  },
+  get putAsset() {
+    return putAsset;
+  },
+  get getAsset() {
+    return getAsset;
+  },
+  get deleteAsset() {
+    return deleteAsset;
+  },
+  get renderExportTargets() {
+    return renderExportTargets;
+  },
+  get showQuickHandle() {
+    return showQuickHandle;
+  },
+  get loadQuickHandles() {
+    return loadQuickHandles;
+  },
+  get rememberQuickHandle() {
+    return rememberQuickHandle;
+  },
+  get forgetExportTarget() {
+    return forgetExportTarget;
+  },
+  get prepareQuickExport() {
+    return prepareQuickExport;
+  },
+  get writeQuickExport() {
+    return writeQuickExport;
+  },
+  get quickExportProject() {
+    return quickExportProject;
+  },
+  get safeName() {
+    return safeName;
+  },
+  get clip() {
+    return clip;
+  },
+  get pitches() {
+    return pitches;
+  },
+  get staticCopy() {
+    return staticCopy;
+  },
+  get leadingCopy() {
+    return leadingCopy;
+  },
+  get shortcutCopy() {
+    return shortcutCopy;
+  },
+  get controlDescriptions() {
+    return controlDescriptions;
+  },
+  get applyLanguage() {
+    return applyLanguage;
+  },
+  get controlInfo() {
+    return controlInfo;
+  },
+  get installControlHelp() {
+    return installControlHelp;
+  },
+  get showHelpIntro() {
+    return showHelpIntro;
+  },
+  get toggleHelp() {
+    return toggleHelp;
+  },
+  get showControlHelp() {
+    return showControlHelp;
+  },
+  get tutorialSteps() {
+    return tutorialSteps;
+  },
+  get showTutorialStep() {
+    return showTutorialStep;
+  },
+  get startTutorial() {
+    return startTutorial;
+  },
+  get endTutorial() {
+    return endTutorial;
+  },
+  get initLearning() {
+    return initLearning;
+  },
+  get renderTracks() {
+    return renderTracks;
+  },
+  get renderInspector() {
+    return renderInspector;
+  },
+  get applyPreset() {
+    return applyPreset;
+  },
+  get renderArp() {
+    return renderArp;
+  },
+  get renderFx() {
+    return renderFx;
+  },
+  get macroMarkup() {
+    return macroMarkup;
+  },
+  get renderClipControls() {
+    return renderClipControls;
+  },
+  get updateDeleteClipDialog() {
+    return updateDeleteClipDialog;
+  },
+  get requestClipDelete() {
+    return requestClipDelete;
+  },
+  get renderHarmony() {
+    return renderHarmony;
+  },
+  get renderPiano() {
+    return renderPiano;
+  },
+  get bindMarqueeSelection() {
+    return bindMarqueeSelection;
+  },
+  get bindNoteDrag() {
+    return bindNoteDrag;
+  },
+  get syncSelectedClasses() {
+    return syncSelectedClasses;
+  },
+  get syncRollScroll() {
+    return syncRollScroll;
+  },
+  get setDefaultScroll() {
+    return setDefaultScroll;
+  },
+  get renderSelection() {
+    return renderSelection;
+  },
+  get editSelection() {
+    return editSelection;
+  },
+  get deleteSelection() {
+    return deleteSelection;
+  },
+  get renderAutomation() {
+    return renderAutomation;
+  },
+  get heldKeyPointers() {
+    return heldKeyPointers;
+  },
+  get releaseKeyPointer() {
+    return releaseKeyPointer;
+  },
+  get releaseKeyPointers() {
+    return releaseKeyPointers;
+  },
+  get instrumentOctave() {
+    return instrumentOctave;
+  },
+  set instrumentOctave(value: typeof instrumentOctave) {
+    instrumentOctave = value;
+  },
+  get renderKeyboard() {
+    return renderKeyboard;
+  },
+  get startPerformance() {
+    return startPerformance;
+  },
+  get endPerformance() {
+    return endPerformance;
+  },
+  get launcherSnapshot() {
+    return launcherSnapshot;
+  },
+  get launchClip() {
+    return launchClip;
+  },
+  get renderLauncher() {
+    return renderLauncher;
+  },
+  get setupLauncher() {
+    return setupLauncher;
+  },
+  get renderArrangement() {
+    return renderArrangement;
+  },
+  get sceneLength() {
+    return sceneLength;
+  },
+  get focusScene() {
+    return focusScene;
+  },
+  get updatePlayheads() {
+    return updatePlayheads;
+  },
+  get updatePosition() {
+    return updatePosition;
+  },
+  get updateOrb() {
+    return updateOrb;
+  },
+  get songLength() {
+    return songLength;
+  },
+  get formatLocator() {
+    return formatLocator;
+  },
+  get setGlobalStart() {
+    return setGlobalStart;
+  },
+  get setClipStart() {
+    return setClipStart;
+  },
+  get renderLocators() {
+    return renderLocators;
+  },
+  get syncLocatorsFromPlayback() {
+    return syncLocatorsFromPlayback;
+  },
+  get renderMixer() {
+    return renderMixer;
+  },
+  get animateMixer() {
+    return animateMixer;
+  },
+  get setScratchControls() {
+    return setScratchControls;
+  },
+  get updateScratchPlayButton() {
+    return updateScratchPlayButton;
+  },
+  get drawScratchWaveform() {
+    return drawScratchWaveform;
+  },
+  get armScratchBuffer() {
+    return armScratchBuffer;
+  },
+  get importScratchFile() {
+    return importScratchFile;
+  },
+  get audioRegionScratchBuffer() {
+    return audioRegionScratchBuffer;
+  },
+  get loadAudioRegionIntoScratch() {
+    return loadAudioRegionIntoScratch;
+  },
+  get captureScratchMix() {
+    return captureScratchMix;
+  },
+  get animateScratchDeck() {
+    return animateScratchDeck;
+  },
+  get scratchMotorRate() {
+    return scratchMotorRate;
+  },
+  get setupScratchPro() {
+    return setupScratchPro;
+  },
+  get setupScratchDeck() {
+    return setupScratchDeck;
+  },
+  get performanceEventThrottle() {
+    return performanceEventThrottle;
+  },
+  get performanceStep() {
+    return performanceStep;
+  },
+  get recordPerformanceEvent() {
+    return recordPerformanceEvent;
+  },
+  get loadPerformanceAudio() {
+    return loadPerformanceAudio;
+  },
+  get applyPerformanceEvent() {
+    return applyPerformanceEvent;
+  },
+  get playPerformanceTake() {
+    return playPerformanceTake;
+  },
+  get openTakeEditor() {
+    return openTakeEditor;
+  },
+  get renderPerformanceTakes() {
+    return renderPerformanceTakes;
+  },
+  get togglePerformanceCapture() {
+    return togglePerformanceCapture;
+  },
+  get mixSnapshot() {
+    return mixSnapshot;
+  },
+  get captureMixerReference() {
+    return captureMixerReference;
+  },
+  get toggleMixerReference() {
+    return toggleMixerReference;
+  },
+  get setupArrangeTools() {
+    return setupArrangeTools;
+  },
+  get USER_PRESETS() {
+    return USER_PRESETS;
+  },
+  get PRESET_FAVORITES() {
+    return PRESET_FAVORITES;
+  },
+  get userPresets() {
+    return userPresets;
+  },
+  get saveUserPresets() {
+    return saveUserPresets;
+  },
+  get presetFavorites() {
+    return presetFavorites;
+  },
+  get renderPresetLibrary() {
+    return renderPresetLibrary;
+  },
+  get saveCurrentPreset() {
+    return saveCurrentPreset;
+  },
+  get loadLocalSample() {
+    return loadLocalSample;
+  },
+  get loadLocalSamples() {
+    return loadLocalSamples;
+  },
+  get renderSampleSlots() {
+    return renderSampleSlots;
+  },
+  get setupLibraries() {
+    return setupLibraries;
+  },
+  get setupPrecisionControls() {
+    return setupPrecisionControls;
+  },
+  get setupStudioExtensions() {
+    return setupStudioExtensions;
+  },
+  get readUiPrefs() {
+    return readUiPrefs;
+  },
+  get writeUiPrefs() {
+    return writeUiPrefs;
+  },
+  get setRackCollapsed() {
+    return setRackCollapsed;
+  },
+  get toggleFocus() {
+    return toggleFocus;
+  },
+  get selectTrack() {
+    return selectTrack;
+  },
+  get commands() {
+    return commands;
+  },
+  get matchingCommands() {
+    return matchingCommands;
+  },
+  get renderCommands() {
+    return renderCommands;
+  },
+  get runCommand() {
+    return runCommand;
+  },
+  get openCommands() {
+    return openCommands;
+  },
+  get initWorkflowUi() {
+    return initWorkflowUi;
+  },
+  get renderVersions() {
+    return renderVersions;
+  },
+  get loadVersions() {
+    return loadVersions;
+  },
+  get saveVersion() {
+    return saveVersion;
+  },
+  get inputRecorder() {
+    return inputRecorder;
+  },
+  set inputRecorder(value: typeof inputRecorder) {
+    inputRecorder = value;
+  },
+  get inputStream() {
+    return inputStream;
+  },
+  set inputStream(value: typeof inputStream) {
+    inputStream = value;
+  },
+  get inputChunks() {
+    return inputChunks;
+  },
+  set inputChunks(value: typeof inputChunks) {
+    inputChunks = value;
+  },
+  get midiLearnTarget() {
+    return midiLearnTarget;
+  },
+  set midiLearnTarget(value: typeof midiLearnTarget) {
+    midiLearnTarget = value;
+  },
+  get applyMidiMapping() {
+    return applyMidiMapping;
+  },
+  get audioBufferWav() {
+    return audioBufferWav;
+  },
+  get addAudioBlob() {
+    return addAudioBlob;
+  },
+  get loadAudioAssets() {
+    return loadAudioAssets;
+  },
+  get renderAudioStudio() {
+    return renderAudioStudio;
+  },
+  get renderGlobalAutomation() {
+    return renderGlobalAutomation;
+  },
+  get renderMixGroups() {
+    return renderMixGroups;
+  },
+  get renderTempoMap() {
+    return renderTempoMap;
+  },
+  get samplerSettings() {
+    return samplerSettings;
+  },
+  get setupSamplerOctaveControls() {
+    return setupSamplerOctaveControls;
+  },
+  get samplerNoteName() {
+    return samplerNoteName;
+  },
+  get drawSamplerWaveform() {
+    return drawSamplerWaveform;
+  },
+  get startSamplerPerformance() {
+    return startSamplerPerformance;
+  },
+  get endSamplerPerformance() {
+    return endSamplerPerformance;
+  },
+  get renderSamplerKeyboard() {
+    return renderSamplerKeyboard;
+  },
+  get loadSamplerAsset() {
+    return loadSamplerAsset;
+  },
+  get setupSamplerKeyboard() {
+    return setupSamplerKeyboard;
+  },
+  get setupV6Studio() {
+    return setupV6Studio;
+  },
+  get setupMidiLearnUi() {
+    return setupMidiLearnUi;
+  },
+  get setupV6Copy() {
+    return setupV6Copy;
+  },
+  get setupV6Safety() {
+    return setupV6Safety;
+  },
+  get setupSampleSlicing() {
+    return setupSampleSlicing;
+  },
+  get setupProjectTemplates() {
+    return setupProjectTemplates;
+  },
+  get renderAll() {
+    return renderAll;
+  },
+  get syncTransportButtons() {
+    return syncTransportButtons;
+  },
+  get pausePlayback() {
+    return pausePlayback;
+  },
+  get togglePlay() {
+    return togglePlay;
+  },
+  get animateMeter() {
+    return animateMeter;
+  },
+  get wavOptions() {
+    return wavOptions;
+  },
+  get setExportProgress() {
+    return setExportProgress;
+  },
+  get exportWav() {
+    return exportWav;
+  },
+  get crc32() {
+    return crc32;
+  },
+  get zipFiles() {
+    return zipFiles;
+  },
+  get readStoreZip() {
+    return readStoreZip;
+  },
+  get importProjectFile() {
+    return importProjectFile;
+  },
+  get renderStems() {
+    return renderStems;
+  },
+  get renderProjectBundle() {
+    return renderProjectBundle;
+  },
+  get exportMeta() {
+    return exportMeta;
+  },
+  get exportName() {
+    return exportName;
+  },
+  get performExport() {
+    return performExport;
+  },
+  get quickExportWav() {
+    return quickExportWav;
+  },
+  get quickExportMidi() {
+    return quickExportMidi;
+  },
+  get repeatLastExport() {
+    return repeatLastExport;
+  },
+  get activateView() {
+    return activateView;
+  },
+  get compatibility() {
+    return compatibility;
+  },
+  get showCompatibility() {
+    return showCompatibility;
+  },
+  get open() {
+    return open;
+  },
+  get replaceProject() {
+    return replaceProject;
+  },
+  get initMidi() {
+    return initMidi;
+  },
+  get query() {
+    return query;
+  },
+  get copyQueued() {
+    return copyQueued;
+  },
+  set copyQueued(value: typeof copyQueued) {
+    copyQueued = value;
+  },
+  get syncStudioUi() {
+    return syncStudioUi;
+  },
+  get duplicateSelectedNotes() {
+    return duplicateSelectedNotes;
+  },
+  get quantizeSelectedNotes() {
+    return quantizeSelectedNotes;
+  },
+  get setupStudioUi() {
+    return setupStudioUi;
+  },
+  get setupConsistentControls() {
+    return setupConsistentControls;
+  },
 };
-Object.assign(controlDescriptions,{arpEnabled:['Clip arpeggiator','Arpegiador del clip','Turn held notes in the active clip into a rhythmic sequence.','Convierte las notas mantenidas del clip activo en una secuencia rítmica.'],lfoEnabled:['Clip LFO','LFO del clip','Enable cyclic modulation for the active clip.','Activa la modulación cíclica del clip activo.'],fxBypass:['Clip effects bypass','Omitir efectos del clip','Disable or restore effects on the active clip.','Desactiva o restaura los efectos del clip activo.'],clipSelect:['Active clip and character','Clip y carácter activos','Choose the pattern together with its independent motion, effects and vector settings.','Elige el patrón junto con sus ajustes independientes de movimiento, efectos y vectores.']});
-Object.assign(controlDescriptions,{scratchCaptureBtn:['Capture active mix','Capturar mezcla activa','Render the active clips into a mastered one, two, four, or eight-bar scratch buffer.','Renderiza los clips activos en un búfer masterizado de uno, dos, cuatro u ocho compases.'],scratchImport:['Import audio to Scratch Deck','Importar audio al plato','Load a local WAV, MP3, OGG, or other browser-decodable audio file into the temporary Scratch Deck buffer.','Carga un WAV, MP3, OGG u otro archivo decodificable por el navegador en el búfer temporal del plato.'],scratchPlatter:['Bidirectional scratch platter','Plato de scratch bidireccional','Drag in either direction for sample-accurate scratching. Release to return smoothly to normal motor speed.','Arrastra en ambas direcciones para hacer scratch con precisión de muestra. Suelta para recuperar suavemente la velocidad normal.'],scratchSyncBtn:['Beat sync','Sincronía de pulso','Move the deck to the nearest beat boundary and return to normal speed.','Mueve el plato al pulso más cercano y recupera la velocidad normal.'],scratchBrakeBtn:['Motor brake','Freno de motor','Slow the deck to a stop with a progressive motor brake.','Detiene el plato progresivamente con un freno de motor.'],scratchSpinBtn:['Spinback','Retroceso','Throw the record backwards and let it decelerate.','Lanza el disco hacia atrás y deja que desacelere.'],scratchStutterBtn:['Beat stutter','Repetición rítmica','Loop a short tempo-derived fragment until this control is released.','Repite un fragmento corto derivado del tempo hasta desactivar el control.'],scratchMix:['Deck crossfader','Crossfader del plato','Blend between the live program and the captured Scratch Deck with equal-power curves.','Mezcla el programa en directo y el plato capturado con curvas de potencia constante.'],scratchFilter:['Deck filter','Filtro del plato','Darken the Scratch Deck with a smooth resonant-free low-pass filter.','Oscurece el plato con un filtro paso bajo suave y sin resonancia.'],scratchWaveform:['Scratch waveform','Forma de onda de scratch','Shows the captured buffer and its live playback position.','Muestra el búfer capturado y su posición de reproducción en directo.']});
-Object.assign(controlDescriptions,{exportBtn:['Export','Exportar','Repeat the last export recipe and update its linked file. Shortcut: Ctrl or Command plus E.','Repite la última exportación y actualiza su archivo vinculado. Atajo: Ctrl o Comando más E.'],exportAsBtn:['Export As','Exportar como','Choose a format and always select a new destination. Shortcut: Ctrl or Command plus Shift plus E.','Elige un formato y selecciona siempre un destino nuevo. Atajo: Ctrl o Comando más Mayús más E.'],globalPosition:['Song start locator','Localizador de inicio de canción','Choose the exact arrangement step where global playback begins.','Elige el paso exacto del arreglo donde comienza la reproducción global.'],clipPosition:['Clip start locator','Localizador de inicio del clip','Choose the exact step where active-clip playback begins.','Elige el paso exacto donde comienza la reproducción del clip activo.'],performanceRecordBtn:['Record performance take','Grabar toma de interpretación','Capture the audible master in real time, including the Scratch Deck.','Captura el master audible en tiempo real, incluido el plato de scratch.']});
-function applyLanguage(render=false){document.documentElement.lang=language;localStorage.setItem(LANGUAGE_STORAGE,language);$('#languageSelect').value=language;$('#menuLanguageSelect').value=language;for(const [selector,en,es] of staticCopy){const el=$(selector);if(el)el.textContent=L(en,es)}for(const [selector,en,es] of leadingCopy){const el=$(selector),node=[...(el?.childNodes||[])].find((n:any)=>n.nodeType===3&&n.textContent.trim());if(node)node.textContent=`${L(en,es)} `}$$('#helpDialog .help-grid span').forEach((el,i)=>{const copy=shortcutCopy[i];if(copy)el.textContent=L(copy[0],copy[1])});$('#arrangeView h1').textContent=L('ARRANGEMENT','ARREGLO');$('#performView h1').textContent=L('PERFORMANCE DECK','MESA DE INTERPRETACIÓN');$('.generators>span').textContent=L('GENERATE','GENERAR');const styles=$$('#backingStyle option');if(styles.length){styles[0].textContent=L('CINEMATIC ARC','ARCO CINEMÁTICO');styles[1].textContent=L('DRIVING RIFF','RIFF MOTOR');styles[2].textContent=L('DARK PULSE','PULSO OSCURO')}$('#commandSearch').placeholder=L('Search actions, views, tracks…','Buscar acciones, vistas, pistas…');$('#commandSearch').ariaLabel=L('Search commands','Buscar comandos');$('#commandDialog').ariaLabel=L('Command palette','Paleta de comandos');$('#contextHelpClose').ariaLabel=L('Close help','Cerrar ayuda');document.querySelector('meta[name="description"]')?.setAttribute('content',L('КИБЕР VENGANCE — cinematic electro-rock composition workstation.','КИБЕР VENGANCE — estación de composición electro-rock cinematográfica.'));if(render)renderAll();if(pendingDeleteClipId)updateDeleteClipDialog();installControlHelp();if(helpMode)showHelpIntro()}
-function controlInfo(el:any):[string,string]{const data=controlDescriptions[el.id];if(data)return[L(data[0],data[1]),L(data[2],data[3])];if(el.matches('.knob')){const name=el.closest('.knob-control')?.querySelector('label')?.textContent||L('Sound parameter','Parámetro de sonido');return[name,L('Drag up/down to adjust; drag horizontally for five times finer control. − / + remain available.','Arrastra arriba/abajo para ajustar; en horizontal el control es cinco veces más fino. También puedes usar − / +.')]}if(el.matches('[data-region-scratch]'))return[L('Load region into Scratch Deck','Cargar región en el plato'),L('Create a temporary Scratch Deck buffer from this region, including its trim, length, gain, fades, pitch, warp and reverse settings.','Crea un búfer temporal del plato con el recorte, duración, ganancia, fades, tono, warp y reverse de esta región.')];if(el.matches('[data-fx]'))return[el.closest('.fx-unit')?.querySelector('span')?.textContent||'FX',L('Set the intensity of this track effect.','Ajusta la intensidad de este efecto de pista.')];if(el.matches('[data-macro]'))return[el.dataset.macro.toUpperCase(),L('Shape several musical and sound parameters at once.','Modifica varios parámetros musicales y sonoros a la vez.')];if(el.matches('[data-solo]'))return[L('Solo track','Aislar pista'),L('Listen only to this instrument. Press again to restore the full mix.','Escucha únicamente este instrumento. Pulsa de nuevo para restaurar la mezcla completa.')];if(el.matches('[data-mute]'))return[L('Mute track','Silenciar pista'),L('Silence or restore this instrument without changing its clips.','Silencia o restaura este instrumento sin modificar sus clips.')];if(el.matches('.track-select'))return[L('Select track','Seleccionar pista'),L('Open this instrument track and its active clip for editing.','Abre esta pista de instrumento y su clip activo para editar.')];if(el.matches('.note-block'))return[L('Sequencer note','Nota del secuenciador'),L('Drag to move. Use the right edge to resize and Shift to select several notes.','Arrastra para mover. Usa el borde derecho para redimensionar y Mayús para seleccionar varias notas.')];if(el.matches('.key'))return[L('Performance key','Tecla de interpretación'),L('Play this note live; it is recorded when recording is armed.','Toca esta nota en directo; se graba cuando la grabación está armada.')];if(el.matches('[data-generate]'))return[L('Musical generator','Generador musical'),L('Create scale-aware material for the active clip.','Crea material ajustado a la escala para el clip activo.')];const name=(el.getAttribute('aria-label')||el.closest('label')?.textContent||el.textContent||el.id||L('Control','Control')).trim().replace(/\s+/g,' ').slice(0,48);if(el.tagName==='SELECT')return[name,L('Choose one of the available values for this control.','Elige uno de los valores disponibles para este control.')];if(el.type==='range')return[name,L('Drag to adjust this value continuously.','Arrastra para ajustar este valor de forma continua.')];if(el.type==='number')return[name,L('Enter a precise numeric value.','Introduce un valor numérico preciso.')];if(el.type==='checkbox')return[name,L('Turn this option on or off.','Activa o desactiva esta opción.')];return[name,L('Activate this control to perform its labeled action.','Activa este control para ejecutar la acción indicada.')];}
-function installControlHelp(){const controls=$$('button,input,select,canvas,[role="application"],.knob');for(const el of controls){const [title,body]=controlInfo(el);el.dataset.helpTitle=title;el.dataset.helpBody=body;el.setAttribute('aria-description',body);if(!el.title&&el.tagName!=='INPUT')el.title=body}}
-function showHelpIntro(){$('#contextHelpTitle').textContent=L('Help mode active','Modo de ayuda activo');$('#contextHelpBody').textContent=L('Focus, hover or tap any control to understand what it does.','Enfoca, pasa el cursor o toca cualquier control para saber qué hace.');$('#contextHelp').hidden=false}
-function toggleHelp(force?:boolean){helpMode=force??!helpMode;document.body.classList.toggle('help-mode',helpMode);$('#helpBtn').setAttribute('aria-pressed',String(helpMode));if(helpMode)showHelpIntro();else $('#contextHelp').hidden=true}
-function showControlHelp(el:any){if(!helpMode||!el?.dataset.helpBody)return;$('#contextHelpTitle').textContent=el.dataset.helpTitle;$('#contextHelpBody').textContent=el.dataset.helpBody;$('#contextHelp').hidden=false}
-const tutorialSteps=()=>[
-  {target:'.transport',view:'forge',title:L('Own the transport','Controla el transporte'),body:L('Set tempo, meter, swing and count-in here. Play with Space and arm recording with R.','Ajusta aquí tempo, compás, swing y cuenta atrás. Reproduce con Espacio y arma la grabación con R.')},
-  {target:'.track-rail',view:'forge',title:L('Five independent instruments','Cinco instrumentos independientes'),body:L('Choose Lead, Guitar, Bass, Pad or Drums. Every track keeps its own clips, sound and effects.','Elige Lead, Guitarra, Bajo, Pad o Batería. Cada pista conserva sus propios clips, sonido y efectos.')},
-  {target:'#synthRack',view:'forge',title:L('Design the sound','Diseña el sonido'),body:L('Start from a preset, combine oscillators and shape each parameter. On touch screens, use the large − / + controls or drag a dial.','Parte de un preset, combina osciladores y modela cada parámetro. En pantalla táctil usa − / + o arrastra un dial.')},
-  {target:'.piano-shell',view:'forge',title:L('Compose in the piano roll','Compón en el piano roll'),body:L('Click to create notes, drag notes to move them, or drag across empty space to select several with a marquee. Shift adds to the selection.','Haz clic para crear notas, arrástralas para moverlas o arrastra sobre un espacio vacío para seleccionar varias con un marco. Mayús suma a la selección.')},
-  {target:'#arrangeView .section-title',view:'arrange',title:L('Build the complete song','Construye la canción completa'),body:L('Sections combine one clip per track. Repeat, duplicate and reorder them to create a full structure.','Las secciones combinan un clip por pista. Repítelas, duplícalas y ordénalas para crear una estructura completa.')},
-  {target:'#performView .performance',view:'perform',title:L('Perform live','Interpreta en directo'),body:L('Play from A to K, use MIDI or touch keys, and move macros while the composition is running.','Toca de A a K, usa MIDI o las teclas táctiles y mueve macros mientras suena la composición.')},
-  {target:'.modebar',view:'forge',title:L('Work at command speed','Trabaja a velocidad de comando'),body:L('Use Command to search actions, Focus to clear the workspace, ? for contextual help and Export when the song is ready.','Usa Comando para buscar acciones, Foco para despejar el espacio, ? para ayuda contextual y Exportar cuando la canción esté lista.')}
+export type RuntimeContext = typeof runtime;
+import { t as msg, setLanguage, translateDOM, translate } from "./ui/i18n";
+import { mountKeyboard, releaseAllKeyboards } from "./ui/components/keyboard";
+import { mountDial } from "./ui/components/dial";
+import { studioBridge, type StudioView } from "./ui/bridge";
+import {
+  createProject,
+  createEmptyProject,
+  migrateProject,
+  activeClip,
+  clipsForTrack,
+  createClip,
+  clipLengthSteps,
+  meterSteps,
+  setProjectMeter,
+  makeNote,
+  duplicateClip,
+  deleteClip,
+  varyClip,
+  resizeClip,
+  quantizeClip,
+  automationValue,
+  generateClip,
+  generateBacking,
+  encodeMidi,
+  playbackEvents,
+  History,
+  TRACKS,
+  TRACK_META,
+  DRUM_NAMES,
+  SCALES,
+  KEYS,
+  addArrangementScene,
+  duplicateArrangementScene,
+  moveArrangementScene,
+  removeArrangementScene,
+  distributeArrangementPatterns,
+  isInScale,
+  createPerformanceTake,
+  quantizePerformanceTake,
+  captureLauncherScenes,
+  duplicateArrangementSelection,
+  removeArrangementSelection,
+  dbToGain,
+  gainToDb,
+  createAudioLane,
+  createAudioRegion,
+  audioRegionRate,
+  createAutomationLane,
+  detectTransientSlices,
+  transformNotes,
+  cryptoId,
+  samplerDefaults,
+} from "./core.js";
+import { AudioEngine, renderWav } from "./audio.js";
+import type {
+  AudioLane,
+  AudioRegion,
+  AutomationLane,
+  MidiMapping,
+  ModulationRoute,
+  NoteEvent,
+  NoteExpression,
+  PerformanceEvent,
+  PerformanceTake,
+  Project,
+  SampleAsset,
+  SamplerInstrument,
+  TrackId,
+  TrackState,
+} from "./model.js";
+
+declare global {
+  interface Window {
+    __kvErrors: string[];
+    __kvDiagnostics: () => ReturnType<AudioEngine["diagnostics"]>;
+    webkitAudioContext?: typeof AudioContext;
+    showSaveFilePicker?: (options: Record<string, unknown>) => Promise<any>;
+  }
+}
+
+window.__kvErrors = [];
+function reportError(message: unknown): any {
+  return workflow.reportError(runtime, message);
+}
+window.addEventListener("error", (e) => reportError(e.message));
+window.addEventListener("unhandledrejection", (e) =>
+  reportError(String(e.reason?.message || e.reason)),
+);
+
+const $ = (s: string): any => document.querySelector(s),
+  $$ = (s: string): any[] => [...document.querySelectorAll(s)],
+  STORAGE = "kiber-vengance-project-v6",
+  LEGACY_V5 = "kiber-vengance-project-v5",
+  LEGACY_V4 = "kiber-vengance-project-v4",
+  LEGACY_V3 = "kiber-vengance-project-v3",
+  LEGACY = "kiber-vengance-project-v2",
+  VERSIONS = "kiber-vengance-versions-v1",
+  UI_STORAGE = "kiber-vengance-ui-v1",
+  LANGUAGE_STORAGE = "kiber-vengance-language-v1";
+let copyQueued = false;
+let project: any = loadProject(),
+  selectedTrack: TrackId = "lead",
+  selectedNotes = new Set<string>(),
+  currentStep = -1,
+  currentScene = -1,
+  transportPosition = 0,
+  globalStartStep = 0,
+  draggedScene = -1,
+  recordArmed = false,
+  metronome = false,
+  saveTimer: ReturnType<typeof setTimeout> | undefined,
+  animation = 0,
+  clipboard: NoteEvent[] = [],
+  recording = new Map<string, any>(),
+  rollScroll: any = {},
+  activeView = "forge",
+  commandIndex = 0,
+  pendingDeleteClipId: string | null = null,
+  suppressSequencerClick = false,
+  scratchBuffer: AudioBuffer | null = null,
+  scratchAnimation = 0,
+  scratchAngle = 0,
+  scratchLastFrame = performance.now(),
+  scratchStuttering = false,
+  performanceTake: Blob | null = null,
+  performanceStarted = 0,
+  performanceTimer: ReturnType<typeof setInterval> | null = null,
+  mixerReference: any = null,
+  mixerComparing = false,
+  activePerformanceTakeId: string | null = null,
+  performanceEvents: PerformanceEvent[] | null = null,
+  exportController: AbortController | null = null,
+  launcherCapturing = false,
+  launcherSnapshots: Array<{
+    name: string;
+    clipIds: Record<TrackId, string>;
+    repeats: number;
+  }> = [],
+  selectedScenes = new Set<number>(),
+  sceneClipboard: any[] = [],
+  mixerPeaks: Partial<Record<TrackId, number>> = {},
+  lastRecovery = 0;
+const clipStartSteps = new Map<string, number>();
+let samplerArmed = false,
+  loadedSamplerAssetId: string | null = null,
+  samplerQwertyBase = 60;
+const samplerHeld = new Map<string, HTMLElement>();
+let toastTimer: ReturnType<typeof setTimeout>;
+let editorTool: "draw" | "select" | "navigate" = "draw";
+let soundPanel = false;
+type Language = "en" | "es";
+let language: Language =
+    localStorage.getItem(LANGUAGE_STORAGE) === "es" ? "es" : "en",
+  tutorialStep = 0,
+  helpMode = false;
+const L = translate;
+const history = new History<any>();
+const engine = new AudioEngine(
+  (
+    step: number,
+    time: number,
+    scene: number,
+    info: Record<string, any> = {},
+  ) => {
+    if (step === -2) {
+      $("#audioState").textContent = `COUNT ${info.countIn}`;
+      return;
+    }
+    currentStep = step;
+    currentScene = scene;
+    if (step >= 0) transportPosition = Number(info.position ?? step);
+    if (step < 0) $("#audioState").textContent = "STANDBY";
+    else $("#audioState").textContent = "RUNNING";
+    requestAnimationFrame(() => {
+      updatePlayheads();
+      updatePosition();
+      syncLocatorsFromPlayback();
+    });
+  },
+);
+engine.project = project;
+window.__kvDiagnostics = () => engine.diagnostics();
+engine.onScratchGesture = (target: string, value: number | boolean) =>
+  recordPerformanceEvent("scratch", target, value);
+const presets = {
+  lead: ["Razor Choir", "Neon Talon", "Solar Vengeance"],
+  guitar: ["Chrome Strings", "Voltage Chug", "Glass Horizon"],
+  bass: ["Foundry Pulse", "Black Reactor", "Grind Theory"],
+  pad: ["Afterlight", "Frozen Cathedral", "Signal Ghost"],
+  drums: ["Titan Frame", "Riot Assembly", "Chrome Bones"],
+};
+const keyMap = "asdfghjk",
+  pitchNames = [
+    "C",
+    "C♯",
+    "D",
+    "D♯",
+    "E",
+    "F",
+    "F♯",
+    "G",
+    "G♯",
+    "A",
+    "A♯",
+    "B",
+  ],
+  samplerQwertyPitches = [60, 62, 64, 65, 67, 69, 71, 72],
+  samplerQwertyMap: Record<string, number> = {
+    a: 0,
+    w: 1,
+    s: 2,
+    e: 3,
+    d: 4,
+    f: 5,
+    t: 6,
+    g: 7,
+    y: 8,
+    h: 9,
+    u: 10,
+    j: 11,
+    k: 12,
+  };
+
+function loadProject() {
+  for (const key of [STORAGE, LEGACY_V5, LEGACY_V4, LEGACY_V3, LEGACY])
+    try {
+      const value = localStorage.getItem(key);
+      if (value) return migrateProject(JSON.parse(value));
+    } catch {}
+  return createProject();
+}
+function esc(v: any) {
+  return String(v).replace(
+    /[&<>'"]/g,
+    (c) =>
+      (
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "'": "&#39;",
+          '"': "&quot;",
+        }) as Record<string, string>
+      )[c]!,
+  );
+}
+function snapshot() {
+  history.push(project);
+}
+function changed(render = false) {
+  project.modifiedAt = Date.now();
+  $("#saveState").textContent = msg("ui_56a2285c5b11");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE, JSON.stringify(project));
+      $("#saveState").textContent = msg("ui_87222e82bf5d");
+      $("#saveWarning")?.setAttribute("hidden", "");
+    } catch {
+      $("#saveState").textContent = msg("ui_3d56409d02fb");
+      const warning = $("#saveWarning");
+      if (warning) {
+        warning.hidden = false;
+        warning.textContent = msg("ui_008e26ff915f");
+      }
+      return;
+    }
+    if (Date.now() - lastRecovery > 60000) {
+      try {
+        const list = loadVersions();
+        list.unshift({
+          id: cryptoId(),
+          label: `AUTO RECOVERY · ${project.title}`,
+          date: Date.now(),
+          project: structuredClone(project),
+        });
+        localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
+        lastRecovery = Date.now();
+      } catch {
+        toast(msg("ui_0af7730f9e25"));
+      }
+    }
+  }, 350);
+  engine.setProject(project);
+  if (project.sampler?.assetId !== loadedSamplerAssetId)
+    void loadSamplerAsset();
+  if (render) renderAll();
+  syncStudioUi();
+}
+function toast(message: any, undo = false) {
+  clearTimeout(toastTimer);
+  const el = $("#toast");
+  el.textContent = message;
+  if (undo) {
+    const button = document.createElement("button");
+    button.textContent = msg("ui_39fc72124884");
+    button.onclick = () => {
+      $("#undoBtn").click();
+      el.classList.remove("show");
+    };
+    el.append(button);
+  }
+  el.classList.add("show");
+  toastTimer = setTimeout(
+    () => el.classList.remove("show"),
+    undo ? 6000 : 2500,
+  );
+}
+function download(
+  data: any,
+  name: string,
+  type = "application/octet-stream",
+): any {
+  return storage.download(runtime, data, name, type);
+}
+type QuickExportKind =
+  | "wav"
+  | "midi"
+  | "project"
+  | "clip-wav"
+  | "clip-midi"
+  | "stems"
+  | "bundle"
+  | "performance";
+type QuickTarget = {
+  handle: any | null;
+  fallback: boolean;
+  cancelled: boolean;
+  name: string;
+  type: string;
+};
+const quickHandles = new Map<QuickExportKind, any>(),
+  QUICK_HANDLE_DB = "kiber-vengance-file-handles-v1",
+  LAST_EXPORT = "kiber-vengance-last-export-v1";
+function quickHandleDb(): any {
+  return workflow.quickHandleDb(runtime);
+}
+const ASSET_DB = "kiber-vengance-assets-v1";
+function assetDb(): any {
+  return storage.assetDb(runtime);
+}
+async function putAsset(id: string, blob: Blob): Promise<any> {
+  return storage.putAsset(runtime, id, blob);
+}
+async function getAsset(id: string): Promise<any> {
+  return storage.getAsset(runtime, id);
+}
+async function deleteAsset(id: string): Promise<any> {
+  return storage.deleteAsset(runtime, id);
+}
+function renderExportTargets(): any {
+  return storage.renderExportTargets(runtime);
+}
+function showQuickHandle(_kind: QuickExportKind, _handle: any): any {
+  return workflow.showQuickHandle(runtime, _kind, _handle);
+}
+async function loadQuickHandles(): Promise<any> {
+  return workflow.loadQuickHandles(runtime);
+}
+async function rememberQuickHandle(
+  kind: QuickExportKind,
+  handle: any,
+): Promise<any> {
+  return workflow.rememberQuickHandle(runtime, kind, handle);
+}
+async function forgetExportTarget(kind: QuickExportKind): Promise<any> {
+  return storage.forgetExportTarget(runtime, kind);
+}
+async function prepareQuickExport(
+  kind: QuickExportKind,
+  name: string,
+  type: string,
+  extension: string,
+  description: string,
+  forcePicker = false,
+): Promise<QuickTarget> {
+  return storage.prepareQuickExport(
+    runtime,
+    kind,
+    name,
+    type,
+    extension,
+    description,
+    forcePicker,
+  );
+}
+async function writeQuickExport(target: QuickTarget, data: any): Promise<any> {
+  return storage.writeQuickExport(runtime, target, data);
+}
+async function quickExportProject(forcePicker = false): Promise<any> {
+  return storage.quickExportProject(runtime, forcePicker);
+}
+function safeName(): any {
+  return storage.safeName(runtime);
+}
+function clip() {
+  return activeClip(project, selectedTrack);
+}
+function pitches(): any {
+  return performanceFeature.pitches(runtime);
+}
+
+const staticCopy: Array<[string, string, string]> = [
+  ["#boot p", "LOADING COMPOSITION ENGINE", "CARGANDO MOTOR DE COMPOSICIÓN"],
+  [".project-head label", "PROJECT", "PROYECTO"],
+  [".rail-label", "INDEPENDENT CLIPS", "CLIPS INDEPENDIENTES"],
+  ["#newClipBtn", "＋ NEW CLIP", "＋ NUEVO CLIP"],
+  ['[data-view="forge"]', "FORGE", "FORJA"],
+  ['[data-view="arrange"]', "ARRANGE", "ARREGLO"],
+  ['[data-view="perform"]', "PERFORM", "INTERPRETAR"],
+  ["#tutorialBtn", "GUIDE", "GUÍA"],
+  ["#focusBtn", "FOCUS", "FOCO"],
+  ["#motionRack .eyebrow", "MOTION ENGINE", "MOTOR DE MOVIMIENTO"],
+  ["#effectsRack .eyebrow", "SIGNAL PROCESSING", "PROCESADO DE SEÑAL"],
+  ["#effectsRack strong", "TRACK FX", "EFECTOS DE PISTA"],
+  ["#macroRack .eyebrow", "VECTOR CONTROL", "CONTROL VECTORIAL"],
+  ["#macroRack strong", "SCULPT THE IMPACT", "MODELA EL IMPACTO"],
+  ["#fxBypass", "BYPASS", "OMITIR"],
+  [".editor-head .eyebrow", "ACTIVE CLIP", "CLIP ACTIVO"],
+  ["#duplicateBtn", "DUPLICATE", "DUPLICAR"],
+  ["#mutateBtn", "MUTATE", "MUTAR"],
+  ["#backingBtn", "BACKING", "BASE"],
+  ["#quantizeBtn", "QUANTIZE", "CUANTIZAR"],
+  ["#deleteNotesBtn", "DELETE", "BORRAR"],
+  [".automation-head .eyebrow", "AUTOMATION", "AUTOMATIZACIÓN"],
+  [
+    ".automation-head>span",
+    "CLICK / DRAG TO DRAW",
+    "CLIC / ARRASTRA PARA DIBUJAR",
+  ],
+  ["#clearAutomationBtn", "CLEAR LANE", "LIMPIAR LÍNEA"],
+  [
+    "#arrangeDescription",
+    "Each section combines five independent clips. Edit, repeat and reorder the complete song.",
+    "Cada sección combina cinco clips independientes. Edita, repite y reordena la canción completa.",
+  ],
+  ["#addSceneBtn", "＋ ADD SECTION", "＋ AÑADIR SECCIÓN"],
+  ["#autoArrangeBtn", "⟳ AUTO SEQUENCE", "⟳ SECUENCIA AUTO"],
+  [
+    "#performDescription",
+    "Play the instruments, capture the active mix, and cut it into the performance with the Scratch Deck.",
+    "Toca los instrumentos, captura la mezcla activa y córtala en directo con el plato de scratch.",
+  ],
+  ["#backingDialog .eyebrow", "BACKING GENERATOR", "GENERADOR DE BASES"],
+  [
+    "#backingDialog h2",
+    "BUILD A PLAYABLE FOUNDATION",
+    "CREA UNA BASE PARA TOCAR",
+  ],
+  [
+    "#backingDescription",
+    "Generate a structured bass, pad and drum arrangement while preserving your lead and guitar clips.",
+    "Genera un arreglo estructurado de bajo, pad y batería conservando tus clips de lead y guitarra.",
+  ],
+  [
+    "#backingWarning",
+    "The current arrangement will be replaced. You can undo this action.",
+    "El arreglo actual será reemplazado. Puedes deshacer esta acción.",
+  ],
+  ["#generateBackingBtn", "GENERATE BACKING", "GENERAR BASE"],
+  ["#projectMenu .eyebrow", "PROJECT CORE", "NÚCLEO DEL PROYECTO"],
+  ["#projectMenu h2", "VERSIONS & RECOVERY", "VERSIONES Y RECUPERACIÓN"],
+  ["#menuLanguageLabel", "INTERFACE LANGUAGE", "IDIOMA DE LA INTERFAZ"],
+  ["#importProjectLabel", "Import project JSON", "Importar proyecto JSON"],
+  ["#newBtn", "New demo project", "Nuevo proyecto de demostración"],
+  ["#emptyBtn", "New empty project", "Nuevo proyecto vacío"],
+  [
+    "#duplicateProjectBtn",
+    "Duplicate current project",
+    "Duplicar proyecto actual",
+  ],
+  ["#saveBtn", "Create named snapshot", "Crear instantánea con nombre"],
+  ["#exportProjectBtn", "Export project JSON", "Exportar proyecto JSON"],
+  ["#compatBtn", "Compatibility report", "Informe de compatibilidad"],
+  [".versions-head", "LOCAL VERSIONS", "VERSIONES LOCALES"],
+  [
+    "#exportDialog .eyebrow",
+    "COMMIT THE FULL SIGNAL",
+    "CONSOLIDA TODA LA SEÑAL",
+  ],
+  ["#exportDialog h2", "EXPORT SONG", "EXPORTAR CANCIÓN"],
+  [
+    "#exportDialog>p",
+    "Render the complete arrangement, including repeated clips, automation, arpeggiators and effects.",
+    "Renderiza todo el arreglo, incluidos clips repetidos, automatización, arpegiadores y efectos.",
+  ],
+  ["#wavBtn b", "SONG WAV", "CANCIÓN WAV"],
+  ["#exportMidiBtn b", "SONG MIDI", "CANCIÓN MIDI"],
+  ["#clipWavBtn b", "CLIP WAV", "CLIP WAV"],
+  ["#clipMidiBtn b", "CLIP MIDI", "CLIP MIDI"],
+  ["#helpDialog .eyebrow", "FIELD MANUAL", "MANUAL DE CAMPO"],
+  ["#helpDialog h2", "COMPOSITION CONTROLS", "CONTROLES DE COMPOSICIÓN"],
+  [
+    "#helpDialog .note",
+    "Drag notes to move them and use the handle on their right edge to resize. Web MIDI records note-on/off, velocity, bend, pressure and timbre.",
+    "Arrastra las notas para moverlas y usa el tirador derecho para cambiar su duración. Web MIDI graba nota, velocidad, bend, presión y timbre.",
+  ],
+  [
+    "#aboutDialog p",
+    "A complete cinematic electro-rock composition engine built for pressure, motion and controlled impact.",
+    "Un motor completo de composición electro-rock cinematográfica creado para presión, movimiento e impacto controlado.",
+  ],
+  ["#compatDialog .eyebrow", "SYSTEM DIAGNOSTICS", "DIAGNÓSTICO DEL SISTEMA"],
+  ["#compatDialog h2", "COMPATIBILITY REPORT", "INFORME DE COMPATIBILIDAD"],
+  ["#copyCompatBtn", "COPY REPORT", "COPIAR INFORME"],
+  [
+    "#commandDialog .command-head .eyebrow",
+    "RAPID EXECUTION",
+    "EJECUCIÓN RÁPIDA",
+  ],
+  ["#commandDialog .command-head b", "COMMAND PALETTE", "PALETA DE COMANDOS"],
+  [
+    ".command-help",
+    "↑↓ NAVIGATE · ENTER EXECUTE · ESC CLOSE",
+    "↑↓ NAVEGAR · INTRO EJECUTAR · ESC CERRAR",
+  ],
+  ["#contextHelpEyebrow", "CONTEXT HELP", "AYUDA CONTEXTUAL"],
+  ["#manualBtn", "KEYBOARD SHORTCUTS", "ATAJOS DE TECLADO"],
 ];
-function showTutorialStep(){const steps=tutorialSteps(),step=steps[tutorialStep]!;$$('.tutorial-target').forEach(el=>el.classList.remove('tutorial-target'));activateView(step.view);setTimeout(()=>{const target=$(step.target);target?.classList.add('tutorial-target');target?.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'})},30);$('#tutorialStepLabel').textContent=L(`STEP ${tutorialStep+1} / ${steps.length}`,`PASO ${tutorialStep+1} / ${steps.length}`);$('#tutorialTitle').textContent=step.title;$('#tutorialBody').textContent=step.body;$('#tutorialBack').textContent=L('BACK','ATRÁS');$('#tutorialBack').disabled=tutorialStep===0;$('#tutorialNext').textContent=tutorialStep===steps.length-1?L('FINISH','TERMINAR'):L('NEXT','SIGUIENTE');$('#tutorialExit').textContent=L('EXIT','SALIR');$('#tutorialProgress').style.setProperty('--tutorial-progress',`${(tutorialStep+1)/steps.length*100}%`)}
-function startTutorial(){toggleHelp(false);tutorialStep=0;document.body.classList.add('tutorial-active');if(!$('#tutorialDialog').open)$('#tutorialDialog').show();showTutorialStep()}
-function endTutorial(){document.body.classList.remove('tutorial-active');$$('.tutorial-target').forEach(el=>el.classList.remove('tutorial-target'));$('#tutorialDialog').close();localStorage.setItem('kiber-vengance-tutorial-complete-v1','true')}
-function initLearning(){const changeLanguage=(value:string)=>{language=value==='es'?'es':'en';applyLanguage(true);if($('#tutorialDialog').open)showTutorialStep()};$('#languageSelect').onchange=()=>changeLanguage($('#languageSelect').value);$('#menuLanguageSelect').onchange=()=>changeLanguage($('#menuLanguageSelect').value);$('#tutorialBtn').onclick=startTutorial;$('#helpBtn').onclick=()=>toggleHelp();$('#contextHelpClose').onclick=()=>toggleHelp(false);$('#manualBtn').onclick=()=>open('#helpDialog');$('#tutorialExit').onclick=endTutorial;$('#tutorialBack').onclick=()=>{tutorialStep=Math.max(0,tutorialStep-1);showTutorialStep()};$('#tutorialNext').onclick=()=>{if(tutorialStep>=tutorialSteps().length-1)endTutorial();else{tutorialStep++;showTutorialStep()}};document.addEventListener('pointerover',e=>showControlHelp((e.target as HTMLElement).closest?.('[data-help-body]')));document.addEventListener('focusin',e=>showControlHelp((e.target as HTMLElement).closest?.('[data-help-body]')));document.addEventListener('pointerdown',e=>showControlHelp((e.target as HTMLElement).closest?.('[data-help-body]')))}
-
-function renderTracks(){
-  const soloActive=TRACKS.some(id=>project.tracks[id].solo);$('#tracks').innerHTML=TRACKS.map((id,i)=>{const m=TRACK_META[id],t=project.tracks[id],c=activeClip(project,id);return `<div class="track ${id===selectedTrack?'active':''} ${t.solo?'soloed':''} ${soloActive&&!t.solo?'solo-muted':''}" data-track="${id}" style="--track:${t.color||m.color}"><button class="track-select"><span class="track-head"><span><b class="track-name">${m.label}</b><small>${esc(c?.name||L('NO CLIP','SIN CLIP'))}</small></span><b>0${i+1}</b></span><span class="track-foot"><span class="track-meter"><i style="width:${t.volume*100}%"></i></span></span></button><span class="track-switches"><button class="solo ${t.solo?'on':''}" data-solo="${id}" aria-label="${L('Solo track','Aislar pista')} ${m.label}" aria-pressed="${t.solo}">S</button><button class="mute ${t.mute?'on':''}" data-mute="${id}" aria-label="${L('Mute track','Silenciar pista')} ${m.label}" aria-pressed="${t.mute}">M</button></span></div>`}).join('');
-  $$('.track').forEach(el=>el.onclick=(e:any)=>{const solo=e.target.closest('[data-solo]'),mute=e.target.closest('[data-mute]');if(solo){e.stopPropagation();snapshot();const id=solo.dataset.solo as TrackId,was=project.tracks[id].solo;TRACKS.forEach(track=>project.tracks[track].solo=false);project.tracks[id].solo=!was;if(!was)project.tracks[id].mute=false;recordPerformanceEvent('mixer',id+':solo',!was);changed(true);toast(was?L('FULL MIX RESTORED','MEZCLA COMPLETA RESTAURADA'):L(`${TRACK_META[id].label} · SOLO`,`SOLO · ${TRACK_META[id].label}`));return}if(mute){e.stopPropagation();snapshot();project.tracks[mute.dataset.mute].mute=!project.tracks[mute.dataset.mute].mute;recordPerformanceEvent('mixer',mute.dataset.mute+':mute',project.tracks[mute.dataset.mute].mute);changed(true);return}selectedTrack=el.dataset.track;selectedNotes.clear();renderAll();setDefaultScroll()});
-}
-function renderInspector(){
-  const meta=TRACK_META[selectedTrack],cfg=project.tracks[selectedTrack];document.documentElement.style.setProperty('--track',meta.color);$('#trackName').textContent=meta.label;$('#trackType').textContent=selectedTrack==='drums'?L('SYNTHETIC PERCUSSION','PERCUSIÓN SINTÉTICA'):selectedTrack==='guitar'?L('PLUCKED STRING MODEL','MODELO DE CUERDA PULSADA'):L('POLYPHONIC DUAL-OSC VOICE','VOZ POLIFÓNICA DE DOBLE OSCILADOR');$('#preset').innerHTML=presets[selectedTrack].map(p=>`<option ${p===cfg.preset?'selected':''}>${p}</option>`).join('');$('#waveSelect').hidden=selectedTrack==='drums';$('#osc2WaveSelect').hidden=selectedTrack==='drums';$('#filterSelect').hidden=selectedTrack==='drums';$('#waveSelect').value=cfg.wave||'sawtooth';$('#osc2WaveSelect').value=cfg.osc2Wave||'off';$('#filterSelect').value=cfg.filterType||'lowpass';
-  const defs:any[]=selectedTrack==='drums'?[['volume',L('LEVEL','NIVEL'),0,1,.01],['pan','PAN',-1,1,.01]]:[['volume',L('LEVEL','NIVEL'),0,1,.01],['osc2Mix',L('OSC 2 MIX','MEZCLA OSC 2'),0,1,.01],['cutoff',L('CUTOFF','CORTE'),120,10000,1],['resonance',L('RESO','RESO'),.1,16,.1],['attack',L('ATTACK','ATAQUE'),.005,1,.005],['decay',L('DECAY','CAÍDA'),.01,2,.01],['sustain',L('SUSTAIN','SOSTÉN'),.01,1,.01],['release',L('RELEASE','LIBERACIÓN'),.05,3,.01],['glide',L('GLIDE','DESLIZ.'),0,.5,.005],['pan','PAN',-1,1,.01],['unison',L('UNISON','UNÍSONO'),1,3,1],['detune',L('DETUNE','DESAFINE'),0,20,.5]],format=(key:string,v:number)=>key==='cutoff'?`${Math.round(v)} Hz`:key==='detune'?`${v} ct`:key==='unison'?`${v}x`:key==='pan'?`${v>0?'+':''}${Math.round(v*100)}`:Math.round(v*100);
-  $('#synthControls').innerHTML=defs.map(([key,label,min,max,step])=>{const v=cfg[key],n=(v-min)/(max-min);return `<div class="knob-control"><button class="knob-nudge" data-direction="-1" aria-label="${L('Reduce','Reducir')} ${label}">−</button><div class="knob" role="slider" tabindex="0" aria-label="${label}" aria-valuemin="${min}" aria-valuemax="${max}" aria-valuenow="${v}" style="--n:${n};--v:${n*75}%" title="${L('Drag up/down · Shift for fine adjustment','Arrastra arriba/abajo · Mayús para ajuste fino')}"></div><button class="knob-nudge" data-direction="1" aria-label="${L('Increase','Aumentar')} ${label}">+</button><input data-param="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${v}" tabindex="-1"><label>${label}</label><output>${format(key,v)}</output></div>`}).join('');
-  $$('.knob-control').forEach(w=>{const input=w.querySelector('input'),knob=w.querySelector('.knob'),min=+input.min,max=+input.max,range=max-min,step=+input.step||range/100,setValue=(value:number)=>{const snapped=Math.round((Math.max(min,Math.min(max,value))-min)/step)*step+min;input.value=String(Math.max(min,Math.min(max,snapped)));input.dispatchEvent(new Event('input'))};knob.onpointerdown=(e:PointerEvent)=>{if(e.button!==0)return;e.preventDefault();snapshot();knob.setPointerCapture(e.pointerId);knob.classList.add('adjusting');let x=e.clientX,y=e.clientY,value=+input.value,moved=false,done=false;const move=(ev:PointerEvent)=>{if(ev.pointerId!==e.pointerId)return;ev.preventDefault();const dx=ev.clientX-x,dy=y-ev.clientY;x=ev.clientX;y=ev.clientY;const delta=Math.abs(dy)>=Math.abs(dx)?dy/300:dx/1500;value=Math.max(min,Math.min(max,value+delta*range*(ev.shiftKey?.15:1)));setValue(value);moved=moved||dx!==0||dy!==0},finish=()=>{if(done)return;done=true;knob.classList.remove('adjusting');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);window.removeEventListener('blur',finish);knob.removeEventListener('lostpointercapture',finish);if(knob.hasPointerCapture(e.pointerId))knob.releasePointerCapture(e.pointerId);if(moved)changed()},up=(ev:PointerEvent)=>{if(ev.pointerId===e.pointerId)finish()};window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);window.addEventListener('blur',finish);knob.addEventListener('lostpointercapture',finish)};knob.onkeydown=(e:any)=>{const direction=e.key==='ArrowUp'||e.key==='ArrowRight'?1:e.key==='ArrowDown'||e.key==='ArrowLeft'?-1:0;if(!direction)return;e.preventDefault();snapshot();setValue(+input.value+direction*Math.max(step,range*(e.shiftKey?.002:.02)));changed()};w.querySelectorAll('.knob-nudge').forEach((button:any)=>button.onclick=()=>{snapshot();setValue(+input.value+(+button.dataset.direction)*Math.max(step,range*.02));changed()});input.oninput=()=>{const v=+input.value,n=(v-min)/range;cfg[input.dataset.param]=v;knob.style.setProperty('--n',n);knob.style.setProperty('--v',`${n*75}%`);knob.setAttribute('aria-valuenow',String(v));knob.setAttribute('aria-valuetext',format(input.dataset.param,v));w.querySelector('output').textContent=format(input.dataset.param,v);engine.setProject(project)}});
-  $('#preset').onchange=()=>{snapshot();cfg.preset=$('#preset').value;applyPreset(selectedTrack,cfg.preset);changed(true)};$('#waveSelect').onchange=()=>{snapshot();cfg.wave=$('#waveSelect').value;changed()};$('#osc2WaveSelect').onchange=()=>{snapshot();cfg.osc2Wave=$('#osc2WaveSelect').value;changed()};$('#filterSelect').onchange=()=>{snapshot();cfg.filterType=$('#filterSelect').value;changed()};
-}
-function applyPreset(track:TrackId,name:string){const c=project.tracks[track],fx=activeClip(project,track).character.fx,bank:any={lead:{'Razor Choir':{wave:'sawtooth',osc2Wave:'square',osc2Mix:.2,cutoff:4200,resonance:4,attack:.015,decay:.11,sustain:.72,release:.22,unison:2,detune:7},'Neon Talon':{wave:'square',osc2Wave:'sawtooth',osc2Mix:.12,cutoff:5600,resonance:2,attack:.008,decay:.06,sustain:.62,release:.12,unison:2,detune:9},'Solar Vengeance':{wave:'sawtooth',osc2Wave:'triangle',osc2Mix:.32,cutoff:7200,resonance:7,attack:.025,decay:.18,sustain:.8,release:.48,unison:3,detune:12}},guitar:{'Chrome Strings':{wave:'triangle',osc2Wave:'sawtooth',osc2Mix:.18,cutoff:5200,resonance:2.4,attack:.003,decay:.24,sustain:.18,release:.38,unison:1,detune:4,fx:{...fx,distortion:.34,saturation:.3,chorus:.12}},'Voltage Chug':{wave:'sawtooth',osc2Wave:'square',osc2Mix:.26,cutoff:3600,resonance:3.8,attack:.002,decay:.12,sustain:.1,release:.22,unison:1,detune:2,fx:{...fx,distortion:.62,saturation:.48,chorus:.04,reverb:.08}},'Glass Horizon':{wave:'triangle',osc2Wave:'sine',osc2Mix:.3,cutoff:6800,resonance:1.5,attack:.005,decay:.42,sustain:.24,release:.9,unison:2,detune:7,fx:{...fx,distortion:.14,saturation:.18,chorus:.38,delay:.34,reverb:.42}}},bass:{'Foundry Pulse':{wave:'square',osc2Wave:'sine',osc2Mix:.28,cutoff:900,resonance:6,attack:.008,decay:.08,sustain:.78,release:.14},'Black Reactor':{wave:'sawtooth',osc2Wave:'square',osc2Mix:.18,cutoff:560,resonance:9,attack:.012,decay:.16,sustain:.68,release:.28},'Grind Theory':{wave:'square',osc2Wave:'sawtooth',osc2Mix:.4,cutoff:1450,resonance:3,attack:.005,decay:.05,sustain:.9,release:.09}},pad:{'Afterlight':{wave:'triangle',osc2Wave:'sawtooth',osc2Mix:.18,cutoff:2400,attack:.45,decay:.65,sustain:.8,release:1.8},'Frozen Cathedral':{wave:'sine',osc2Wave:'triangle',osc2Mix:.45,cutoff:1800,attack:.8,decay:1.1,sustain:.72,release:2.6},'Signal Ghost':{wave:'sawtooth',osc2Wave:'sine',osc2Mix:.3,cutoff:3300,attack:.25,decay:.5,sustain:.58,release:2.2}},drums:{'Titan Frame':{volume:.8,pan:0,fx:{...fx,distortion:.2,delay:.08,reverb:.16}},'Riot Assembly':{volume:.88,pan:0,fx:{...fx,distortion:.48,delay:.04,reverb:.1}},'Chrome Bones':{volume:.72,pan:-.05,fx:{...fx,distortion:.12,delay:.2,reverb:.34}}}},patch=bank[track][name]||{},{fx:fxPatch,...instrument}=patch;Object.assign(c,instrument);if(fxPatch)Object.assign(fx,fxPatch);c.preset=name}
-function renderArp(){const {arp,lfo}=clip().character as any,$panel=$('.arp-rack');$panel.classList.toggle('disabled',selectedTrack==='drums');$('#arpEnabled').checked=arp.enabled;$('#arpMode').value=arp.mode;$('#arpOctaves').value=arp.octaves;$('#arpRate').value=arp.rate;$('#lfoEnabled').checked=lfo.enabled;$('#lfoTarget').value=lfo.target;$('#lfoRate').value=lfo.rate;$('#lfoDepth').value=lfo.depth;$('#arpEnabled').onchange=()=>{snapshot();arp.enabled=$('#arpEnabled').checked;changed()};for(const [id,key,number] of ([['#arpMode','mode'],['#arpOctaves','octaves',true],['#arpRate','rate',true]] as any[]))$(id).onchange=()=>{snapshot();arp[key]=number?+$(id).value:$(id).value;changed()};$('#lfoEnabled').onchange=()=>{snapshot();lfo.enabled=$('#lfoEnabled').checked;changed()};$('#lfoTarget').onchange=()=>{snapshot();lfo.target=$('#lfoTarget').value;changed()};for(const [id,key] of ([['#lfoRate','rate'],['#lfoDepth','depth']] as any[])){$(id).onpointerdown=snapshot;$(id).oninput=()=>{lfo[key]=+$(id).value;engine.setProject(project)};$(id).onchange=()=>changed()}}
-function renderFx(){const fx=clip().character.fx,defs=[['saturation',L('SATURATION','SATURACIÓN')],['distortion',L('DISTORTION','DISTORSIÓN')],['chorus','CHORUS'],['delay',L('DELAY','RETARDO')],['reverb','REVERB'],['tone',L('TONE / EQ','TONO / EQ')]];$('#fxBypass').setAttribute('aria-pressed',fx.bypass);$('#fxBypass').classList.toggle('active',fx.bypass);$('#fxBypass').onclick=()=>{snapshot();fx.bypass=!fx.bypass;changed();renderFx();installControlHelp()};$('#fxControls').innerHTML=defs.map((entry:any)=>{const [key,label]=entry;return `<label class="fx-unit"><span>${label}</span><input type="range" data-fx="${key}" min="0" max="1" step=".01" value="${fx[key]}"><output>${Math.round(fx[key]*100)}</output></label>`}).join('');$$('#fxControls input').forEach(i=>{i.onpointerdown=snapshot;i.oninput=()=>{fx[i.dataset.fx]=+i.value;i.nextElementSibling.textContent=Math.round(i.value*100);engine.setProject(project)};i.onchange=()=>changed()})}
-function macroMarkup(container:any){const macros=clip().character.macros,names:Record<string,string>={energy:L('ENERGY','ENERGÍA'),darkness:L('DARKNESS','OSCURIDAD'),tension:L('TENSION','TENSIÓN'),aggression:L('AGGRESSION','AGRESIÓN'),space:L('SPACE','ESPACIO'),complexity:L('COMPLEXITY','COMPLEJIDAD')};container.innerHTML=(Object.entries(macros) as Array<[string,number]>).map(([k,v])=>`<div class="macro"><label><span>${names[k]||k.toUpperCase()}</span><output>${Math.round(v*100)}</output></label><input data-macro="${k}" type="range" min="0" max="1" step=".01" value="${v}"></div>`).join('');container.querySelectorAll('input').forEach((i:any)=>{i.onpointerdown=snapshot;i.oninput=()=>{macros[i.dataset.macro]=+i.value;i.closest('.macro').querySelector('output').textContent=Math.round(i.value*100);engine.setProject(project);recordPerformanceEvent('macro',`${clip().id}:${i.dataset.macro}`,+i.value);updateOrb()};i.onchange=()=>changed()})}
-
-function renderClipControls(){const c=clip(),trackClips=clipsForTrack(project,selectedTrack);$('#clipSelect').innerHTML=trackClips.map(x=>`<option value="${x.id}" ${x.id===c.id?'selected':''}>${esc(x.name)} · ${x.bars} bars</option>`).join('');$('#deleteClipBtn').disabled=trackClips.length<=1;$('#barsSelect').value=c.bars;$('#gridSelect').value=project.editor.snap;$('#zoomRange').value=project.editor.zoom;$('#clipSelect').onchange=()=>{project.activeClipIds[selectedTrack]=$('#clipSelect').value;selectedNotes.clear();changed(true);setDefaultScroll()};$('#barsSelect').onchange=()=>{snapshot();resizeClip(c,+$('#barsSelect').value);selectedNotes.clear();changed(true)};$('#gridSelect').onchange=()=>{project.editor.snap=+$('#gridSelect').value;changed();renderPiano()};$('#zoomRange').oninput=()=>{project.editor.zoom=+$('#zoomRange').value;renderPiano();renderAutomation()};$('#zoomRange').onchange=()=>changed();$('#renameClipBtn').onclick=()=>{const name=prompt(L('Clip name','Nombre del clip'),c.name);if(name?.trim()){snapshot();c.name=name.trim();changed(true)}};$('#deleteClipBtn').onclick=()=>requestClipDelete(c.id)}
-function updateDeleteClipDialog(){const target=project.clips.find((c:any)=>c.id===pendingDeleteClipId);if(!target)return;const replacement=clipsForTrack(project,target.track).find(c=>c.id!==target.id),uses=project.arrangement.filter((s:any)=>s.clipIds[target.track]===target.id).length;$('#deleteClipTitle').textContent=L(`DELETE “${target.name}”?`,`¿BORRAR “${target.name}”?`);$('#deleteClipDescription').textContent=L(`${uses?`${uses} arrangement section${uses===1?'':'s'} use this clip. `:'This clip is not used by the arrangement. '}${uses&&replacement?`They will switch to “${replacement.name}”. `:''}At least one clip always remains on this track.`,`${uses?`${uses} sección${uses===1?'':'es'} del arreglo usa${uses===1?'':'n'} este clip. `:'Este clip no se utiliza en el arreglo. '}${uses&&replacement?`Se cambiará${uses===1?'':'n'} a “${replacement.name}”. `:''}Siempre se conserva al menos un clip en esta pista.`)}
-function requestClipDelete(id:string){const target=project.clips.find((c:any)=>c.id===id);if(!target)return;if(clipsForTrack(project,target.track).length<=1){toast(L('KEEP AT LEAST ONE CLIP PER TRACK','DEBE QUEDAR UN CLIP POR PISTA'));return}pendingDeleteClipId=id;updateDeleteClipDialog();$('#deleteClipDialog').showModal()}
-function renderHarmony(){ $('#keySelect').innerHTML=KEYS.map(k=>`<option ${k===project.key?'selected':''}>${k}</option>`).join('');$('#scaleSelect').innerHTML=Object.keys(SCALES).map(s=>`<option value="${s}" ${s===project.scale?'selected':''}>${s.replace(/([A-Z])/g,' $1').toUpperCase()}</option>`).join('');$('#keySelect').onchange=()=>{snapshot();project.key=$('#keySelect').value;changed(true)};$('#scaleSelect').onchange=()=>{snapshot();project.scale=$('#scaleSelect').value;changed(true)};$$('[data-generate]').forEach(b=>{const type=b.dataset.generate;b.disabled=(selectedTrack==='drums'&&type!=='drums')||(selectedTrack!=='drums'&&type==='drums');b.onclick=()=>{snapshot();generateClip(project,clip(),type,clip().character.macros.complexity);selectedNotes.clear();changed(true);toast(L('Musical material generated','Material musical generado'),true)}});$('#quantizeBtn').onclick=()=>{snapshot();quantizeClip(clip(),project.editor.snap);changed(true);toast(L('Clip quantized','Clip cuantizado'),true)}}
-
-function renderPiano(){
-  const c=clip(),rows=pitches(),zoom=project.editor.zoom,rowH=22,steps=clipLengthSteps(c),pane=$('#rollPane'),old=rollScroll[selectedTrack]||{left:pane?.scrollLeft||0,top:pane?.scrollTop||0};
-  $('#pianoLabelRows').innerHTML=rows.map(p=>`<div class="pitch-label ${selectedTrack!=='drums'&&isInScale(p,project.key,project.scale)?'in-scale':''}">${selectedTrack==='drums'?(DRUM_NAMES[p]??'DRUM'):(pitchNames[p%12]??'N')+Math.floor(p/12-1)}</div>`).join('');$('#pianoLabelRows').style.height=`${rows.length*rowH}px`;
-  const barSteps=c.stepsPerBar||meterSteps(project.meter),beatSteps=project.meter.unit===8?2:4;$('#rollRuler').innerHTML=`<div class="ruler-content" style="width:${steps*zoom}px">${Array.from({length:steps},(_,s)=>`<span style="left:${s*zoom}px;width:${zoom}px">${s%barSteps===0?`BAR ${s/barSteps+1}`:s%beatSteps===0?Math.floor(s/beatSteps)%project.meter.beats+1:''}</span>`).join('')}</div>`;
-  const seq=$('#sequencer');seq.style.width=`${steps*zoom}px`;seq.style.height=`${rows.length*rowH}px`;seq.style.setProperty('--step',`${zoom}px`);seq.style.setProperty('--beat',`${zoom*beatSteps}px`);seq.style.setProperty('--bar',`${zoom*barSteps}px`);seq.style.setProperty('--row',`${rowH}px`);
-  seq.innerHTML=c.notes.map(n=>{const row=selectedTrack==='drums'?DRUM_NAMES.length-1-n.pitch:TRACK_META[selectedTrack].high-n.pitch;if(row<0||row>=rows.length)return'';return `<button class="note-block ${selectedNotes.has(n.id)?'selected':''}" data-note="${n.id}" style="left:${(n.step+(n.offset||0))*zoom+1}px;top:${row*rowH+2}px;width:${Math.max(5,n.length*zoom-2)}px;height:${rowH-4}px;--vel:${n.velocity}" title="${selectedTrack==='drums'?DRUM_NAMES[n.pitch]:pitchNames[n.pitch%12]} · ${n.length.toFixed(3)} steps · offset ${(n.offset||0).toFixed(3)} · velocity ${Math.round(n.velocity*127)}"><span class="note-resize"></span></button>`}).join('')+`<div class="roll-playhead" style="left:${Math.max(0,currentStep%steps)*zoom}px"></div>`;
-  seq.onclick=(e:any)=>{if(suppressSequencerClick){suppressSequencerClick=false;return}if(editorTool!=='draw'||e.target!==seq)return;const rect=seq.getBoundingClientRect(),step=Math.max(0,Math.min(steps-project.editor.snap,Math.floor((e.clientX-rect.left)/zoom/project.editor.snap)*project.editor.snap)),row=Math.floor((e.clientY-rect.top)/rowH),pitch=rows[row];if(pitch==null)return;snapshot();const n=makeNote(step,pitch,selectedTrack==='drums'?1:Math.max(project.editor.snap,1),e.shiftKey?1:.8);c.notes.push(n);selectedNotes=e.shiftKey?new Set([...selectedNotes,n.id]):new Set([n.id]);changed();engine.preview(selectedTrack,pitch,n.velocity);renderPiano();renderSelection()};
-  bindMarqueeSelection(seq);
-  $$('.note-block').forEach(el=>bindNoteDrag(el,c,rows,zoom,rowH));
-  pane.scrollLeft=Math.min(old.left,Math.max(0,steps*zoom-pane.clientWidth));pane.scrollTop=Math.min(old.top,Math.max(0,rows.length*rowH-pane.clientHeight));syncRollScroll();pane.onscroll=()=>{rollScroll[selectedTrack]={left:pane.scrollLeft,top:pane.scrollTop};syncRollScroll()};renderSelection();
-}
-function bindMarqueeSelection(seq:any){seq.onpointerdown=(e:any)=>{if(editorTool==='navigate'||e.target!==seq||(e.button!=null&&e.button!==0)||e.pointerType==='touch')return;const rect=seq.getBoundingClientRect(),clamp=(value:number,max:number)=>Math.max(0,Math.min(max,value)),startX=clamp(e.clientX-rect.left,seq.clientWidth),startY=clamp(e.clientY-rect.top,seq.clientHeight),base=e.shiftKey?new Set(selectedNotes):new Set<string>(),box=document.createElement('div');box.className='selection-marquee';seq.append(box);let moved=false;const move=(ev:any)=>{const x=clamp(ev.clientX-rect.left,seq.clientWidth),y=clamp(ev.clientY-rect.top,seq.clientHeight),left=Math.min(startX,x),top=Math.min(startY,y),right=Math.max(startX,x),bottom=Math.max(startY,y);if(!moved&&Math.hypot(x-startX,y-startY)<4)return;moved=true;ev.preventDefault();Object.assign(box.style,{left:`${left}px`,top:`${top}px`,width:`${right-left}px`,height:`${bottom-top}px`});const next=new Set(base);seq.querySelectorAll('.note-block').forEach((note:any)=>{const noteRight=note.offsetLeft+note.offsetWidth,noteBottom=note.offsetTop+note.offsetHeight;if(note.offsetLeft<=right&&noteRight>=left&&note.offsetTop<=bottom&&noteBottom>=top)next.add(note.dataset.note)});selectedNotes=next;syncSelectedClasses();renderSelection()},up=()=>{box.remove();window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);if(moved){suppressSequencerClick=true;renderSelection()}};window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up)}}
-function bindNoteDrag(el:any,c:any,rows:number[],zoom:number,rowH:number){el.onpointerdown=(e:any)=>{if(editorTool==='navigate')return;e.stopPropagation();const id=el.dataset.note;if(editorTool==='select'){selectedNotes.has(id)?selectedNotes.delete(id):selectedNotes.add(id);syncSelectedClasses();renderSelection();return;}if(e.shiftKey){selectedNotes.has(id)?selectedNotes.delete(id):selectedNotes.add(id)}else if(!selectedNotes.has(id))selectedNotes=new Set([id]);syncSelectedClasses();renderSelection();const originals=new Map(c.notes.filter((n:any)=>selectedNotes.has(n.id)).map((n:any)=>[n.id,{step:n.step,pitch:n.pitch,length:n.length}])),startX=e.clientX,startY=e.clientY,resizing=e.target.classList.contains('note-resize'),before=structuredClone(project);let moved=false;const move=(ev:any)=>{const dx=Math.round((ev.clientX-startX)/zoom/project.editor.snap)*project.editor.snap,dy=Math.round((ev.clientY-startY)/rowH);if(!dx&&!dy)return;if(!moved){history.push(before);moved=true}for(const n of c.notes.filter((n:any)=>selectedNotes.has(n.id))){const o:any=originals.get(n.id);if(resizing)n.length=Math.max(project.editor.snap,Math.min(clipLengthSteps(c)-n.step,o.length+dx));else{n.step=Math.max(0,Math.min(clipLengthSteps(c)-o.length,o.step+dx));if(selectedTrack!=='drums')n.pitch=Math.max(TRACK_META[selectedTrack].low,Math.min(TRACK_META[selectedTrack].high,o.pitch-dy));}}renderPiano()};const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);if(moved)changed()};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up)}}
-function syncSelectedClasses(){$$('.note-block').forEach(n=>n.classList.toggle('selected',selectedNotes.has(n.dataset.note)))}
-function syncRollScroll(){const pane=$('#rollPane'),content=$('#rollRuler .ruler-content');if(content)content.style.transform=`translateX(${-pane.scrollLeft}px)`;$('#pianoLabelRows').style.transform=`translateY(${-pane.scrollTop}px)`;$('#automationPane').scrollLeft=pane.scrollLeft}
-function setDefaultScroll(){setTimeout(()=>{const pane=$('#rollPane');if(!pane||selectedTrack==='drums')return;const row=(TRACK_META[selectedTrack].high-TRACK_META[selectedTrack].base)*22;pane.scrollTop=Math.max(0,row-pane.clientHeight/2);rollScroll[selectedTrack]={left:0,top:pane.scrollTop};syncRollScroll()},0)}
-
-function renderSelection(){const notes=clip().notes.filter(n=>selectedNotes.has(n.id));$('#selectionCount').textContent=language==='es'?`${notes.length} NOTA${notes.length===1?'':'S'}`:`${notes.length} NOTE${notes.length===1?'':'S'}`;$('#noteLength').disabled=!notes.length;$('#noteVelocity').disabled=!notes.length;$('#deleteNotesBtn').disabled=!notes.length;$$('[data-selection-action]').forEach((button:any)=>button.disabled=!notes.length);if(notes.length){$('#noteLength').value=notes[0]!.length;$('#noteVelocity').value=notes.reduce((a,n)=>a+n.velocity,0)/notes.length}}
-function editSelection(key:any,value:any){const notes=clip().notes.filter(n=>selectedNotes.has(n.id));if(!notes.length)return;snapshot();for(const n of notes)(n as any)[key]=key==='velocity'?Math.max(.01,Math.min(1,+value)):Math.max(project.editor.snap,Math.min(clipLengthSteps(clip())-n.step,+value));changed();renderPiano()}
-function deleteSelection(){if(!selectedNotes.size)return;snapshot();clip().notes=clip().notes.filter(n=>!selectedNotes.has(n.id));selectedNotes.clear();changed();renderPiano();renderSelection();toast(L('Selected notes deleted','Notas seleccionadas borradas'),true)}
-
-function renderAutomation(){const c=clip(),steps=clipLengthSteps(c),zoom=project.editor.zoom,param=project.editor.automationParam,lane:any=(c.automation as any)[param];$('#automationParam').value=param;const el=$('#automationLane');el.style.width=`${steps*zoom}px`;el.innerHTML=Array.from({length:steps},(_,s)=>{const value=automationValue(c,param,s,.5),point=lane[s]!=null;return `<i class="automation-step ${point?'point':''}" style="left:${s*zoom}px;width:${zoom}px;--value:${value}" data-step="${s}"></i>`}).join('')+`<div class="automation-playhead" style="left:${Math.max(0,currentStep%steps)*zoom}px"></div>`;const draw=(e:any)=>{const rect=el.getBoundingClientRect(),step=Math.max(0,Math.min(steps-1,Math.round((e.clientX-rect.left)/zoom/project.editor.snap)*project.editor.snap)),value=Math.max(0,Math.min(1,1-(e.clientY-rect.top)/rect.height));lane[step]=value;renderAutomation();engine.setProject(project)};el.onpointerdown=(e:any)=>{snapshot();draw(e);const move=(ev:any)=>draw(ev),up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);changed()};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up)};$('#automationPane').scrollLeft=$('#rollPane').scrollLeft}
-
-const heldKeyPointers=new Map<number,{source:string,key:HTMLElement}>();
-function releaseKeyPointer(pointerId:number){const held=heldKeyPointers.get(pointerId);if(!held)return;heldKeyPointers.delete(pointerId);endPerformance(held.source,held.key)}
-function releaseKeyPointers(){for(const id of [...heldKeyPointers.keys()])releaseKeyPointer(id)}
-window.addEventListener('pointerup',event=>releaseKeyPointer(event.pointerId),true);
-window.addEventListener('pointercancel',event=>releaseKeyPointer(event.pointerId),true);
-window.addEventListener('blur',releaseKeyPointers);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseKeyPointers()});
-function renderKeyboard(){
- releaseKeyPointers();
- const base=TRACK_META[selectedTrack].base,offsets=selectedTrack==='drums'?[0,1,2,3,4,5,6]:[0,2,4,5,7,9,11,12];
- const markup=offsets.map((x,i)=>`<button class="key" data-pitch="${base+x}" data-source="${keyMap[i]||i}" aria-label="${selectedTrack==='drums'?DRUM_NAMES[x]:pitchNames[(base+x)%12]} ${keyMap[i]?.toUpperCase()||''}">${keyMap[i]?.toUpperCase()||''}</button>`).join('');
- for(const id of ['#keyboard','#performanceKeyboard']){$(id).innerHTML=markup;$(id).querySelectorAll('.key').forEach((key:HTMLElement)=>{
-  key.onpointerdown=(event:PointerEvent)=>{if(event.button!==0)return;event.preventDefault();const source=`key-pointer-${event.pointerId}`;heldKeyPointers.set(event.pointerId,{source,key});key.setPointerCapture(event.pointerId);startPerformance(source,Number(key.dataset.pitch),.85,key)};
-  key.onpointerup=key.onpointercancel=key.onlostpointercapture=(event:PointerEvent)=>releaseKeyPointer(event.pointerId);
-  key.ondblclick=event=>event.preventDefault();
- })}
-}
-function startPerformance(source:string,pitch:number,velocity=.8,el:any=null,expression:Partial<NoteExpression>={},channel:number|null=null){if(samplerArmed&&activeView==='audio'){const keyboardIndex=keyMap.indexOf(source),samplerPitch=keyboardIndex>=0?samplerQwertyPitches[keyboardIndex]!:pitch,samplerKey=$(`[data-sampler-pitch="${samplerPitch}"]`) as HTMLElement|null;startSamplerPerformance(source,samplerPitch,velocity,samplerKey);return}el?.classList.add('active');engine.startLive(source,selectedTrack,pitch,velocity,expression,channel);if(recordArmed&&engine.playing&&(!project.loop.punch||(transportPosition>=project.loop.start&&transportPosition<project.loop.end))){const free=project.editor.recordMode==='free',raw=engine.recordPosition(selectedTrack,{quantized:false});if(raw==null)return;const c=clip(),unwrapped=Math.round(raw/project.editor.snap)*project.editor.snap,step=free?(unwrapped%clipLengthSteps(c)):engine.recordPosition(selectedTrack),offset=free?raw-unwrapped:0;snapshot();const n=makeNote(step??0,pitch,free ? .05 : project.editor.snap,velocity,offset,expression);c.notes.push(n);recording.set(source,{note:n,startRaw:raw,start:step??0,clipId:c.id,channel});selectedNotes=new Set([n.id]);renderPiano()}}
-function endPerformance(source:string,el:any=null){if(engine.samplerVoices.has(source)){endSamplerPerformance(source);return}el?.classList.remove('active');engine.stopLive(source);const rec=recording.get(source);if(!rec)return;const c=project.clips.find((x:any)=>x.id===rec.clipId);if(!c){recording.delete(source);return}const free=project.editor.recordMode==='free',end=engine.recordPosition(c.track,{quantized:!free});if(end!=null){let length=end-(free?rec.startRaw:rec.start);if(length<=0)length+=clipLengthSteps(c);rec.note.length=Math.max(free?.01:project.editor.snap,length);changed();renderPiano()}recording.delete(source)}
-
-function launcherSnapshot(name='LIVE'){const current={name,clipIds:{...project.activeClipIds},repeats:1};const previous=launcherSnapshots.at(-1);if(previous&&TRACKS.every(track=>previous.clipIds[track]===current.clipIds[track]))previous.repeats=Math.min(16,previous.repeats+1);else launcherSnapshots.push(current);$('#launcherCommitBtn').disabled=!launcherSnapshots.length}
-async function launchClip(track:TrackId,clipId:string){const quantization=+$('#launchQuantize').value||project.launcher.quantization;project.launcher.quantization=quantization;engine.stopLauncherTrack(track,false);if(!engine.playing){project.activeClipIds[track]=clipId;await togglePlay(false);engine.onLaunch?.(track,clipId,0)}else engine.queueClip(track,clipId,quantization);recordPerformanceEvent('launcher',track,clipId);renderLauncher()}
-function renderLauncher(){const root=$('#launcherGrid');if(!root)return;root.innerHTML=TRACKS.map(track=>{const cfg=project.tracks[track],clips=clipsForTrack(project,track),queued=engine.launchQueue.get(track)?.clipId;return `<section class="launcher-track" style="--track:${cfg.color||TRACK_META[track].color}"><header><b>${TRACK_META[track].label}</b><button data-launch-stop="${track}" aria-label="${L('Stop track','Parar pista')}">■</button></header>${clips.map(item=>`<button class="launcher-cell ${project.activeClipIds[track]===item.id&&!engine.launcherStopped.has(track)?'active':''} ${queued===item.id?'queued':''}" data-launch-track="${track}" data-launch-clip="${item.id}"><b>${esc(item.name)}</b><small>${item.bars} ${L('BARS','COMPASES')} · ${item.notes.length} NOTES</small></button>`).join('')}</section>`}).join('');$$('[data-launch-clip]').forEach(button=>button.onclick=()=>launchClip(button.dataset.launchTrack,button.dataset.launchClip));$$('[data-launch-stop]').forEach(button=>button.onclick=()=>{const track=button.dataset.launchStop as TrackId;engine.stopLauncherTrack(track,true);engine.launchQueue.delete(track);recordPerformanceEvent('launcher',track,'stop');renderLauncher()});$('#launchQuantize').value=String(project.launcher.quantization)}
-function setupLauncher(){engine.onLaunch=(track,clipId)=>{if(launcherCapturing)launcherSnapshot(`LIVE ${launcherSnapshots.length+1}`);$('#launcherStatus').textContent=`${TRACK_META[track].label} · ${project.clips.find((item:any)=>item.id===clipId)?.name||'CLIP'} · LIVE`;renderLauncher();changed()};$('#launchQuantize').onchange=()=>{project.launcher.quantization=+$('#launchQuantize').value;changed()};$('#launcherCaptureBtn').onclick=()=>{launcherCapturing=!launcherCapturing;if(launcherCapturing)launcherSnapshots=[];$('#launcherCaptureBtn').setAttribute('aria-pressed',String(launcherCapturing));$('#launcherCaptureBtn').textContent=launcherCapturing?'■ STOP CAPTURE':'● CAPTURE';if(launcherCapturing)launcherSnapshot('LIVE 1');else $('#launcherCommitBtn').disabled=!launcherSnapshots.length};$('#launcherCommitBtn').onclick=()=>{if(!launcherSnapshots.length)return;snapshot();captureLauncherScenes(project,launcherSnapshots);launcherSnapshots=[];launcherCapturing=false;$('#launcherCaptureBtn').setAttribute('aria-pressed','false');$('#launcherCaptureBtn').textContent='● CAPTURE';changed(true);activateView('arrange');toast(L('LIVE SEQUENCE COMMITTED TO ARRANGE','SECUENCIA EN DIRECTO AÑADIDA AL ARREGLO'))}}
-
-function renderArrangement(){
-  const options=(track:TrackId,id:string)=>clipsForTrack(project,track).map(c=>`<option value="${c.id}" ${c.id===id?'selected':''}>${esc(c.name)} · ${c.bars}b</option>`).join(''),{durationSteps}=playbackEvents(project,{song:true}),seconds=durationSteps*60/project.tempo/4;$('#songStats').textContent=language==='es'?`${project.arrangement.length} SECCIONES · ${Math.ceil(durationSteps/meterSteps(project.meter))} COMPASES · ${Math.floor(seconds/60)}:${String(Math.round(seconds%60)).padStart(2,'0')}`:`${project.arrangement.length} SECTIONS · ${Math.ceil(durationSteps/meterSteps(project.meter))} BARS · ${Math.floor(seconds/60)}:${String(Math.round(seconds%60)).padStart(2,'0')}`;
-  let timelineCursor=0;$('#arrangeTimeline').innerHTML=project.arrangement.map((scene:any,index:number)=>{const length=sceneLength(scene)*scene.repeats,start=timelineCursor;timelineCursor+=length;return `<button data-timeline-start="${start}" data-timeline-scene="${index}" data-timeline-length="${length}" style="--scene-width:${Math.max(1,length/durationSteps*100)}%"><b>${String(index+1).padStart(2,'0')} · ${esc(scene.name)}</b><span>${Math.ceil(length/meterSteps(project.meter))} ${L('BARS','COMPASES')}</span></button>`}).join('')+`<i class="arrange-playhead" style="left:${durationSteps?transportPosition/durationSteps*100:0}%"></i>`;$$('[data-timeline-start]').forEach(button=>button.onclick=(event:MouseEvent)=>{const rect=button.getBoundingClientRect(),offset=Math.floor((event.clientX-rect.left)/Math.max(1,rect.width)*(+button.dataset.timelineLength));setGlobalStart(+button.dataset.timelineStart+offset);focusScene(+button.dataset.timelineScene)});
-  $('#arrangement').innerHTML=project.arrangement.map((s:any,i:number)=>`<article class="scene ${selectedScenes.has(i)?'selected':''} ${currentScene===i&&engine.playing?'playing':''}" data-scene="${i}" tabindex="0"><div class="scene-top"><span class="drag-handle" draggable="true">⠿</span><input data-scene-name aria-label="${L('Section','Sección')} ${i+1}" value="${esc(s.name)}"><button data-action="remove" aria-label="${L('Remove section','Eliminar sección')} ${i+1}" ${project.arrangement.length===1?'disabled':''}>×</button></div><div class="scene-clips">${TRACKS.map(t=>`<label style="--track:${TRACK_META[t].color}"><span>${TRACK_META[t].label}</span><select data-scene-track="${t}">${options(t,s.clipIds[t])}</select></label>`).join('')}</div><div class="scene-bottom"><label class="scene-repeats"><span>${L('REPEATS','REPETICIONES')}</span><input data-repeats type="number" min="1" max="16" value="${s.repeats}"></label><div class="scene-actions"><button data-action="left" aria-label="${L('Move section left','Mover sección a la izquierda')}" ${i===0?'disabled':''}>←</button><button data-action="duplicate" aria-label="${L('Duplicate section','Duplicar sección')}">⧉</button><button data-action="right" aria-label="${L('Move section right','Mover sección a la derecha')}" ${i===project.arrangement.length-1?'disabled':''}>→</button></div><em>${String(i+1).padStart(2,'0')}</em></div></article>`).join('');
-  $$('.scene').forEach(card=>{const i=+card.dataset.scene,s=project.arrangement[i];card.querySelector('[data-scene-name]').onchange=(e:any)=>{snapshot();s.name=e.target.value.trim()||`SECTION ${i+1}`;changed()};card.querySelector('[data-repeats]').onchange=(e:any)=>{snapshot();s.repeats=Math.max(1,Math.min(16,+e.target.value||1));changed(true)};card.querySelectorAll('[data-scene-track]').forEach((sel:any)=>sel.onchange=()=>{snapshot();s.clipIds[sel.dataset.sceneTrack]=sel.value;project.activeClipIds[sel.dataset.sceneTrack]=sel.value;changed(true)});card.querySelectorAll('[data-action]').forEach((b:any)=>b.onclick=()=>{const a=b.dataset.action;if(a==='remove'&&project.arrangement.length>1){snapshot();removeArrangementScene(project,i);changed(true)}if(a==='duplicate'){snapshot();duplicateArrangementScene(project,i);changed(true);focusScene(i+1)}if(a==='left'){snapshot();moveArrangementScene(project,i,i-1);changed(true);focusScene(i-1)}if(a==='right'){snapshot();moveArrangementScene(project,i,i+1);changed(true);focusScene(i+1)}});const h=card.querySelector('.drag-handle');h.ondragstart=(e:any)=>{draggedScene=i;e.dataTransfer.setData('text/plain',i);card.classList.add('dragging')};h.ondragend=()=>{draggedScene=-1;card.classList.remove('dragging')};card.ondragover=(e:any)=>{e.preventDefault();card.classList.add('drop-target')};card.ondragleave=()=>card.classList.remove('drop-target');card.ondrop=(e:any)=>{e.preventDefault();snapshot();moveArrangementScene(project,draggedScene,i);draggedScene=-1;changed(true);focusScene(i)}});
-  $$('.scene').forEach(card=>card.addEventListener('click',(event:MouseEvent)=>{if((event.target as HTMLElement).closest('input,select,button,.drag-handle'))return;const index=+card.dataset.scene;if(event.shiftKey||event.ctrlKey||event.metaKey){if(selectedScenes.has(index))selectedScenes.delete(index);else selectedScenes.add(index)}else{selectedScenes.clear();selectedScenes.add(index)}renderArrangement()}));
-  $('#arrangeTimeline').style.width=`${Math.max(100,project.editor.arrangeZoom*100)}%`;$('#arrangeZoom').value=project.editor.arrangeZoom;$('#arrangeLoopEnabled').checked=project.loop.enabled;$('#arrangePunchEnabled').checked=project.loop.punch;$('#arrangeLoopStart').value=project.loop.start;$('#arrangeLoopEnd').value=project.loop.end;
-  $('#arrangeMarkers').innerHTML=project.markers.map((marker:any)=>`<button class="arrange-marker" style="--marker:${marker.color}" data-marker="${marker.id}">${esc(marker.name)} · ${formatLocator(marker.step)} ×</button>`).join('');$$('[data-marker]').forEach(button=>button.onclick=()=>{const marker=project.markers.find((item:any)=>item.id===button.dataset.marker);if(!marker)return;if(confirm(L(`Remove marker “${marker.name}”?`,`¿Eliminar marcador “${marker.name}”?`))){project.markers=project.markers.filter((item:any)=>item.id!==marker.id);changed(true)}else setGlobalStart(marker.step)});
-}
-function sceneLength(scene:any){return Math.max(...TRACKS.map(track=>clipLengthSteps(project.clips.find((c:any)=>c.id===scene.clipIds[track])||activeClip(project,track))));}
-function focusScene(i:number){setTimeout(()=>document.querySelector(`.scene[data-scene="${i}"]`)?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'}),0)}
-function updatePlayheads(){const c=clip(),steps=clipLengthSteps(c),local=currentStep<0?(clipStartSteps.get(c.id)||0):currentStep%steps;const p=$('.roll-playhead'),a=$('.automation-playhead');if(p)p.style.left=`${local*project.editor.zoom}px`;if(a)a.style.left=`${local*project.editor.zoom}px`;$$('.scene').forEach((s,i)=>s.classList.toggle('playing',engine.playing&&engine.songMode&&i===currentScene));const global=$('.arrange-playhead'),duration=songLength();if(global)global.style.left=`${duration?transportPosition/duration*100:0}%`}
-function updatePosition(){if(currentStep<0){$('#positionReadout').textContent='BAR 1 · STEP 1';return}const bar=meterSteps(project.meter);$('#positionReadout').textContent=`BAR ${Math.floor(currentStep/bar)+1} · STEP ${currentStep%bar+1}`}
-function updateOrb(){const macros=clip().character.macros,o=$('#performanceOrb');o.style.transform=`scale(${.9+macros.energy*.12})`;o.style.filter=`saturate(${.7+macros.tension}) brightness(${.8+macros.space*.35})`}
-
-function songLength(){return playbackEvents(project,{song:true}).durationSteps}
-function formatLocator(step:number){const bar=meterSteps(project.meter),seconds=step*60/project.tempo/4;return `${L('BAR','COMPÁS')} ${Math.floor(step/bar)+1} · ${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`}
-function setGlobalStart(value:number){globalStartStep=Math.max(0,Math.min(Math.max(0,songLength()-1),Math.round(value)));$('#globalPosition').value=globalStartStep;$('#globalPositionValue').textContent=formatLocator(globalStartStep);if(engine.playing&&engine.songMode){engine.seek(globalStartStep,true);transportPosition=globalStartStep;updatePlayheads()}}
-function setClipStart(value:number){const c=clip(),length=clipLengthSteps(c),step=Math.max(0,Math.min(length-1,Math.round(value)));clipStartSteps.set(c.id,step);$('#clipPosition').value=step;$('#clipPositionValue').textContent=`${L('BAR','COMPÁS')} ${Math.floor(step/meterSteps(project.meter))+1} · ${L('STEP','PASO')} ${step%meterSteps(project.meter)+1}`;if(engine.playing&&!engine.songMode){engine.seek(step,false);currentStep=step;updatePlayheads()}}
-function renderLocators(){const length=songLength(),clipLength=clipLengthSteps(clip());globalStartStep=Math.min(globalStartStep,Math.max(0,length-1));$('#globalPosition').max=Math.max(1,length-1);$('#globalPosition').value=globalStartStep;$('#globalPositionValue').textContent=formatLocator(globalStartStep);const local=Math.min(clipStartSteps.get(clip().id)||0,Math.max(0,clipLength-1));clipStartSteps.set(clip().id,local);$('#clipPosition').max=Math.max(1,clipLength-1);$('#clipPosition').value=local;setClipStart(local)}
-function syncLocatorsFromPlayback(){if(!engine.playing)return;if(engine.songMode){$('#globalPosition').value=transportPosition;$('#globalPositionValue').textContent=formatLocator(transportPosition)}else{const step=Math.max(0,currentStep);$('#clipPosition').value=step;$('#clipPositionValue').textContent=`${L('BAR','COMPÁS')} ${Math.floor(step/meterSteps(project.meter))+1} · ${L('STEP','PASO')} ${step%meterSteps(project.meter)+1}`}}
-
-function renderMixer(){const root=$('#mixerChannels');if(!root)return;root.innerHTML=TRACKS.map((track,index)=>{const cfg=project.tracks[track],character=activeClip(project,track).character,meta=TRACK_META[track],db=gainToDb(cfg.volume);return `<article class="mixer-channel ${cfg.mute?'muted':''}" data-mix-track="${track}" style="--track:${cfg.color||meta.color}"><header><span>0${index+1}</span><b>${meta.label}</b><input data-track-color type="color" value="${cfg.color||meta.color}" aria-label="${meta.label} color"></header><div class="mix-meter-pair"><canvas width="14" height="150" aria-label="${meta.label} left meter"></canvas><canvas width="14" height="150" aria-label="${meta.label} right meter"></canvas></div><label class="mix-fader"><span>FADER</span><input data-mix="faderDb" type="range" min="-60" max="6" step=".1" value="${db}" orient="vertical"><output>${db<=-60?"−∞":`${db>0?"+":""}${db.toFixed(1)} dB`}</output></label><label data-precision><span>PRE GAIN</span><input data-mix="preGainDb" type="range" min="-24" max="12" step=".5" value="${cfg.preGainDb}"><output>${cfg.preGainDb>0?'+':''}${cfg.preGainDb.toFixed(1)} dB</output></label><label data-precision><span>PAN</span><input data-mix="pan" type="range" min="-1" max="1" step=".01" value="${cfg.pan}"><output>${Math.round(cfg.pan*100)}</output></label><label data-precision><span>DELAY</span><input data-mix="delay" type="range" min="0" max="1" step=".01" value="${character.fx.delay}"><output>${Math.round(character.fx.delay*100)}</output></label><label data-precision><span>REVERB</span><input data-mix="reverb" type="range" min="0" max="1" step=".01" value="${character.fx.reverb}"><output>${Math.round(character.fx.reverb*100)}</output></label><label data-precision><span>SENDS</span><select data-send-mode><option value="post" ${cfg.sendMode==='post'?'selected':''}>POST</option><option value="pre" ${cfg.sendMode==='pre'?'selected':''}>PRE</option></select><output class="mix-peak">${db.toFixed(1)} dB</output></label><div><button data-mix-solo aria-pressed="${cfg.solo}" class="${cfg.solo?'on':''}">S</button><button data-mix-mute aria-pressed="${cfg.mute}" class="${cfg.mute?'on':''}">M</button></div></article>`}).join('');$$('[data-mix-track]').forEach(channel=>{const track=channel.dataset.mixTrack as TrackId,cfg=project.tracks[track],character=activeClip(project,track).character;channel.querySelectorAll('[data-mix]').forEach((input:any)=>{input.onpointerdown=snapshot;input.oninput=()=>{const key=input.dataset.mix,value=+input.value;if(key==='delay'||key==='reverb')character.fx[key]=value;else if(key==='faderDb')cfg.volume=value<=-60?0:10**(value/20);else (cfg as any)[key]=value;const output=input.closest('label').querySelector('output');if(output)output.textContent=key==='preGainDb'||key==='faderDb'?(value<=-60?'−∞':(value>0?'+':'')+value.toFixed(1)+' dB'):String(Math.round(value*100));engine.setProject(project);recordPerformanceEvent('mixer',`${track}:${key}`,value)};input.onchange=()=>changed()});channel.querySelector('[data-send-mode]').onchange=(event:any)=>{cfg.sendMode=event.target.value;recordPerformanceEvent('mixer',`${track}:sendMode`,cfg.sendMode);changed()};channel.querySelector('[data-track-color]').oninput=(event:any)=>{cfg.color=event.target.value;channel.style.setProperty('--track',cfg.color)};channel.querySelector('[data-track-color]').onchange=()=>changed(true);channel.querySelector('[data-mix-solo]').onclick=()=>$(`[data-solo="${track}"]`)?.click();channel.querySelector('[data-mix-mute]').onclick=()=>$(`[data-mute="${track}"]`)?.click()});$('#mixerMaster').value=project.master;$('#mixerMasterValue').textContent=`${Math.round(project.master*100)}%`;$('#masterBypassBtn').setAttribute('aria-pressed',String(project.masterSettings.bypass));$('#masterBypassBtn').textContent=project.masterSettings.bypass?'FX BYPASSED':'MASTER FX'}
-function animateMixer(){if(activeView!=='mix')return;let loudnessEnergy=0;for(const channel of $$('[data-mix-track]')){const track=channel.dataset.mixTrack as TrackId,meter=engine.trackMeter(track),canvases=channel.querySelectorAll('canvas'),levels=[meter.left,meter.right];loudnessEnergy+=meter.rms*meter.rms;mixerPeaks[track]=Math.max(meter.peak,(mixerPeaks[track]||0)*.965);canvases.forEach((canvas:any,index:number)=>{const level=levels[index]||0,ctx=canvas.getContext('2d'),height=canvas.height;ctx.clearRect(0,0,canvas.width,height);const gradient=ctx.createLinearGradient(0,height,0,0);gradient.addColorStop(0,'#2ee8ff');gradient.addColorStop(.72,'#a7ff5b');gradient.addColorStop(1,'#ff4e72');ctx.fillStyle=gradient;ctx.fillRect(2,height*(1-level),canvas.width-4,height*level);ctx.fillStyle='#ffcf67';ctx.fillRect(1,height*(1-(mixerPeaks[track]||0)),canvas.width-2,2)});const peak=channel.querySelector('.mix-peak');if(peak)peak.textContent=mixerPeaks[track]!<=.001?'−∞ dB':`${(20*Math.log10(mixerPeaks[track]!)).toFixed(1)} dB` }const loudness=Math.sqrt(loudnessEnergy/TRACKS.length);$('#mixerLoudness').textContent=loudness>.0001?`${(20*Math.log10(loudness)-9).toFixed(1)} LUFS-M APPROX`:'−∞ LUFS-M APPROX';engine.draw($('#mixerMasterMeter'));requestAnimationFrame(animateMixer)}
-
-function setScratchControls(enabled:boolean){for(const id of ['scratchPlayBtn','scratchSyncBtn','scratchBrakeBtn','scratchSpinBtn','scratchStutterBtn','scratchFilter','scratchMix','scratchRate','scratchReverse','scratchRestart'])$(`#${id}`).disabled=!enabled;const platter=$('#scratchPlatter');platter.classList.toggle('disabled',!enabled);platter.setAttribute('aria-disabled',String(!enabled));$('.scratch-deck').classList.toggle('ready',enabled)}
-function updateScratchPlayButton(){const button=$('#scratchPlayBtn');button.textContent=engine.scratchPlaying?L('Pause','Pausar'):L('Play','Reproducir');button.classList.toggle('active',Boolean(engine.scratchPlaying))}
-function drawScratchWaveform(buffer:AudioBuffer){const canvas=$('#scratchWaveform') as HTMLCanvasElement,ctx=canvas.getContext('2d')!,width=canvas.width,height=canvas.height,data=buffer.getChannelData(0),stride=Math.max(1,Math.floor(data.length/width));ctx.clearRect(0,0,width,height);const gradient=ctx.createLinearGradient(0,0,width,0);gradient.addColorStop(0,'#2ee8ff');gradient.addColorStop(.52,'#8b7cff');gradient.addColorStop(1,'#ff3bd4');ctx.strokeStyle=gradient;ctx.lineWidth=1.5;ctx.beginPath();for(let x=0;x<width;x++){let peak=0;const start=x*stride;for(let i=0;i<stride&&start+i<data.length;i++)peak=Math.max(peak,Math.abs(data[start+i]!));const size=Math.max(1,peak*(height*.45));ctx.moveTo(x,height/2-size);ctx.lineTo(x,height/2+size)}ctx.stroke();ctx.fillStyle='#ffffff12';ctx.fillRect(0,height/2,width,1)}
-async function armScratchBuffer(buffer:AudioBuffer,label:string){scratchBuffer=buffer;scratchAngle=0;if($('#scratchRate')){$('#scratchRate').value='1';$('#scratchRateValue').textContent='1.00×';$('#scratchReverse').setAttribute('aria-pressed','false')};scratchStuttering=false;$('#scratchStutterBtn').setAttribute('aria-pressed','false');drawScratchWaveform(buffer);await engine.loadScratchBuffer(buffer);engine.setScratchFilter(+$('#scratchFilter').value);engine.setScratchMix(+$('#scratchMix').value);setScratchControls(true);updateScratchPlayButton();$('#scratchStatus').textContent=L(`BUFFER ARMED · ${label} · DRAG THE VINYL`,`BÚFER LISTO · ${label} · ARRASTRA EL VINILO`);toast(L('SCRATCH BUFFER ARMED','BÚFER DE SCRATCH LISTO'))}
-async function importScratchFile(file:File){const input=$('#scratchImport') as HTMLInputElement;input.disabled=true;$('#scratchStatus').textContent=L('DECODING LOCAL AUDIO…','DECODIFICANDO AUDIO LOCAL…');try{await engine.init();const buffer=await engine.ctx.decodeAudioData(await file.arrayBuffer());await armScratchBuffer(buffer,file.name)}catch(error){const message=error instanceof Error?error.message:String(error);$('#scratchStatus').textContent=`${L('IMPORT FAILED','ERROR DE IMPORTACIÓN')}: ${message}`;toast(L('FORMAT NOT SUPPORTED BY THIS BROWSER','FORMATO NO COMPATIBLE CON ESTE NAVEGADOR'))}finally{input.disabled=false;input.value=''}}
-async function audioRegionScratchBuffer(lane:AudioLane,region:AudioRegion){await engine.init();let source=engine.audioAssets.get(region.assetId);if(!source){const blob=await getAsset(region.assetId);if(!blob)throw new Error(L('LOCAL AUDIO FILE IS MISSING','FALTA EL ARCHIVO DE AUDIO LOCAL'));await engine.setAudioAsset(region.assetId,await blob.arrayBuffer());source=engine.audioAssets.get(region.assetId)}if(!source)throw new Error(L('AUDIO COULD NOT BE DECODED','NO SE PUDO DECODIFICAR EL AUDIO'));const rate=audioRegionRate(region,project.tempo),start=Math.max(0,Math.min(source.duration-.001,region.offsetSeconds)),requested=region.lengthSteps*60/project.tempo/4,duration=Math.max(.001,Math.min(requested,(source.duration-start)/rate)),sampleRate=engine.ctx.sampleRate,frames=Math.max(1,Math.round(duration*sampleRate)),buffer=engine.ctx.createBuffer(2,frames,sampleRate),gain=lane.volume*dbToGain(region.gainDb),fadeIn=Math.min(duration*.45,region.fadeInSteps*60/project.tempo/4),fadeOut=Math.min(duration*.45,region.fadeOutSteps*60/project.tempo/4),sourceSpan=duration*rate;for(let channel=0;channel<2;channel++){const from=source.getChannelData(Math.min(channel,source.numberOfChannels-1)),to=buffer.getChannelData(channel);for(let i=0;i<frames;i++){const time=i/sampleRate,sourceTime=region.reverse?start+sourceSpan-time*rate:start+time*rate,position=Math.max(0,Math.min(from.length-1.001,sourceTime*source.sampleRate)),index=Math.floor(position),next=Math.min(from.length-1,index+1),mix=position-index,envelope=(fadeIn&&time<fadeIn?time/fadeIn:1)*(fadeOut&&time>duration-fadeOut?(duration-time)/fadeOut:1);to[i]=(from[index]!*(1-mix)+from[next]!*mix)*gain*Math.max(0,Math.min(1,envelope))}}return buffer}
-async function loadAudioRegionIntoScratch(lane:AudioLane,region:AudioRegion,button:HTMLButtonElement){button.disabled=true;button.textContent=L('LOADING…','CARGANDO…');try{const buffer=await audioRegionScratchBuffer(lane,region);await armScratchBuffer(buffer,region.name);activateView('perform')}catch(error){toast(`${L('DECK LOAD FAILED','ERROR AL CARGAR EL PLATO')}: ${error instanceof Error?error.message:String(error)}`)}finally{button.disabled=false;button.textContent=L('LOAD DECK','AL PLATO')}}
-async function captureScratchMix(){const button=$('#scratchCaptureBtn');if(button.disabled)return;button.disabled=true;button.classList.add('busy');button.textContent=L('RENDERING…','RENDERIZANDO…');$('#scratchStatus').textContent=L('FORGING A MASTERED PERFORMANCE BUFFER…','CREANDO EL BÚFER MASTERIZADO…');try{const bars=Math.max(1,+$('#scratchBars').value),wav=await renderWav(project,{song:false});await engine.init();const decoded=await engine.ctx.decodeAudioData(await wav.arrayBuffer()),rate=engine.ctx.sampleRate,targetSeconds=bars*meterSteps(project.meter)*60/project.tempo/4,targetFrames=Math.max(1,Math.round(targetSeconds*rate)),sourceSteps=Math.max(...TRACKS.map(track=>clipLengthSteps(activeClip(project,track)))),sourceSeconds=sourceSteps*60/project.tempo/4,sourceFrames=Math.max(1,Math.min(decoded.length,Math.round(sourceSeconds*decoded.sampleRate))),buffer=engine.ctx.createBuffer(2,targetFrames,rate);for(let channel=0;channel<2;channel++){const source=decoded.getChannelData(Math.min(channel,decoded.numberOfChannels-1)),target=buffer.getChannelData(channel);for(let i=0;i<target.length;i++){const sourcePosition=(i*decoded.sampleRate/rate)%sourceFrames,index=Math.floor(sourcePosition),next=(index+1)%sourceFrames,mix=sourcePosition-index;target[i]=source[index]!*(1-mix)+source[next]!*mix}}await armScratchBuffer(buffer,L(`${bars} BAR${bars===1?'':'S'}`,`${bars} COMPÁS${bars===1?'':'ES'}`))}catch(error){$('#scratchStatus').textContent=`${L('CAPTURE FAILED','ERROR DE CAPTURA')}: ${error instanceof Error?error.message:String(error)}`;toast(L('SCRATCH ENGINE UNAVAILABLE','MOTOR DE SCRATCH NO DISPONIBLE'))}finally{button.disabled=false;button.classList.remove('busy');button.textContent=L('CAPTURE MIX','CAPTURAR MEZCLA')}}
-function animateScratchDeck(now=performance.now()){cancelAnimationFrame(scratchAnimation);const dt=Math.min(.05,(now-scratchLastFrame)/1000);scratchLastFrame=now;if(scratchBuffer&&engine.scratchPlaying&&!$('.scratch-deck').classList.contains('scratching'))scratchAngle+=Number(engine.scratchSpeed||0)*200*dt;$('#scratchPlatter').style.setProperty('--rotation',`${scratchAngle}deg`);$('#scratchSpeed').textContent=`${Number(engine.scratchSpeed||0)>=0?'+':''}${Number(engine.scratchSpeed||0).toFixed(2)}×`;if(scratchBuffer&&engine.scratchFrames)$('#scratchWavePlayhead').style.left=`${Math.max(0,Math.min(100,(engine.scratchPosition||0)/engine.scratchFrames*100))}%`;scratchAnimation=requestAnimationFrame(animateScratchDeck)}
-
-function scratchMotorRate(){return (+$('#scratchRate').value||1)*($('#scratchReverse').getAttribute('aria-pressed')==='true'?-1:1)}
-function setupScratchPro(){
- const mic=document.createElement('button');mic.id='scratchMic';mic.textContent=L('Record mic','Grabar micro');$('.scratch-capture').append(mic);
- $('.scratch-controls').insertAdjacentHTML('beforeend',`<div class="scratch-pro"><label>${L('Stutter interval','Intervalo stutter')}<select id="scratchDivision" aria-label="${L('Stutter interval','Intervalo stutter')}"><option value="1">1/1</option><option value="2">1/2</option><option value="4">1/4</option><option value="8" selected>1/8</option><option value="16">1/16</option><option value="32">1/32</option><option value="64">1/64</option></select></label><label>${L('Motor speed (changes pitch)','Velocidad (cambia el tono)')} <output id="scratchRateValue">1.00×</output><input id="scratchRate" type="range" min=".5" max="1.5" step=".01" value="1"></label><button id="scratchReverse" aria-pressed="false">${L('Reverse','Reversa')}</button><button id="scratchRestart">${L('Back to start','Volver al inicio')}</button><p>${L('Mic audio is temporary. Use Audio → Scratch resample to keep it in the project.','El audio del micro es temporal. Usa Audio → Scratch resample para guardarlo en el proyecto.')}</p></div>`);
- $('#scratchDivision').onchange=()=>{if(scratchStuttering)engine.setScratchStutter(Math.round((engine.scratchSampleRate||44100)*60/project.tempo*4/+$('#scratchDivision').value))};
- $('#scratchRate').oninput=()=>{$('#scratchRateValue').textContent=`${(+$ ('#scratchRate').value).toFixed(2)}×`;engine.setScratchSpeed(scratchMotorRate())};
- $('#scratchReverse').onclick=()=>{const b=$('#scratchReverse');b.setAttribute('aria-pressed',String(b.getAttribute('aria-pressed')!=='true'));engine.setScratchSpeed(scratchMotorRate())};
- $('#scratchRestart').onclick=()=>{scratchStuttering=false;$('#scratchStutterBtn').setAttribute('aria-pressed','false');engine.setScratchStutter(0);engine.scratchNode?.port.postMessage({type:'seek',frame:0});engine.setScratchSpeed(scratchMotorRate());engine.setScratchPlaying(true);updateScratchPlayButton()};
- let recorder:MediaRecorder|null=null,stream:MediaStream|null=null,timer:ReturnType<typeof setTimeout>|undefined;
- const stop=()=>{if(recorder?.state==='recording')recorder.stop();stream?.getTracks().forEach(t=>t.stop());clearTimeout(timer)};
- window.addEventListener('pagehide',stop);
- mic.onclick=async()=>{if(recorder?.state==='recording'){stop();return}mic.disabled=true;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});const chunks:Blob[]=[];recorder=new MediaRecorder(stream);const current=recorder;current.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};current.onstop=async()=>{stop();mic.disabled=true;try{await engine.init();const buffer=await engine.ctx.decodeAudioData(await new Blob(chunks,{type:current.mimeType}).arrayBuffer());await armScratchBuffer(buffer,L('Microphone','Micrófono'));engine.setScratchPlaying(false);updateScratchPlayButton()}catch(error){toast(String(error))}finally{recorder=null;mic.disabled=false;mic.textContent=L('Record mic','Grabar micro');mic.setAttribute('aria-pressed','false')}};current.start();mic.textContent=L('Stop mic (max 60 s)','Parar micro (máx. 60 s)');mic.setAttribute('aria-pressed','true');timer=setTimeout(stop,60000)}catch(error){stop();recorder=null;toast(`${L('Microphone unavailable','Micrófono no disponible')}: ${String(error)}`)}finally{mic.disabled=false}};
-}
-
-function setupScratchDeck(){setupScratchPro();setScratchControls(false);engine.onScratchPosition=(state:any)=>{engine.scratchPosition=state.frame;engine.scratchSpeed=state.speed;engine.scratchPlaying=state.playing};$('#scratchCaptureBtn').onclick=captureScratchMix;$('#scratchImport').onchange=(event:any)=>{const file=event.target.files?.[0] as File|undefined;if(file)importScratchFile(file)};$('#scratchPlayBtn').onclick=()=>{engine.setScratchPlaying(!engine.scratchPlaying);updateScratchPlayButton()};$('#scratchSyncBtn').onclick=()=>engine.syncScratch((engine.scratchSampleRate||44100)*60/project.tempo*4/project.meter.unit);$('#scratchBrakeBtn').onclick=()=>{engine.setScratchSpeed(0,1.15);toast(L('MOTOR BRAKE','FRENO DE MOTOR'))};$('#scratchSpinBtn').onclick=()=>{engine.setScratchPlaying(true);engine.setScratchSpeed(-3.6,.035);engine.setScratchSpeed(0,1.6);updateScratchPlayButton()};$('#scratchStutterBtn').onclick=()=>{scratchStuttering=!scratchStuttering;const frames=scratchStuttering?Math.round((engine.scratchSampleRate||44100)*60/project.tempo*4/(+$('#scratchDivision').value)):0;engine.setScratchStutter(frames);$('#scratchStutterBtn').setAttribute('aria-pressed',String(scratchStuttering))};$('#scratchFilter').oninput=()=>{const value=+$('#scratchFilter').value;engine.setScratchFilter(value);$('#scratchFilterValue').textContent=value>.96?'OPEN':`${Math.round(value*100)}%`};$('#scratchMix').oninput=()=>{const value=+$('#scratchMix').value;engine.setScratchMix(value);$('#scratchMixValue').textContent=`${L('DECK','PLATO')} ${Math.round(value*100)}%`};const platter=$('#scratchPlatter');let previousAngle=0,previousTime=0,dragging=false,rotation=0;const angle=(event:PointerEvent)=>{const rect=platter.getBoundingClientRect();return Math.atan2(event.clientY-(rect.top+rect.height/2),event.clientX-(rect.left+rect.width/2))};platter.onpointerdown=(event:PointerEvent)=>{if(!scratchBuffer)return;event.preventDefault();dragging=true;previousAngle=angle(event);previousTime=performance.now();rotation=scratchAngle;try{platter.setPointerCapture(event.pointerId)}catch{}$('.scratch-deck').classList.add('scratching');engine.setScratchPlaying(true);engine.setScratchSpeed(0,0);updateScratchPlayButton()};platter.onpointermove=(event:PointerEvent)=>{if(!dragging)return;event.preventDefault();const current=angle(event),time=performance.now();let delta=current-previousAngle;if(delta>Math.PI)delta-=Math.PI*2;if(delta<-Math.PI)delta+=Math.PI*2;rotation+=delta*180/Math.PI;scratchAngle=rotation;const elapsed=Math.max(.008,(time-previousTime)/1000),speed=Math.max(-6,Math.min(6,delta/(Math.PI*2)/elapsed/(33.333/60)));engine.setScratchSpeed(speed,0);previousAngle=current;previousTime=time};const release=(event:PointerEvent)=>{if(!dragging)return;dragging=false;try{platter.releasePointerCapture(event.pointerId)}catch{}$('.scratch-deck').classList.remove('scratching');engine.setScratchSpeed(scratchMotorRate(),.14)};platter.onpointerup=release;platter.onpointercancel=release;platter.onwheel=(event:WheelEvent)=>{if(!scratchBuffer)return;event.preventDefault();engine.setScratchPlaying(true);engine.setScratchSpeed(Math.max(-4,Math.min(4,-event.deltaY*.018)),.01);clearTimeout(engine.scratchReturnTimer);engine.scratchReturnTimer=setTimeout(()=>engine.setScratchSpeed(scratchMotorRate(),.12),90)};platter.onkeydown=(event:KeyboardEvent)=>{if(!scratchBuffer)return;if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();engine.setScratchPlaying(true);engine.setScratchSpeed(event.key==='ArrowLeft'?-1.8:1.8,.01)}else if(event.key==='Enter'){event.preventDefault();$('#scratchPlayBtn').click()}};platter.onkeyup=(event:KeyboardEvent)=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight')engine.setScratchSpeed(scratchMotorRate(),.1)};animateScratchDeck()}
-
-const performanceEventThrottle=new Map<string,number>();
-function performanceStep(){return Math.max(0,(Date.now()-performanceStarted)/1000/(60/project.tempo/4))}
-function recordPerformanceEvent(kind:PerformanceEvent['kind'],target:string,value:number|string|boolean){if(!performanceEvents)return;const step=performanceStep(),key=`${kind}:${target}`,last=performanceEventThrottle.get(key)??-1;if(step-last<.12)return;performanceEventThrottle.set(key,step);performanceEvents.push({id:crypto.randomUUID(),step,kind,target,value})}
-async function loadPerformanceAudio(take:PerformanceTake){if(!take.audioAssetId)return null;return getAsset(take.audioAssetId)}
-function applyPerformanceEvent(event:PerformanceEvent){if(event.kind==='macro'){const [clipId,key]=event.target.split(':'),target=project.clips.find((item:any)=>item.id===clipId);if(target&&key)target.character.macros[key]=+event.value}else if(event.kind==='mixer'){if(event.target==='master:volume'){project.master=+event.value;engine.setProject(project);return}if(event.target==='master:bypass'){project.masterSettings.bypass=Boolean(event.value);engine.setProject(project);return}const [track,key]=event.target.split(':') as [TrackId,string],cfg=project.tracks[track];if(!cfg||!key)return;if(key==='solo'){TRACKS.forEach(id=>project.tracks[id].solo=false);cfg.solo=Boolean(event.value)}else if(key==='faderDb')cfg.volume=+event.value<=-60?0:10**(+event.value/20);else if(key==='delay'||key==='reverb')activeClip(project,track).character.fx[key]=+event.value;else (cfg as any)[key]=event.value}else if(event.kind==='scratch'){if(event.target==='speed')engine.setScratchSpeed(+event.value,.01);if(event.target==='mix')engine.setScratchMix(+event.value);if(event.target==='filter')engine.setScratchFilter(+event.value);if(event.target==='stutter')engine.setScratchStutter(event.value?Math.round((engine.scratchSampleRate||44100)*60/project.tempo*4/(+$('#scratchDivision').value)):0);if(event.target==='playing')engine.setScratchPlaying(Boolean(event.value))}else if(event.kind==='launcher'){const track=event.target as TrackId;if(event.value==='stop')engine.stopLauncherTrack(track,true);else if(typeof event.value==='string')engine.queueClip(track,event.value,1)}engine.setProject(project)}
-async function playPerformanceTake(take:PerformanceTake){const blob=await loadPerformanceAudio(take);if(!blob){toast(L('TAKE AUDIO IS MISSING ON THIS DEVICE','FALTA EL AUDIO DE LA TOMA EN ESTE DISPOSITIVO'));return}const audio=new Audio(URL.createObjectURL(blob)),secondsPerTakeStep=60/project.tempo/4,timers:number[]=[];audio.currentTime=Math.max(0,take.trimStart*secondsPerTakeStep);for(const event of take.events.filter(item=>item.step>=take.trimStart&&item.step<=take.trimEnd))timers.push(window.setTimeout(()=>{applyPerformanceEvent(event);if(activeView==='perform')renderPerformanceTakes();if(activeView==='mix')renderMixer()},Math.max(0,(event.step-take.trimStart)*secondsPerTakeStep*1000)));await audio.play();window.setTimeout(()=>{audio.pause();timers.forEach(timer=>clearTimeout(timer));URL.revokeObjectURL(audio.src)},Math.max(100,(take.trimEnd-take.trimStart)*secondsPerTakeStep*1000))}
-function openTakeEditor(take:PerformanceTake){activePerformanceTakeId=take.id;$('#takeEditorTitle').textContent=take.name;$('#takeTrimStart').value=take.trimStart;$('#takeTrimEnd').value=take.trimEnd;const renderEvents=()=>{$('#takeEventList').innerHTML=take.events.filter(event=>event.step>=take.trimStart&&event.step<=take.trimEnd).map(event=>`<div class="take-event" data-take-event="${event.id}"><code>${event.kind.toUpperCase()}</code><input data-event-step type="number" min="0" max="${take.durationSteps}" step=".25" value="${event.step.toFixed(3)}"><span>${esc(event.target)}</span><input data-event-value value="${esc(String(event.value))}" aria-label="Event value"><button data-event-delete>×</button></div>`).join('')||`<p class="launcher-status">${L('NO EVENTS INSIDE THE CURRENT TRIM','NO HAY EVENTOS DENTRO DEL RECORTE')}</p>`;$$('[data-take-event]').forEach(row=>{const event=take.events.find(item=>item.id===row.dataset.takeEvent)!;row.querySelector('[data-event-step]').onchange=(input:any)=>{event.step=Math.max(0,Math.min(take.durationSteps,+input.target.value));take.events.sort((a,b)=>a.step-b.step);changed();renderEvents()};row.querySelector('[data-event-value]').onchange=(input:any)=>{const raw=input.target.value;event.value=event.value===true||event.value===false?raw==='true':typeof event.value==='number'?(Number.isFinite(+raw)?+raw:event.value):raw;changed()};row.querySelector('[data-event-delete]').onclick=()=>{take.events=take.events.filter(item=>item.id!==event.id);changed();renderEvents()}})};const trim=()=>{take.trimStart=Math.max(0,Math.min(take.durationSteps-.25,+$('#takeTrimStart').value||0));take.trimEnd=Math.max(take.trimStart+.25,Math.min(take.durationSteps,+$('#takeTrimEnd').value||take.durationSteps));changed();renderEvents()};$('#takeTrimStart').onchange=trim;$('#takeTrimEnd').onchange=trim;$('#takeQuantizeBtn').onclick=()=>{quantizePerformanceTake(take,project.editor.snap);changed();renderEvents()};renderEvents();open('#takeEditorDialog')}
-function renderPerformanceTakes(){const root=$('#performanceTakes');if(!root)return;root.innerHTML=project.performanceTakes.length?project.performanceTakes.map((take:PerformanceTake)=>`<article class="performance-take ${take.id===activePerformanceTakeId?'active':''}" data-take="${take.id}"><span><b>${esc(take.name)}</b><small>${take.events.length} EVENTS · ${take.trimStart.toFixed(1)}–${take.trimEnd.toFixed(1)} STEPS</small></span><button data-take-play>▶</button><button data-take-edit>EDIT</button><button data-take-export>EXPORT</button><button data-take-delete>×</button></article>`).join(''):`<p class="launcher-status">${L('NO SAVED TAKES · RECORDING STORES AUDIO AND EDITABLE CONTROL EVENTS LOCALLY','SIN TOMAS · LA GRABACIÓN GUARDA AUDIO Y EVENTOS EDITABLES EN LOCAL')}</p>`;$$('[data-take]').forEach(card=>{const take=project.performanceTakes.find((item:PerformanceTake)=>item.id===card.dataset.take)!;card.querySelector('[data-take-play]').onclick=()=>playPerformanceTake(take);card.querySelector('[data-take-edit]').onclick=()=>openTakeEditor(take);card.querySelector('[data-take-export]').onclick=async()=>{activePerformanceTakeId=take.id;performanceTake=await loadPerformanceAudio(take);performExport('performance',true)};card.querySelector('[data-take-delete]').onclick=async()=>{if(!confirm(L(`Delete “${take.name}”?`,`¿Borrar “${take.name}”?`)))return;project.performanceTakes=project.performanceTakes.filter((item:PerformanceTake)=>item.id!==take.id);if(take.audioAssetId)await deleteAsset(take.audioAssetId);changed();renderPerformanceTakes()}})}
-async function togglePerformanceCapture(){const button=$('#performanceRecordBtn');if(engine.performanceRecorder?.state==='recording'){try{performanceTake=await engine.stopPerformanceCapture();if(performanceTimer)clearInterval(performanceTimer);performanceTimer=null;const durationSteps=Math.max(1,performanceStep()),take=createPerformanceTake(`${L('Live take','Toma en directo')} ${project.performanceTakes.length+1}`,durationSteps,performanceEvents||[]),assetId=`take-${take.id}`;take.audioAssetId=assetId;take.mimeType=performanceTake.type;await putAsset(assetId,performanceTake);project.performanceTakes.push(take);activePerformanceTakeId=take.id;performanceEvents=null;changed();renderPerformanceTakes();button.textContent=L('● RECORD TAKE','● GRABAR TOMA');button.classList.remove('active');$('#performanceSaveBtn').disabled=false;toast(L('PERFORMANCE TAKE STORED WITH EDITABLE EVENTS','TOMA GUARDADA CON EVENTOS EDITABLES'))}catch(error){toast(error instanceof Error?error.message:String(error))}return}try{performanceTake=null;performanceEvents=[];performanceEventThrottle.clear();$('#performanceSaveBtn').disabled=true;await engine.startPerformanceCapture();performanceStarted=Date.now();button.textContent=L('■ STOP TAKE','■ PARAR TOMA');button.classList.add('active');performanceTimer=setInterval(()=>{const elapsed=Math.floor((Date.now()-performanceStarted)/1000);$('#performanceRecordTime').textContent=`${String(Math.floor(elapsed/60)).padStart(2,'0')}:${String(elapsed%60).padStart(2,'0')}`},250);toast(L('PERFORMANCE CAPTURE ACTIVE','CAPTURA DE INTERPRETACIÓN ACTIVA'))}catch(error){performanceEvents=null;toast(`${L('CAPTURE UNAVAILABLE','CAPTURA NO DISPONIBLE')}: ${error instanceof Error?error.message:String(error)}`)}}
-function mixSnapshot(){const tracks=Object.fromEntries(TRACKS.map(track=>[track,{volume:project.tracks[track].volume,pan:project.tracks[track].pan,preGainDb:project.tracks[track].preGainDb}])),loudness=Math.sqrt(TRACKS.reduce((sum,track)=>sum+(project.tracks[track].volume*10**(project.tracks[track].preGainDb/20))**2,0));return{tracks,master:project.master,loudness}}
-function captureMixerReference(){mixerReference=mixSnapshot();mixerComparing=false;$('#mixCompareBtn').disabled=false;$('#mixCompareBtn').setAttribute('aria-pressed','false');toast(L('MIX A CAPTURED · LOUDNESS MATCH READY','MEZCLA A CAPTURADA · NIVEL COMPENSADO LISTO'))}
-function toggleMixerReference(){if(!mixerReference)return;if(!mixerReference.current)mixerReference.current=mixSnapshot();mixerComparing=!mixerComparing;const source=mixerComparing?mixerReference:mixerReference.current,target=mixerComparing?mixerReference.current:mixerReference,compensation=Math.max(.5,Math.min(2,(target.loudness||1)/(source.loudness||1)));for(const track of TRACKS)Object.assign(project.tracks[track],source.tracks[track]);project.master=Math.max(0,Math.min(1,source.master*compensation));engine.setProject(project);renderMixer();renderTracks();$('#mixCompareBtn').setAttribute('aria-pressed',String(mixerComparing));$('#mixCompareBtn').textContent=mixerComparing?L('LISTENING A · MATCHED','ESCUCHANDO A · IGUALADO'):L('COMPARE B','COMPARAR B')}
-function setupArrangeTools(){$('#arrangeSelectAllBtn').onclick=()=>{selectedScenes=new Set(project.arrangement.map((_scene:any,index:number)=>index));renderArrangement()};$('#arrangeDuplicateBtn').onclick=()=>{if(!selectedScenes.size)return;snapshot();const copies=duplicateArrangementSelection(project,[...selectedScenes]);selectedScenes=new Set(copies.map((_copy,index)=>project.arrangement.length-copies.length+index));changed(true)};$('#arrangeCopyBtn').onclick=()=>{sceneClipboard=[...selectedScenes].sort((a,b)=>a-b).map(index=>structuredClone(project.arrangement[index]));toast(`${sceneClipboard.length} ${L('SECTIONS COPIED','SECCIONES COPIADAS')}`)};$('#arrangePasteBtn').onclick=()=>{if(!sceneClipboard.length)return;snapshot();const at=selectedScenes.size?Math.max(...selectedScenes)+1:project.arrangement.length,copies=sceneClipboard.map(scene=>({...structuredClone(scene),id:crypto.randomUUID(),name:`${scene.name} COPY`}));project.arrangement.splice(at,0,...copies);selectedScenes=new Set(copies.map((_copy,index)=>at+index));changed(true)};$('#arrangeDeleteBtn').onclick=()=>{if(!selectedScenes.size)return;snapshot();if(!removeArrangementSelection(project,[...selectedScenes])){toast(L('THE SONG MUST KEEP ONE SECTION','LA CANCIÓN DEBE CONSERVAR UNA SECCIÓN'));return}selectedScenes.clear();changed(true)};$('#arrangeFillBtn').onclick=()=>{snapshot();const at=selectedScenes.size?Math.max(...selectedScenes)+1:project.arrangement.length,source=project.arrangement[Math.max(0,at-1)]||project.arrangement[0],drum=createClip('drums','IMPACT FILL',1,meterSteps(project.meter));generateClip(project,drum,'drums',1);drum.notes.push(makeNote(Math.max(0,drum.stepsPerBar-2),6,1,1));project.clips.push(drum);project.arrangement.splice(at,0,{id:crypto.randomUUID(),name:'IMPACT FILL',clipIds:{...source.clipIds,drums:drum.id},repeats:1});selectedScenes=new Set([at]);changed(true)};$('#arrangeMarkerBtn').onclick=()=>{const name=prompt(L('Marker name','Nombre del marcador'),`MARK ${project.markers.length+1}`);if(!name?.trim())return;snapshot();project.markers.push({id:crypto.randomUUID(),name:name.trim(),step:globalStartStep,color:['#2ee8ff','#ff3bd4','#a7ff5b','#ff9f43'][project.markers.length%4]});project.markers.sort((a:any,b:any)=>a.step-b.step);changed(true)};$('#arrangeZoom').oninput=()=>{project.editor.arrangeZoom=+$('#arrangeZoom').value;renderArrangement()};$('#arrangeZoom').onchange=()=>changed();$('#arrangeLoopEnabled').onchange=()=>{project.loop.enabled=$('#arrangeLoopEnabled').checked;changed()};$('#arrangePunchEnabled').onchange=()=>{project.loop.punch=$('#arrangePunchEnabled').checked;changed()};const loopChange=()=>{project.loop.start=Math.max(0,+$('#arrangeLoopStart').value||0);project.loop.end=Math.max(project.loop.start+1,+$('#arrangeLoopEnd').value||1);changed()};$('#arrangeLoopStart').onchange=loopChange;$('#arrangeLoopEnd').onchange=loopChange}
-type UserPreset={id:string;name:string;track:TrackId;tags:string[];instrument:TrackState;character:any};const USER_PRESETS='kiber-vengance-user-presets-v1',PRESET_FAVORITES='kiber-vengance-preset-favorites-v1';
-function userPresets():UserPreset[]{try{return JSON.parse(localStorage.getItem(USER_PRESETS)||'[]')}catch{return[]}}
-function saveUserPresets(items:UserPreset[]){localStorage.setItem(USER_PRESETS,JSON.stringify(items))}
-function presetFavorites(){try{return new Set<string>(JSON.parse(localStorage.getItem(PRESET_FAVORITES)||'[]'))}catch{return new Set<string>()}}
-function renderPresetLibrary(){const query=String($('#presetSearch').value||'').toLowerCase(),favorites=presetFavorites(),builtins=TRACKS.flatMap(track=>presets[track].map(name=>({id:`builtin:${track}:${name}`,name,track,tags:['factory',track]}))),users=userPresets(),items=[...builtins,...users].filter(item=>`${item.name} ${item.track} ${item.tags.join(' ')}`.toLowerCase().includes(query));$('#presetLibrary').innerHTML=items.map(item=>`<article class="preset-card" data-preset-id="${esc(item.id)}"><span><b>${esc(item.name)}</b><small>${item.track.toUpperCase()} · ${item.tags.map(tag=>tag.toUpperCase()).join(' · ')}</small></span><button class="favorite" data-preset-favorite aria-pressed="${favorites.has(item.id)}">${favorites.has(item.id)?'★':'☆'}</button><button data-preset-load>LOAD</button>${item.id.startsWith('builtin:')?'':'<button data-preset-delete>×</button>'}</article>`).join('');$$('[data-preset-id]').forEach(card=>{const item=items.find(candidate=>candidate.id===card.dataset.presetId)!;card.querySelector('[data-preset-load]').onclick=()=>{snapshot();selectedTrack=item.track;if(item.id.startsWith('builtin:'))applyPreset(item.track,item.name);else{Object.assign(project.tracks[item.track],structuredClone((item as UserPreset).instrument));activeClip(project,item.track).character=structuredClone((item as UserPreset).character)}changed(true);$('#presetDialog').close();toast(L('PRESET LOADED','PRESET CARGADO'))};card.querySelector('[data-preset-favorite]').onclick=()=>{const next=presetFavorites();if(next.has(item.id))next.delete(item.id);else next.add(item.id);localStorage.setItem(PRESET_FAVORITES,JSON.stringify([...next]));renderPresetLibrary()};const remove=card.querySelector('[data-preset-delete]');if(remove)remove.onclick=()=>{saveUserPresets(userPresets().filter(candidate=>candidate.id!==item.id));renderPresetLibrary()}})}
-function saveCurrentPreset(){const name=prompt(L('Preset name','Nombre del preset'),`${TRACK_META[selectedTrack].label} CUSTOM`);if(!name?.trim())return;const tags=(prompt(L('Tags separated by commas','Etiquetas separadas por comas'),'custom, cinematic')||'custom').split(',').map(tag=>tag.trim()).filter(Boolean),items=userPresets();items.push({id:crypto.randomUUID(),name:name.trim(),track:selectedTrack,tags,instrument:structuredClone(project.tracks[selectedTrack]),character:structuredClone(clip().character)});saveUserPresets(items);renderPresetLibrary()}
-async function loadLocalSample(asset:SampleAsset){const blob=await getAsset(asset.id);if(!blob){toast(`${DRUM_NAMES[asset.slot]} · ${L('SAMPLE FILE MISSING','ARCHIVO DE SAMPLE AUSENTE')}`);return}await engine.setDrumSample(asset.slot,await blob.arrayBuffer(),asset)}
-async function loadLocalSamples(){for(const asset of project.samples)try{await loadLocalSample(asset)}catch{}}
-function renderSampleSlots(){$('#sampleSlots').innerHTML=DRUM_NAMES.map((name,slot)=>{const asset=project.samples.find((item:SampleAsset)=>item.slot===slot);return `<article class="sample-slot" data-sample-slot="${slot}"><b>${name}</b><label class="file-button">${asset?esc(asset.name):'LOAD WAV/MP3'}<input data-sample-file type="file" accept="audio/*"></label><label>START<input data-sample-setting="trimStart" type="range" min="0" max=".95" step=".01" value="${asset?.trimStart??0}"></label><label>END<input data-sample-setting="trimEnd" type="range" min=".05" max="1" step=".01" value="${asset?.trimEnd??1}"></label><label>TUNE<input data-sample-setting="tune" type="number" min="-24" max="24" step="1" value="${asset?.tune??0}"></label><label>ATTACK<input data-sample-setting="attack" type="number" min="0" max="1" step=".001" value="${asset?.attack??.002}"></label><label>RELEASE<input data-sample-setting="release" type="number" min=".005" max="3" step=".005" value="${asset?.release??.08}"></label><label>REVERSE<input data-sample-setting="reverse" type="checkbox" ${asset?.reverse?'checked':''}></label><button data-sample-remove ${asset?'':'disabled'}>×</button></article>`}).join('');$$('[data-sample-slot]').forEach(row=>{const slot=+row.dataset.sampleSlot,file=row.querySelector('[data-sample-file]');file.onchange=async()=>{const blob=file.files?.[0];if(!blob)return;const old=project.samples.find((item:SampleAsset)=>item.slot===slot);if(old)await deleteAsset(old.id);const asset:SampleAsset={id:`sample-${crypto.randomUUID()}`,name:blob.name,slot,size:blob.size,type:blob.type||'audio/wav',trimStart:0,trimEnd:1,tune:0,attack:.002,release:.08,reverse:false};await putAsset(asset.id,blob);project.samples=project.samples.filter((item:SampleAsset)=>item.slot!==slot);project.samples.push(asset);await loadLocalSample(asset);changed();renderSampleSlots();toast(`${DRUM_NAMES[slot]} · ${L('SAMPLE READY','SAMPLE LISTO')}`)};row.querySelectorAll('[data-sample-setting]').forEach((input:any)=>input.onchange=async()=>{const asset=project.samples.find((item:SampleAsset)=>item.slot===slot);if(!asset)return;const key=input.dataset.sampleSetting;asset[key]=input.type==='checkbox'?input.checked:+input.value;if(asset.trimEnd<=asset.trimStart)asset.trimEnd=Math.min(1,asset.trimStart+.05);await loadLocalSample(asset);changed();renderSampleSlots()});row.querySelector('[data-sample-remove]').onclick=async()=>{const asset=project.samples.find((item:SampleAsset)=>item.slot===slot);if(!asset)return;await deleteAsset(asset.id);project.samples=project.samples.filter((item:SampleAsset)=>item.id!==asset.id);engine.clearDrumSample(slot);changed();renderSampleSlots()}})}
-function setupLibraries(){$('#presetLibraryBtn').onclick=()=>{$('#projectMenu').close();renderPresetLibrary();open('#presetDialog')};$('#sampleLibraryBtn').onclick=()=>{$('#projectMenu').close();renderSampleSlots();open('#sampleDialog')};$('#presetSearch').oninput=renderPresetLibrary;$('#saveUserPresetBtn').onclick=saveCurrentPreset;$('#exportPresetBankBtn').onclick=()=>download(JSON.stringify({format:'kiber-vengance-preset-bank',version:1,presets:userPresets()},null,2),'kiber-vengance-presets.json','application/json');$('#importPresetBank').onchange=async(event:any)=>{try{const data=JSON.parse(await event.target.files[0].text());if(data.format!=='kiber-vengance-preset-bank'||!Array.isArray(data.presets))throw new Error('Invalid preset bank');saveUserPresets([...userPresets(),...data.presets]);renderPresetLibrary();toast(L('PRESET BANK IMPORTED','BANCO DE PRESETS IMPORTADO'))}catch(error){toast(error instanceof Error?error.message:String(error))}};$('#compactModeBtn').onclick=()=>{document.body.classList.toggle('compact-mode');$('#compactModeBtn').setAttribute('aria-pressed',String(document.body.classList.contains('compact-mode')));writeUiPrefs()}}
-function setupPrecisionControls(){$('#masterBypassBtn').onclick=()=>{snapshot();project.masterSettings.bypass=!project.masterSettings.bypass;engine.setProject(project);recordPerformanceEvent('mixer','master:bypass',project.masterSettings.bypass);changed();renderMixer()};$('#cancelExportBtn').onclick=()=>exportController?.abort()}
-function setupStudioExtensions(){$('#globalPosition').oninput=()=>setGlobalStart(+$('#globalPosition').value);$('#clipPosition').oninput=()=>setClipStart(+$('#clipPosition').value);$('#globalZeroBtn').onclick=()=>setGlobalStart(0);$('#clipZeroBtn').onclick=()=>setClipStart(0);$('#globalStartBtn').onclick=()=>{if(engine.playing)engine.stop();activateView('arrange');togglePlay(true)};$('#clipStartBtn').onclick=()=>{if(engine.playing)engine.stop();activateView('forge');togglePlay(false)};$('#performanceRecordBtn').onclick=togglePerformanceCapture;$('#performanceSaveBtn').onclick=()=>performExport('performance',true);$('#mixCaptureBtn').onclick=captureMixerReference;$('#mixCompareBtn').onclick=toggleMixerReference;$('#mixerMaster').onpointerdown=snapshot;$('#mixerMaster').oninput=()=>{project.master=+$('#mixerMaster').value;recordPerformanceEvent('mixer','master:volume',project.master);$('#mixerMasterValue').textContent=`${Math.round(project.master*100)}%`;$('#masterVolume').value=project.master;$('#masterValue').textContent=Math.round(project.master*100);engine.setProject(project)};$('#mixerMaster').onchange=()=>changed();$('#forgetTargetsBtn').onclick=async()=>{for(const kind of [...quickHandles.keys()])await forgetExportTarget(kind);toast(L('EXPORT DESTINATIONS FORGOTTEN','DESTINOS DE EXPORTACIÓN OLVIDADOS'))};$$('[data-export]').forEach(button=>button.onclick=()=>performExport(button.dataset.export,false));$$('[data-export-as]').forEach(button=>button.onclick=()=>performExport(button.dataset.exportAs,true))}
-
-type CommandAction={label:string;labelEs:string;group:string;groupEs:string;shortcut:string;icon:string;keywords:string;run:()=>void};
-function readUiPrefs():{focus:boolean;collapsed:string[];compact:boolean}{try{return{focus:false,collapsed:[],compact:false,...JSON.parse(localStorage.getItem(UI_STORAGE)||'{}')}}catch{return{focus:false,collapsed:[],compact:false}}}
-function writeUiPrefs(){localStorage.setItem(UI_STORAGE,JSON.stringify({focus:document.body.classList.contains('focus-mode'),collapsed:$$('.collapsible-rack.collapsed').map(x=>x.id),compact:document.body.classList.contains('compact-mode')}))}
-function setRackCollapsed(id:string,collapsed:boolean,persist=true){const rack=$(`#${id}`),button=rack?.querySelector('.rack-toggle'),names:Record<string,string>={synthRack:L('synthesizer','sintetizador'),motionRack:L('Motion Engine','motor de movimiento'),effectsRack:L('effects','efectos'),macroRack:'macros'};if(!rack)return;rack.classList.toggle('collapsed',collapsed);button?.setAttribute('aria-expanded',String(!collapsed));button?.setAttribute('aria-label',`${collapsed?L('Expand','Expandir'):L('Collapse','Plegar')} ${names[id]||L('panel','panel')}`);if(button)button.textContent=collapsed?'+':'−';if(persist)writeUiPrefs()}
-function toggleFocus(force?:boolean,silent=false){const active=force??!document.body.classList.contains('focus-mode');document.body.classList.toggle('focus-mode',active);$('#focusBtn').setAttribute('aria-pressed',String(active));writeUiPrefs();if(!silent)toast(active?L('FOCUS MODE · EDITOR LOCKED','MODO FOCO · EDITOR BLOQUEADO'):L('FULL SIGNAL RACKS RESTORED','PANELES DE SEÑAL RESTAURADOS'))}
-function selectTrack(track:TrackId){selectedTrack=track;selectedNotes.clear();activateView('forge');renderAll();setDefaultScroll()}
-const commands:CommandAction[]=[
-  {label:'Play / stop transport',labelEs:'Reproducir / detener transporte',group:'TRANSPORT',groupEs:'TRANSPORTE',shortcut:'SPACE',icon:'▶',keywords:'play stop transport reproducir parar',run:()=>togglePlay()},
-  {label:'Arm / disarm recording',labelEs:'Armar / desarmar grabación',group:'TRANSPORT',groupEs:'TRANSPORTE',shortcut:'R',icon:'●',keywords:'record arm grabar',run:()=>$('#recordBtn').click()},
-  {label:'Toggle metronome',labelEs:'Activar metrónomo',group:'TRANSPORT',groupEs:'TRANSPORTE',shortcut:'',icon:'⌁',keywords:'metro click metrónomo',run:()=>$('#metroBtn').click()},
-  {label:'Toggle Solo on active track',labelEs:'Activar o quitar Solo en la pista activa',group:'MIX',groupEs:'MEZCLA',shortcut:'SHIFT S',icon:'S',keywords:'solo isolate isolation aislar aislamiento restore mix mezcla instrument instrumento',run:()=>$(`[data-solo="${selectedTrack}"]`)?.click()},
-  {label:'Toggle Mute on active track',labelEs:'Silenciar o restaurar la pista activa',group:'MIX',groupEs:'MEZCLA',shortcut:'SHIFT M',icon:'M',keywords:'mute silence silenciar restore restaurar mix mezcla instrument instrumento',run:()=>$(`[data-mute="${selectedTrack}"]`)?.click()},
-  {label:'Open Forge',labelEs:'Abrir Forja',group:'VIEW',groupEs:'VISTA',shortcut:'SHIFT G',icon:'F',keywords:'forge forja editor piano',run:()=>activateView('forge')},
-  {label:'Open Arrange',labelEs:'Abrir Arreglo',group:'VIEW',groupEs:'VISTA',shortcut:'SHIFT A',icon:'A',keywords:'arrange arreglo song scenes',run:()=>activateView('arrange')},
-  {label:'Open Clip Launcher',labelEs:'Abrir Lanzador de clips',group:'VIEW',groupEs:'VISTA',shortcut:'SHIFT L',icon:'L',keywords:'launch launcher clips grid live lanzar matriz',run:()=>activateView('launch')},
-  {label:'Open Mix Console',labelEs:'Abrir mesa de mezcla',group:'VIEW',groupEs:'VISTA',shortcut:'SHIFT X',icon:'X',keywords:'mix mixer mezcla console fader',run:()=>activateView('mix')},
-  {label:'Open Perform',labelEs:'Abrir Interpretación',group:'VIEW',groupEs:'VISTA',shortcut:'SHIFT P',icon:'P',keywords:'perform interpretar live macros',run:()=>activateView('perform')},
-  {label:'Toggle Focus mode',labelEs:'Activar modo Foco',group:'VIEW',groupEs:'VISTA',shortcut:'SHIFT F',icon:'⌖',keywords:'focus foco collapse fast editor',run:()=>toggleFocus()},
-  {label:'New independent clip',labelEs:'Nuevo clip independiente',group:'CLIP',groupEs:'CLIP',shortcut:'SHIFT N',icon:'＋',keywords:'new nuevo clip create',run:()=>$('#newClipBtn').click()},
-  {label:'Duplicate active clip',labelEs:'Duplicar clip activo',group:'CLIP',groupEs:'CLIP',shortcut:'SHIFT D',icon:'⧉',keywords:'duplicate duplicar copy clip',run:()=>$('#duplicateBtn').click()},
-  {label:'Delete active clip',labelEs:'Borrar clip activo',group:'CLIP',groupEs:'CLIP',shortcut:'',icon:'⌫',keywords:'delete remove borrar eliminar clip',run:()=>$('#deleteClipBtn').click()},
-  {label:'Mutate active clip',labelEs:'Mutar clip activo',group:'CLIP',groupEs:'CLIP',shortcut:'SHIFT V',icon:'⌁',keywords:'mutate mutar variation clip',run:()=>$('#mutateBtn').click()},
-  {label:'Quantize active clip',labelEs:'Cuantizar clip activo',group:'CLIP',groupEs:'CLIP',shortcut:'SHIFT Q',icon:'▦',keywords:'quantize cuantizar snap notes',run:()=>$('#quantizeBtn').click()},
-  {label:'Add arrangement section',labelEs:'Añadir sección al arreglo',group:'SONG',groupEs:'CANCIÓN',shortcut:'',icon:'＋',keywords:'section sección scene arrangement arreglo',run:()=>{activateView('arrange');$('#addSceneBtn').click()}},
-  {label:'Export to current destination',labelEs:'Exportar al destino actual',group:'PROJECT',groupEs:'PROYECTO',shortcut:'CTRL E',icon:'⇧',keywords:'export save current destino actual wav midi',run:repeatLastExport},
-  {label:'Export As…',labelEs:'Exportar como…',group:'PROJECT',groupEs:'PROYECTO',shortcut:'CTRL SHIFT E',icon:'…',keywords:'export as save choose elegir formato destino',run:()=>open('#exportDialog')},
-  {label:'Export song WAV',labelEs:'Exportar canción WAV',group:'PROJECT',groupEs:'PROYECTO',shortcut:'',icon:'W',keywords:'export wav render audio canción',run:()=>quickExportWav(false)},
-  {label:'Export song MIDI',labelEs:'Exportar canción MIDI',group:'PROJECT',groupEs:'PROYECTO',shortcut:'',icon:'M',keywords:'export midi canción',run:()=>quickExportMidi(false)},
-  {label:'Export project as JSON',labelEs:'Exportar proyecto como JSON',group:'PROJECT',groupEs:'PROYECTO',shortcut:'',icon:'J',keywords:'export project json backup proyecto copia',run:()=>quickExportProject(true)},
-  {label:'Project, versions & recovery',labelEs:'Proyecto, versiones y recuperación',group:'PROJECT',groupEs:'PROYECTO',shortcut:'',icon:'••',keywords:'project proyecto save import snapshot',run:()=>$('#menuBtn').click()},
-  ...TRACKS.map((track,index)=>({label:`Select ${TRACK_META[track].label}`,labelEs:`Seleccionar ${TRACK_META[track].label}`,group:'TRACK',groupEs:'PISTA',shortcut:String(index+1),icon:String(index+1),keywords:`track pista ${track} instrument instrumento`,run:()=>selectTrack(track)}))
+staticCopy.push(
+  ["#effectsRack strong", "CLIP FX", "EFECTOS DEL CLIP"],
+  ["#motionRack .clip-scope", "ACTIVE CLIP", "CLIP ACTIVO"],
+  ["#effectsRack .clip-scope", "ACTIVE CLIP", "CLIP ACTIVO"],
+  ["#macroRack .clip-scope", "ACTIVE CLIP", "CLIP ACTIVO"],
+  [".backing-options label:nth-child(1)>span", "STYLE", "ESTILO"],
+  [".backing-options label:nth-child(2)>span", "SECTIONS", "SECCIONES"],
+  [".backing-options label:nth-child(3)>span", "INTENSITY", "INTENSIDAD"],
+  ["#deleteClipDialog .eyebrow", "DESTRUCTIVE EDIT", "EDICIÓN DESTRUCTIVA"],
+  [
+    "#deleteClipDialog .delete-clip-warning",
+    "This removes the clip from the project. You can undo this action.",
+    "Esto elimina el clip del proyecto. Puedes deshacer la acción.",
+  ],
+  ["#cancelDeleteClipBtn", "CANCEL", "CANCELAR"],
+  ["#confirmDeleteClipBtn", "DELETE CLIP", "BORRAR CLIP"],
+);
+staticCopy.push(
+  ["#scratchTitle", "SCRATCH DECK", "PLATO DE SCRATCH"],
+  ["#scratchCaptureBtn", "CAPTURE MIX", "CAPTURAR MEZCLA"],
+  [".scratch-import span", "IMPORT AUDIO", "IMPORTAR AUDIO"],
+  ["#scratchBrakeBtn", "BRAKE", "FRENAR"],
+  ["#scratchSpinBtn", "↶ SPINBACK", "↶ RETROCESO"],
+  ["#scratchStutterBtn", "STUTTER", "REPETIR"],
+  [
+    ".scratch-hint",
+    "Drag the vinyl in either direction. Release for motor return; wheel or ← → for precise cuts.",
+    "Arrastra el vinilo en ambas direcciones. Suelta para recuperar el motor; usa la rueda o ← → para cortes precisos.",
+  ],
+);
+staticCopy.push(
+  ['[data-view="mix"]', "MIX", "MEZCLA"],
+  ["#exportAsBtn", "EXPORT AS", "EXPORTAR COMO"],
+  ["#globalStartBtn", "▶ SONG", "▶ CANCIÓN"],
+  ["#clipStartBtn", "▶ CLIP", "▶ CLIP"],
+  [
+    "#arrangeDescription",
+    "Each section combines five independent clips. Click the timeline to set the global start; edit, repeat and reorder the complete song.",
+    "Cada sección combina cinco clips independientes. Pulsa la línea temporal para fijar el inicio global; edita, repite y reordena la canción.",
+  ],
+  ["#exportDialog h2", "EXPORT / EXPORT AS", "EXPORTAR / EXPORTAR COMO"],
+  [
+    "#exportDialog>p",
+    "Export reuses the linked file. Export As always asks for a new destination.",
+    "Exportar reutiliza el archivo vinculado. Exportar como siempre solicita un destino nuevo.",
+  ],
+  [".export-targets-head", "EXPORT DESTINATIONS", "DESTINOS DE EXPORTACIÓN"],
+  [
+    "#forgetTargetsBtn",
+    "Forget all destinations",
+    "Olvidar todos los destinos",
+  ],
+  ["#mixCaptureBtn", "CAPTURE A", "CAPTURAR A"],
+  ["#mixCompareBtn", "COMPARE B", "COMPARAR B"],
+  ["#performanceRecordBtn", "● RECORD TAKE", "● GRABAR TOMA"],
+  ["#performanceSaveBtn", "SAVE TAKE AS", "GUARDAR TOMA COMO"],
+);
+staticCopy.push(
+  ['[data-view="launch"]', "LAUNCH", "LANZAR"],
+  ["#launchView h1", "CLIP LAUNCHER", "LANZADOR DE CLIPS"],
+  [
+    "#launchView .launcher-head p",
+    "Queue clips without stopping the signal, stop individual tracks, and capture the live sequence into Arrange.",
+    "Pon clips en cola sin detener la señal, para pistas individuales y captura la secuencia en directo en Arreglo.",
+  ],
+  ["#launcherCaptureBtn", "● CAPTURE", "● CAPTURAR"],
+  ["#launcherCommitBtn", "COMMIT TO ARRANGE", "ENVIAR AL ARREGLO"],
+  ["#arrangeSelectAllBtn", "SELECT ALL", "SELECCIONAR TODO"],
+  ["#arrangeDuplicateBtn", "DUPLICATE", "DUPLICAR"],
+  ["#arrangeCopyBtn", "COPY", "COPIAR"],
+  ["#arrangePasteBtn", "PASTE", "PEGAR"],
+  ["#arrangeDeleteBtn", "DELETE", "BORRAR"],
+  ["#arrangeFillBtn", "＋ FILL", "＋ FILL"],
+  ["#arrangeMarkerBtn", "＋ MARKER", "＋ MARCADOR"],
+  ["#masterBypassBtn", "MASTER FX", "FX MASTER"],
+  ["#presetLibraryBtn", "Preset library", "Biblioteca de presets"],
+  ["#sampleLibraryBtn", "Local drum samples", "Samples de batería locales"],
+  ["#compactModeBtn", "Compact workspace", "Espacio compacto"],
+  ["#presetDialog h2", "PRESET VAULT", "CÁMARA DE PRESETS"],
+  ["#sampleDialog h2", "IMPACT SAMPLE SLOTS", "RANURAS DE SAMPLES IMPACT"],
+  ["#saveUserPresetBtn", "＋ SAVE CURRENT", "＋ GUARDAR ACTUAL"],
+  ["#exportPresetBankBtn", "EXPORT BANK", "EXPORTAR BANCO"],
+  ["#takeQuantizeBtn", "QUANTIZE EVENTS", "CUANTIZAR EVENTOS"],
+  ["#cancelExportBtn", "CANCEL", "CANCELAR"],
+);
+const leadingCopy: Array<[string, string, string]> = [
+  ["label:has(#barsSelect)", "BARS", "COMPASES"],
+  ["label:has(#gridSelect)", "SNAP", "AJUSTE"],
+  ["label:has(#zoomRange)", "ZOOM", "ZOOM"],
+  ["label:has(#keySelect)", "KEY", "TONALIDAD"],
+  ["label:has(#scaleSelect)", "SCALE", "ESCALA"],
+  ["label:has(#noteLength)", "LEN", "DUR"],
+  ["label:has(#noteVelocity)", "VEL", "VEL"],
+  ["label:has(#arpMode)", "MODE", "MODO"],
+  ["label:has(#arpOctaves)", "OCT", "OCT"],
+  ["label:has(#arpRate)", "RATE", "RITMO"],
+  ["label:has(#lfoTarget)", "TARGET", "DESTINO"],
+  ["label:has(#lfoRate)", "LFO RATE", "RITMO LFO"],
+  ["label:has(#lfoDepth)", "DEPTH", "PROFUNDIDAD"],
 ];
-function matchingCommands(query:string){const needle=query.trim().toLowerCase();return commands.filter(command=>!needle||`${command.label} ${command.labelEs} ${command.group} ${command.groupEs} ${command.keywords}`.toLowerCase().includes(needle))}
-function renderCommands(query=''){const list=matchingCommands(query);commandIndex=Math.max(0,Math.min(commandIndex,list.length-1));$('#commandResults').innerHTML=list.length?list.map((command,index)=>`<button class="command-item ${index===commandIndex?'active':''}" data-command="${commands.indexOf(command)}" role="option" aria-selected="${index===commandIndex}"><span><i>${command.icon}</i><b>${esc(L(command.label,command.labelEs))}</b></span><kbd>${L(command.group,command.groupEs)}${command.shortcut?` · ${command.shortcut}`:''}</kbd></button>`).join(''):`<div class="command-empty">${L('NO MATCHING SIGNAL','SIN RESULTADOS')}</div>`;$$('.command-item').forEach(item=>{item.onmouseenter=()=>{commandIndex=list.indexOf(commands[+item.dataset.command]!);renderCommands($('#commandSearch').value)};item.onclick=()=>runCommand(commands[+item.dataset.command])})}
-function runCommand(command:CommandAction|undefined){if(!command)return;$('#commandDialog').close();command.run()}
-function openCommands(){commandIndex=0;$('#commandSearch').value='';renderCommands();$('#commandDialog').showModal();setTimeout(()=>$('#commandSearch').focus(),0)}
-function initWorkflowUi(){const stored=localStorage.getItem(UI_STORAGE),prefs=readUiPrefs(),defaults=!stored&&window.matchMedia('(max-width:760px)').matches?['motionRack','effectsRack','macroRack']:[];for(const id of new Set([...defaults,...prefs.collapsed]))setRackCollapsed(id,true,false);toggleFocus(prefs.focus,true);document.body.classList.toggle('compact-mode',prefs.compact);$('#compactModeBtn')?.setAttribute('aria-pressed',String(prefs.compact));$('#commandBtn').onclick=openCommands;$('#focusBtn').onclick=()=>toggleFocus();$$('.rack-toggle').forEach(button=>button.onclick=()=>setRackCollapsed(button.dataset.rack,!$(`#${button.dataset.rack}`).classList.contains('collapsed')));$('#commandSearch').oninput=()=>{commandIndex=0;renderCommands($('#commandSearch').value)};$('#commandSearch').onkeydown=(event:KeyboardEvent)=>{const list=matchingCommands($('#commandSearch').value);if(event.key==='ArrowDown'){event.preventDefault();commandIndex=Math.min(list.length-1,commandIndex+1);renderCommands($('#commandSearch').value)}if(event.key==='ArrowUp'){event.preventDefault();commandIndex=Math.max(0,commandIndex-1);renderCommands($('#commandSearch').value)}if(event.key==='Enter'){event.preventDefault();runCommand(list[commandIndex])}}}
-
-function renderVersions(){const list=loadVersions();$('#versionsList').innerHTML=list.length?list.map((v:any,i:number)=>`<div><span><b>${esc(v.label)}</b><small>${new Date(v.date).toLocaleString(language)}</small></span><button data-restore="${i}">${L('RESTORE','RESTAURAR')}</button><button data-delete-version="${i}">×</button></div>`).join(''):`<p>${L('No snapshots yet. Autosave remains active.','Todavía no hay instantáneas. El guardado automático sigue activo.')}</p>`;$$('[data-restore]').forEach((b:any)=>b.onclick=()=>{snapshot();project=migrateProject(list[+b.dataset.restore].project);engine.project=project;selectedNotes.clear();changed(true);$('#projectMenu').close();toast(L('VERSION RESTORED','VERSIÓN RESTAURADA'))});$$('[data-delete-version]').forEach((b:any)=>b.onclick=()=>{list.splice(+b.dataset.deleteVersion,1);localStorage.setItem(VERSIONS,JSON.stringify(list));renderVersions()})}
-function loadVersions(){try{return JSON.parse(localStorage.getItem(VERSIONS)||'[]')||[]}catch{return[]}}
-function saveVersion(){const label=prompt(L('Snapshot name','Nombre de la instantánea'),`${project.title} · ${new Date().toLocaleTimeString(language)}`);if(!label)return;const list=loadVersions();list.unshift({id:crypto.randomUUID(),label,date:Date.now(),project:structuredClone(project)});localStorage.setItem(VERSIONS,JSON.stringify(list.slice(0,20)));renderVersions();toast(L('VERSION SNAPSHOT CREATED','INSTANTÁNEA CREADA'))}
-
-let inputRecorder:MediaRecorder|null=null,inputStream:MediaStream|null=null,inputChunks:Blob[]=[],midiLearnTarget:string|null=null;
-function applyMidiMapping(mapping:MidiMapping,normalized:number){const value=mapping.min+(mapping.max-mapping.min)*normalized;if(mapping.target==='master.volume')project.master=Math.max(0,Math.min(1,value));else{const match=/^track\.([^.]+)\.(volume|pan|cutoff)$/.exec(mapping.target);if(match&&TRACKS.includes(match[1] as TrackId))(project.tracks[match[1] as TrackId] as any)[match[2]!]=match[2]==='cutoff'?120+value*11880:match[2]==='pan'?value*2-1:value}engine.setProject(project);renderMixer();renderMixGroups()}
-function audioBufferWav(buffer:AudioBuffer){const channels=Math.min(2,buffer.numberOfChannels),frames=buffer.length,bytes=44+frames*channels*2,array=new ArrayBuffer(bytes),view=new DataView(array),write=(offset:number,text:string)=>[...text].forEach((char,index)=>view.setUint8(offset+index,char.charCodeAt(0)));write(0,'RIFF');view.setUint32(4,bytes-8,true);write(8,'WAVEfmt ');view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,channels,true);view.setUint32(24,buffer.sampleRate,true);view.setUint32(28,buffer.sampleRate*channels*2,true);view.setUint16(32,channels*2,true);view.setUint16(34,16,true);write(36,'data');view.setUint32(40,frames*channels*2,true);let offset=44;for(let frame=0;frame<frames;frame++)for(let channel=0;channel<channels;channel++){const sample=Math.max(-1,Math.min(1,buffer.getChannelData(channel)[frame]!));view.setInt16(offset,sample<0?sample*32768:sample*32767,true);offset+=2}return new Blob([array],{type:'audio/wav'})}
-async function addAudioBlob(blob:Blob,name='',lane?:AudioLane){await engine.init();const resolvedName=name||(blob as Blob&{name?:string}).name||'Recorded signal.wav',id=`audio-${cryptoId()}`,duration=await engine.setAudioAsset(id,await blob.arrayBuffer());await putAsset(id,blob);snapshot();const targetLane:AudioLane=lane||project.audioLanes[0]||(project.audioLanes[0]=createAudioLane()),steps=Math.max(1,Math.round(duration/(60/project.tempo/4)*4)/4),end=Math.max(0,...targetLane.regions.map((region:AudioRegion)=>region.startStep+region.lengthSteps));targetLane.regions.push(createAudioRegion(id,resolvedName,end,steps,duration));changed();renderAudioStudio();toast(L('Audio saved in project','Audio guardado en el proyecto'),true)}
-async function loadAudioAssets(){const ids=new Set<string>();for(const lane of project.audioLanes||[])for(const region of lane.regions)ids.add(region.assetId);for(const id of ids)try{const blob=await getAsset(id);if(blob)await engine.setAudioAsset(id,await blob.arrayBuffer())}catch{}renderAudioStudio()}
-function renderAudioStudio(){const root=$('#audioLanes');if(!root)return;root.innerHTML=project.audioLanes.length?project.audioLanes.map((lane:AudioLane)=>`<article class="audio-lane" data-audio-lane="${lane.id}" style="--lane:${lane.color}"><header class="audio-lane-head"><input data-lane-name type="text" value="${esc(lane.name)}" aria-label="Lane name"><button data-lane-solo class="${lane.solo?'on':''}" aria-pressed="${lane.solo}">S</button><button data-lane-mute class="${lane.mute?'on':''}" aria-pressed="${lane.mute}">M</button><label>VOL<input data-lane-value="volume" type="range" min="0" max="1.5" step=".01" value="${lane.volume}"><output>${Math.round(lane.volume*100)}</output></label><label>PAN<input data-lane-value="pan" type="range" min="-1" max="1" step=".01" value="${lane.pan}"><output>${Math.round(lane.pan*100)}</output></label><button data-lane-delete>DELETE LANE</button></header><div class="audio-track">${lane.regions.map((region:AudioRegion)=>`<article class="audio-region" data-audio-region="${region.id}" style="--length:${region.lengthSteps}"><header><b>${esc(region.name)}</b><span class="audio-region-actions"><button data-region-scratch title="${L('Load this edited region into Scratch Deck','Cargar esta región editada en el plato')}">${L('LOAD DECK','AL PLATO')}</button><button data-region-delete title="${L('Delete region','Borrar región')}">×</button></span></header><div class="mini-wave"></div><div class="audio-region-controls"><label>START<input data-region-key="startStep" type="number" min="0" step=".25" value="${region.startStep}"></label><label>LENGTH<input data-region-key="lengthSteps" type="number" min=".25" step=".25" value="${region.lengthSteps}"></label><label>OFFSET<input data-region-key="offsetSeconds" type="number" min="0" step=".01" value="${region.offsetSeconds.toFixed(2)}"></label><label>GAIN<input data-region-key="gainDb" type="number" min="-60" max="18" step=".5" value="${region.gainDb}"></label><label>FADE IN<input data-region-key="fadeInSteps" type="number" min="0" step=".25" value="${region.fadeInSteps}"></label><label>FADE OUT<input data-region-key="fadeOutSteps" type="number" min="0" step=".25" value="${region.fadeOutSteps}"></label><label>PITCH<input data-region-key="pitch" type="number" min="-24" max="24" step="1" value="${region.pitch}"></label><label>BPM<input data-region-key="sourceBpm" type="number" min="20" max="300" step=".1" value="${region.sourceBpm}"></label><label class="wide">WARP<select data-region-key="warp"><option value="0" ${!region.warp?'selected':''}>OFF</option><option value="1" ${region.warp?'selected':''}>TEMPO LOCK</option></select></label><label class="wide">MODE<select data-region-key="warpMode"><option value="repitch" ${region.warpMode==='repitch'?'selected':''}>REPITCH</option><option value="stretch" ${region.warpMode==='stretch'?'selected':''}>STRETCH PREVIEW</option></select></label></div></article>`).join('')||'<div class="audio-empty">DROP OR IMPORT AUDIO TO THIS LANE</div>'}</div></article>`).join(''):'<div class="audio-empty">IMPORT AUDIO OR CREATE A LANE TO START THE HYBRID ARRANGEMENT</div>';$$('[data-audio-lane]').forEach(row=>{const lane=project.audioLanes.find((item:AudioLane)=>item.id===row.dataset.audioLane)!;row.querySelector('[data-lane-name]').onchange=(event:any)=>{lane.name=event.target.value||lane.name;changed()};row.querySelector('[data-lane-solo]').onclick=()=>{lane.solo=!lane.solo;changed();renderAudioStudio()};row.querySelector('[data-lane-mute]').onclick=()=>{lane.mute=!lane.mute;changed();renderAudioStudio()};row.querySelectorAll('[data-lane-value]').forEach((input:any)=>input.oninput=()=>{(lane as any)[input.dataset.laneValue]=+input.value;input.closest('label').querySelector('output').textContent=Math.round(+input.value*100);engine.setProject(project)});row.querySelectorAll('[data-lane-value]').forEach((input:any)=>input.onchange=()=>changed());row.querySelector('[data-lane-delete]').onclick=()=>{if(!confirm(L('Delete this audio lane?','¿Borrar esta pista de audio?')))return;snapshot();project.audioLanes=project.audioLanes.filter((item:AudioLane)=>item.id!==lane.id);changed();renderAudioStudio()};row.querySelectorAll('[data-audio-region]').forEach((card:any)=>{const region=lane.regions.find((item:AudioRegion)=>item.id===card.dataset.audioRegion)!;card.querySelectorAll('[data-region-key]').forEach((input:any)=>input.onchange=()=>{const key=input.dataset.regionKey;(region as any)[key]=key==='warp'?input.value==='1':key==='warpMode'?input.value:+input.value;if(region.offsetSeconds>=region.durationSeconds)region.offsetSeconds=Math.max(0,region.durationSeconds-.01);changed();renderAudioStudio()});card.querySelector('[data-region-scratch]').onclick=(event:Event)=>loadAudioRegionIntoScratch(lane,region,event.currentTarget as HTMLButtonElement);card.querySelector('[data-region-delete]').onclick=async()=>{snapshot();lane.regions=lane.regions.filter((item:AudioRegion)=>item.id!==region.id);const used=project.audioLanes.some((item:AudioLane)=>item.regions.some((candidate:AudioRegion)=>candidate.assetId===region.assetId));if(!used){engine.clearAudioAsset(region.assetId);await deleteAsset(region.assetId)}changed();renderAudioStudio()}})});renderGlobalAutomation();installControlHelp()}
-function renderGlobalAutomation(){const root=$('#globalAutomation');if(!root)return;root.innerHTML=[...(project.automationLanes||[]).map((lane:AutomationLane)=>`<article class="automation-card" data-global-auto="${lane.id}"><b>${esc(lane.name)}</b><button data-auto-delete>×</button><small>${lane.target} · ${lane.points.length} POINTS · ${lane.writeMode.toUpperCase()}</small><button data-auto-point>＋ POINT</button></article>`),...(project.modulationRoutes||[]).map((route:ModulationRoute)=>`<article class="modulation-card" data-mod-route="${route.id}"><b>${route.source.toUpperCase()} → ${esc(route.target)}</b><button data-mod-delete>×</button><small>AMOUNT ${Math.round(route.amount*100)}% · ${route.rate.toFixed(2)} Hz</small><input data-mod-amount type="range" min="-1" max="1" step=".01" value="${route.amount}"></article>`)].join('')||'<small>NO GLOBAL AUTOMATION OR MODULATION ROUTES</small>';$$('[data-global-auto]').forEach(card=>{const lane=project.automationLanes.find((item:AutomationLane)=>item.id===card.dataset.globalAuto)!;card.querySelector('[data-auto-delete]').onclick=()=>{project.automationLanes=project.automationLanes.filter((item:AutomationLane)=>item.id!==lane.id);changed();renderGlobalAutomation()};card.querySelector('[data-auto-point]').onclick=()=>{const step=+(prompt(L('Step','Paso'),'0')||'0'),value=+(prompt(L('Value 0–1','Valor 0–1'),'0.5')||'.5');lane.points.push({id:cryptoId(),step:Math.max(0,step),value:Math.max(0,Math.min(1,value)),curve:'smooth'});changed();renderGlobalAutomation()}});$$('[data-mod-route]').forEach(card=>{const route=project.modulationRoutes.find((item:ModulationRoute)=>item.id===card.dataset.modRoute)!;card.querySelector('[data-mod-delete]').onclick=()=>{project.modulationRoutes=project.modulationRoutes.filter((item:ModulationRoute)=>item.id!==route.id);changed();renderGlobalAutomation()};card.querySelector('[data-mod-amount]').oninput=(event:any)=>{route.amount=+event.target.value;engine.setProject(project)};card.querySelector('[data-mod-amount]').onchange=()=>{changed();renderGlobalAutomation()}})}
-function renderMixGroups(){const root=$('#mixGroups');if(!root)return;root.innerHTML=(project.mixerGroups||[]).map((group:any)=>`<article class="mix-group" data-mix-group="${group.id}" style="--group:${group.color}"><b>${esc(group.name)}</b><label>BUS LEVEL<input data-group-volume type="range" min="0" max="1.5" step=".01" value="${group.volume}"></label><label>SIDECHAIN<input data-group-duck type="range" min="0" max=".9" step=".01" value="${group.sidechainAmount}"></label></article>`).join('');$$('[data-mix-group]').forEach(card=>{const group=project.mixerGroups.find((item:any)=>item.id===card.dataset.mixGroup)!;card.querySelector('[data-group-volume]').oninput=(event:any)=>{group.volume=+event.target.value;engine.setProject(project)};card.querySelector('[data-group-duck]').oninput=(event:any)=>group.sidechainAmount=+event.target.value;card.querySelectorAll('input').forEach((input:any)=>input.onchange=()=>changed())});$$('[data-mix-track]').forEach(channel=>{const track=channel.dataset.mixTrack as TrackId,select=document.createElement('select');select.dataset.trackGroup='';select.innerHTML='<option value="">MASTER</option>'+project.mixerGroups.map((group:any)=>`<option value="${group.id}" ${project.tracks[track].groupId===group.id?'selected':''}>${esc(group.name)}</option>`).join('');const label=document.createElement('label');label.dataset.precision='';label.innerHTML='<span>GROUP</span>';label.append(select);channel.insertBefore(label,channel.lastElementChild);select.onchange=()=>{project.tracks[track].groupId=select.value||null;changed()}});$('#masterTargetLufs').value=project.masterSettings.targetLufs;$('#masterTargetValue').textContent=`${project.masterSettings.targetLufs}`;$('#masterCeiling').value=project.masterSettings.ceilingDb;$('#masterCeilingValue').textContent=project.masterSettings.ceilingDb.toFixed(1);$('#monoCheckBtn').setAttribute('aria-pressed',String(project.masterSettings.monoCheck))}
-function renderTempoMap(){const root=$('#arrangeMarkers');if(!root)return;for(const event of project.tempoMap||[]){const badge=document.createElement('button');badge.className='arrange-marker';badge.style.setProperty('--marker','#2ee8ff');badge.textContent=`${event.step} · ${event.bpm} BPM`;badge.title='Tempo map';root.append(badge)}for(const event of (project.meterMap||[]).slice(1)){const badge=document.createElement('button');badge.className='arrange-marker';badge.style.setProperty('--marker','#8b7cff');badge.textContent=`${event.step} · ${event.beats}/${event.unit}`;root.append(badge)}}
-function samplerSettings():SamplerInstrument{return project.sampler||(project.sampler=samplerDefaults())}
-function setupSamplerOctaveControls(){
-  if($('#samplerOctaveValue'))return;
-  $('#samplerArm').insertAdjacentHTML('afterend','<span class="sampler-octave"><button id="samplerOctaveDown" aria-label="Sampler octave down">− OCT</button><output id="samplerOctaveValue">C4–C5</output><button id="samplerOctaveUp" aria-label="Sampler octave up">OCT ＋</button></span>');
-  $('.sampler-keyboard-shell').insertAdjacentHTML('beforeend','<output id="samplerLiveStatus" class="sampler-live-status" aria-live="polite">READY</output>');
-  $('.sampler-hint').textContent='A W S E D F T G Y H U J K · Z/X octave · velocity-sensitive MIDI · Record Take captures the performance.';
-  const decorate=()=>{if(!$('#samplerKeyboard'))return;for(const key of $$('[data-sampler-pitch]')){const marker=String(samplerQwertyBase);if(key.dataset.qwertyBase===marker)continue;key.dataset.qwertyBase=marker;key.querySelector('span')?.remove();const pitch=+key.dataset.samplerPitch,entry=Object.entries(samplerQwertyMap).find(([,offset])=>samplerQwertyBase+offset===pitch);key.classList.toggle('qwerty',Boolean(entry));if(entry){const label=document.createElement('span');label.textContent=entry[0].toUpperCase();key.append(label)}}$('#samplerOctaveValue').textContent=`${samplerNoteName(samplerQwertyBase)}–${samplerNoteName(samplerQwertyBase+12)}`;$('#samplerOctaveDown').disabled=samplerQwertyBase<=48;$('#samplerOctaveUp').disabled=samplerQwertyBase>=60};
-  const shift=(amount:number)=>{for(const key of Object.keys(samplerQwertyMap))endSamplerPerformance(`sampler-qwerty-${key}`);samplerQwertyBase=Math.max(48,Math.min(60,samplerQwertyBase+amount));decorate();$('#samplerLiveStatus').textContent=`QWERTY · ${samplerNoteName(samplerQwertyBase)}–${samplerNoteName(samplerQwertyBase+12)}`};
-  $('#samplerOctaveDown').onclick=()=>shift(-12);$('#samplerOctaveUp').onclick=()=>shift(12);new window.MutationObserver(decorate).observe($('#samplerKeyboard'),{childList:true});
-  document.addEventListener('keydown',(event:KeyboardEvent)=>{if(!samplerArmed||activeView!=='audio'||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA'].includes((event.target as HTMLElement)?.tagName))return;const key=event.key.toLowerCase();if(key==='z'||key==='x'){if(!event.repeat)shift(key==='z'?-12:12);event.preventDefault();event.stopImmediatePropagation();return}const offset=samplerQwertyMap[key];if(offset==null)return;event.preventDefault();event.stopImmediatePropagation();const source=`sampler-qwerty-${key}`;if(!event.repeat&&!samplerHeld.has(source)){const pitch=samplerQwertyBase+offset;startSamplerPerformance(source,pitch,.86,$(`[data-sampler-pitch="${pitch}"]`))}},true);
-  document.addEventListener('keyup',(event:KeyboardEvent)=>{const key=event.key.toLowerCase();if(samplerQwertyMap[key]==null)return;const source=`sampler-qwerty-${key}`;if(!samplerHeld.has(source))return;event.preventDefault();event.stopImmediatePropagation();endSamplerPerformance(source)},true);decorate();
+const shortcutCopy: Array<[string, string]> = [
+  ["Play / stop from locator", "Reproducir / parar desde el localizador"],
+  ["Perform / record", "Interpretar / grabar"],
+  ["Select track", "Seleccionar pista"],
+  ["Command palette", "Paleta de comandos"],
+  ["Export to current destination", "Exportar al destino actual"],
+  ["Open Export As", "Abrir Exportar como"],
+  ["Toggle Focus mode", "Activar modo Foco"],
+  [
+    "Forge / Launch / Arrange / Mix / Perform",
+    "Forja / Lanzar / Arreglo / Mezcla / Interpretar",
+  ],
+  ["New / duplicate clip", "Nuevo / duplicar clip"],
+  ["Solo / mute active track", "Solo / silenciar pista activa"],
+  ["Mutate / quantize", "Mutar / cuantizar"],
+  ["Undo / redo", "Deshacer / rehacer"],
+  ["Multi-select notes", "Selección múltiple"],
+  ["Select all notes", "Seleccionar todas las notas"],
+  ["Move selected notes", "Mover notas seleccionadas"],
+  ["Resize selected notes", "Redimensionar notas"],
+  ["Copy / paste notes", "Copiar / pegar notas"],
+  ["Delete selection", "Borrar selección"],
+];
+const controlDescriptions: Record<string, [string, string, string, string]> = {
+  aboutBtn: [
+    "Brand & about",
+    "Marca e información",
+    "Open product information and version details.",
+    "Abre la información del producto y sus detalles.",
+  ],
+  title: [
+    "Project title",
+    "Título del proyecto",
+    "Rename the current project. Changes are saved locally.",
+    "Renombra el proyecto actual. Los cambios se guardan localmente.",
+  ],
+  rewindBtn: [
+    "Return to start",
+    "Volver al inicio",
+    "Stop playback and return the playhead to the beginning.",
+    "Detiene la reproducción y devuelve el cursor al inicio.",
+  ],
+  playBtn: [
+    "Play / stop",
+    "Reproducir / parar",
+    "Start or stop the active clip or full arrangement. Shortcut: Space.",
+    "Inicia o detiene el clip activo o el arreglo completo. Atajo: Espacio.",
+  ],
+  pauseBtn: [
+    "Pause at playhead",
+    "Pausar en el cursor",
+    "Pause playback and preserve the current position so Play resumes from there.",
+    "Pausa la reproducción y conserva la posición para continuar desde ahí.",
+  ],
+  recordBtn: [
+    "Record arm",
+    "Armar grabación",
+    "Arm live recording from the computer keyboard, touch keys or MIDI.",
+    "Prepara la grabación en directo desde teclado, controles táctiles o MIDI.",
+  ],
+  recordMode: [
+    "Recording timing",
+    "Temporización de grabación",
+    "Choose quantized timing or preserve free microtiming.",
+    "Elige tiempo cuantizado o conserva el microtiming libre.",
+  ],
+  tempo: [
+    "Tempo",
+    "Tempo",
+    "Set song speed in beats per minute.",
+    "Ajusta la velocidad de la canción en pulsos por minuto.",
+  ],
+  meterSelect: [
+    "Time signature",
+    "Compás",
+    "Choose the rhythmic meter used by clips and bars.",
+    "Elige el compás rítmico utilizado por clips y barras.",
+  ],
+  swing: [
+    "Swing",
+    "Swing",
+    "Delay alternating subdivisions to add groove.",
+    "Retrasa subdivisiones alternas para añadir groove.",
+  ],
+  countIn: [
+    "Count-in",
+    "Cuenta atrás",
+    "Choose how many bars play before armed recording starts.",
+    "Elige cuántos compases suenan antes de iniciar la grabación.",
+  ],
+  metroBtn: [
+    "Metronome",
+    "Metrónomo",
+    "Toggle the accented timing click during playback.",
+    "Activa o desactiva el clic acentuado durante la reproducción.",
+  ],
+  masterVolume: [
+    "Master volume",
+    "Volumen maestro",
+    "Set the final output level for the complete mix.",
+    "Ajusta el nivel final de salida de toda la mezcla.",
+  ],
+  languageSelect: [
+    "Language",
+    "Idioma",
+    "Switch the complete interface between English and Spanish.",
+    "Cambia toda la interfaz entre inglés y español.",
+  ],
+  exportBtn: [
+    "Export",
+    "Exportar",
+    "Render the song or active clips to WAV or MIDI.",
+    "Renderiza la canción o los clips activos a WAV o MIDI.",
+  ],
+  menuBtn: [
+    "Project menu",
+    "Menú del proyecto",
+    "Create, import, export or restore project versions.",
+    "Crea, importa, exporta o restaura versiones del proyecto.",
+  ],
+  tutorialBtn: [
+    "Interactive guide",
+    "Guía interactiva",
+    "Start a guided tour through the complete composition workflow.",
+    "Inicia un recorrido guiado por todo el flujo de composición.",
+  ],
+  focusBtn: [
+    "Focus mode",
+    "Modo Foco",
+    "Hide secondary racks and dedicate more space to note editing.",
+    "Oculta paneles secundarios y dedica más espacio a editar notas.",
+  ],
+  commandBtn: [
+    "Command palette",
+    "Paleta de comandos",
+    "Search and execute any common action from the keyboard.",
+    "Busca y ejecuta acciones habituales desde el teclado.",
+  ],
+  undoBtn: [
+    "Undo",
+    "Deshacer",
+    "Restore the previous musical edit.",
+    "Restaura la edición musical anterior.",
+  ],
+  redoBtn: [
+    "Redo",
+    "Rehacer",
+    "Reapply the last undone edit.",
+    "Vuelve a aplicar la última edición deshecha.",
+  ],
+  helpBtn: [
+    "Context help",
+    "Ayuda contextual",
+    "Show a live explanation whenever a control is focused or touched.",
+    "Muestra una explicación cuando enfocas o tocas un control.",
+  ],
+  preset: [
+    "Sound preset",
+    "Preset de sonido",
+    "Load a designed starting sound for the selected track.",
+    "Carga un sonido inicial diseñado para la pista seleccionada.",
+  ],
+  waveSelect: [
+    "Main oscillator",
+    "Oscilador principal",
+    "Choose the waveform that defines the core timbre.",
+    "Elige la forma de onda que define el timbre principal.",
+  ],
+  osc2WaveSelect: [
+    "Second oscillator",
+    "Segundo oscilador",
+    "Choose an additional waveform or switch oscillator two off.",
+    "Elige una onda adicional o desactiva el segundo oscilador.",
+  ],
+  filterSelect: [
+    "Filter type",
+    "Tipo de filtro",
+    "Choose which frequencies the synthesizer filter removes.",
+    "Elige qué frecuencias elimina el filtro del sintetizador.",
+  ],
+  arpEnabled: [
+    "Arpeggiator",
+    "Arpegiador",
+    "Turn held notes into a rhythmic sequence.",
+    "Convierte las notas mantenidas en una secuencia rítmica.",
+  ],
+  arpMode: [
+    "Arpeggio direction",
+    "Dirección del arpegio",
+    "Choose the order in which held notes are played.",
+    "Elige el orden en el que se reproducen las notas.",
+  ],
+  arpOctaves: [
+    "Arpeggio octaves",
+    "Octavas del arpegio",
+    "Set the pitch range covered by the arpeggiator.",
+    "Ajusta el rango tonal recorrido por el arpegiador.",
+  ],
+  arpRate: [
+    "Arpeggio rate",
+    "Velocidad del arpegio",
+    "Choose the rhythmic subdivision for generated notes.",
+    "Elige la subdivisión rítmica de las notas generadas.",
+  ],
+  lfoEnabled: [
+    "LFO modulation",
+    "Modulación LFO",
+    "Enable cyclic movement for the selected target.",
+    "Activa movimiento cíclico sobre el destino seleccionado.",
+  ],
+  lfoTarget: [
+    "LFO target",
+    "Destino del LFO",
+    "Choose the sound parameter moved by the LFO.",
+    "Elige el parámetro de sonido que moverá el LFO.",
+  ],
+  lfoRate: [
+    "LFO rate",
+    "Velocidad del LFO",
+    "Set how quickly the modulation cycle repeats.",
+    "Ajusta la velocidad con que se repite la modulación.",
+  ],
+  lfoDepth: [
+    "LFO depth",
+    "Profundidad del LFO",
+    "Set the amount of cyclic modulation.",
+    "Ajusta la cantidad de modulación cíclica.",
+  ],
+  fxBypass: [
+    "Effects bypass",
+    "Omitir efectos",
+    "Disable or restore all effects on the selected track.",
+    "Desactiva o restaura todos los efectos de la pista.",
+  ],
+  clipSelect: [
+    "Active clip",
+    "Clip activo",
+    "Choose which independent pattern is edited for this track.",
+    "Elige qué patrón independiente se edita en esta pista.",
+  ],
+  renameClipBtn: [
+    "Rename clip",
+    "Renombrar clip",
+    "Give the active clip a descriptive name.",
+    "Asigna un nombre descriptivo al clip activo.",
+  ],
+  duplicateBtn: [
+    "Duplicate clip",
+    "Duplicar clip",
+    "Create an independent copy of the active clip.",
+    "Crea una copia independiente del clip activo.",
+  ],
+  mutateBtn: [
+    "Mutate clip",
+    "Mutar clip",
+    "Generate a controlled variation using the Tension macro.",
+    "Genera una variación controlada usando la macro Tensión.",
+  ],
+  backingBtn: [
+    "Backing generator",
+    "Generador de bases",
+    "Create a structured accompaniment for bass, pad and drums without changing guitar or lead clips.",
+    "Crea un acompañamiento estructurado de bajo, pad y batería sin cambiar los clips de guitarra ni lead.",
+  ],
+  generateBackingBtn: [
+    "Generate backing",
+    "Generar base",
+    "Replace the arrangement with the selected generated backing. The edit can be undone.",
+    "Reemplaza el arreglo por la base generada seleccionada. La edición se puede deshacer.",
+  ],
+  barsSelect: [
+    "Clip length",
+    "Duración del clip",
+    "Resize the active clip in musical bars.",
+    "Cambia la duración del clip activo en compases.",
+  ],
+  gridSelect: [
+    "Snap grid",
+    "Rejilla de ajuste",
+    "Choose the rhythmic resolution for placing and moving notes.",
+    "Elige la resolución rítmica para colocar y mover notas.",
+  ],
+  zoomRange: [
+    "Editor zoom",
+    "Zoom del editor",
+    "Change the horizontal width of sequencer steps.",
+    "Cambia el ancho horizontal de los pasos del secuenciador.",
+  ],
+  keySelect: [
+    "Song key",
+    "Tonalidad",
+    "Set the root note used by scale-aware generators.",
+    "Ajusta la nota raíz usada por los generadores musicales.",
+  ],
+  scaleSelect: [
+    "Musical scale",
+    "Escala musical",
+    "Constrain generated material to a harmonic scale.",
+    "Limita el material generado a una escala armónica.",
+  ],
+  quantizeBtn: [
+    "Quantize",
+    "Cuantizar",
+    "Align notes to the currently selected snap grid.",
+    "Alinea las notas con la rejilla seleccionada.",
+  ],
+  automationParam: [
+    "Automation lane",
+    "Línea de automatización",
+    "Choose which parameter is drawn below the piano roll.",
+    "Elige qué parámetro se dibuja bajo el piano roll.",
+  ],
+  clearAutomationBtn: [
+    "Clear automation",
+    "Limpiar automatización",
+    "Remove every point from the visible automation lane.",
+    "Elimina todos los puntos de la automatización visible.",
+  ],
+  addSceneBtn: [
+    "Add section",
+    "Añadir sección",
+    "Append a new song section using the active clips.",
+    "Añade una nueva sección usando los clips activos.",
+  ],
+  autoArrangeBtn: [
+    "Auto sequence",
+    "Secuencia automática",
+    "Distribute available clips across the complete song.",
+    "Distribuye los clips disponibles a lo largo de la canción.",
+  ],
+  deleteClipBtn: [
+    "Delete active clip",
+    "Borrar clip activo",
+    "Delete this clip safely. Arrangement sections are reassigned and the operation can be undone.",
+    "Borra este clip de forma segura. Las secciones del arreglo se reasignan y puedes deshacer la operación.",
+  ],
+  confirmDeleteClipBtn: [
+    "Confirm clip deletion",
+    "Confirmar borrado del clip",
+    "Permanently remove the selected clip from this project.",
+    "Elimina el clip seleccionado de este proyecto.",
+  ],
+  sequencer: [
+    "Piano roll",
+    "Piano roll",
+    "Click to add a note. Drag across empty space to select several notes; hold Shift to add them to the current selection.",
+    "Haz clic para añadir una nota. Arrastra sobre un espacio vacío para seleccionar varias; mantén Mayús para sumarlas a la selección actual.",
+  ],
+};
+Object.assign(controlDescriptions, {
+  arpEnabled: [
+    "Clip arpeggiator",
+    "Arpegiador del clip",
+    "Turn held notes in the active clip into a rhythmic sequence.",
+    "Convierte las notas mantenidas del clip activo en una secuencia rítmica.",
+  ],
+  lfoEnabled: [
+    "Clip LFO",
+    "LFO del clip",
+    "Enable cyclic modulation for the active clip.",
+    "Activa la modulación cíclica del clip activo.",
+  ],
+  fxBypass: [
+    "Clip effects bypass",
+    "Omitir efectos del clip",
+    "Disable or restore effects on the active clip.",
+    "Desactiva o restaura los efectos del clip activo.",
+  ],
+  clipSelect: [
+    "Active clip and character",
+    "Clip y carácter activos",
+    "Choose the pattern together with its independent motion, effects and vector settings.",
+    "Elige el patrón junto con sus ajustes independientes de movimiento, efectos y vectores.",
+  ],
+});
+Object.assign(controlDescriptions, {
+  scratchCaptureBtn: [
+    "Capture active mix",
+    "Capturar mezcla activa",
+    "Render the active clips into a mastered one, two, four, or eight-bar scratch buffer.",
+    "Renderiza los clips activos en un búfer masterizado de uno, dos, cuatro u ocho compases.",
+  ],
+  scratchImport: [
+    "Import audio to Scratch Deck",
+    "Importar audio al plato",
+    "Load a local WAV, MP3, OGG, or other browser-decodable audio file into the temporary Scratch Deck buffer.",
+    "Carga un WAV, MP3, OGG u otro archivo decodificable por el navegador en el búfer temporal del plato.",
+  ],
+  scratchPlatter: [
+    "Bidirectional scratch platter",
+    "Plato de scratch bidireccional",
+    "Drag in either direction for sample-accurate scratching. Release to return smoothly to normal motor speed.",
+    "Arrastra en ambas direcciones para hacer scratch con precisión de muestra. Suelta para recuperar suavemente la velocidad normal.",
+  ],
+  scratchSyncBtn: [
+    "Beat sync",
+    "Sincronía de pulso",
+    "Move the deck to the nearest beat boundary and return to normal speed.",
+    "Mueve el plato al pulso más cercano y recupera la velocidad normal.",
+  ],
+  scratchBrakeBtn: [
+    "Motor brake",
+    "Freno de motor",
+    "Slow the deck to a stop with a progressive motor brake.",
+    "Detiene el plato progresivamente con un freno de motor.",
+  ],
+  scratchSpinBtn: [
+    "Spinback",
+    "Retroceso",
+    "Throw the record backwards and let it decelerate.",
+    "Lanza el disco hacia atrás y deja que desacelere.",
+  ],
+  scratchStutterBtn: [
+    "Beat stutter",
+    "Repetición rítmica",
+    "Loop a short tempo-derived fragment until this control is released.",
+    "Repite un fragmento corto derivado del tempo hasta desactivar el control.",
+  ],
+  scratchMix: [
+    "Deck crossfader",
+    "Crossfader del plato",
+    "Blend between the live program and the captured Scratch Deck with equal-power curves.",
+    "Mezcla el programa en directo y el plato capturado con curvas de potencia constante.",
+  ],
+  scratchFilter: [
+    "Deck filter",
+    "Filtro del plato",
+    "Darken the Scratch Deck with a smooth resonant-free low-pass filter.",
+    "Oscurece el plato con un filtro paso bajo suave y sin resonancia.",
+  ],
+  scratchWaveform: [
+    "Scratch waveform",
+    "Forma de onda de scratch",
+    "Shows the captured buffer and its live playback position.",
+    "Muestra el búfer capturado y su posición de reproducción en directo.",
+  ],
+});
+Object.assign(controlDescriptions, {
+  exportBtn: [
+    "Export",
+    "Exportar",
+    "Repeat the last export recipe and update its linked file. Shortcut: Ctrl or Command plus E.",
+    "Repite la última exportación y actualiza su archivo vinculado. Atajo: Ctrl o Comando más E.",
+  ],
+  exportAsBtn: [
+    "Export As",
+    "Exportar como",
+    "Choose a format and always select a new destination. Shortcut: Ctrl or Command plus Shift plus E.",
+    "Elige un formato y selecciona siempre un destino nuevo. Atajo: Ctrl o Comando más Mayús más E.",
+  ],
+  globalPosition: [
+    "Song start locator",
+    "Localizador de inicio de canción",
+    "Choose the exact arrangement step where global playback begins.",
+    "Elige el paso exacto del arreglo donde comienza la reproducción global.",
+  ],
+  clipPosition: [
+    "Clip start locator",
+    "Localizador de inicio del clip",
+    "Choose the exact step where active-clip playback begins.",
+    "Elige el paso exacto donde comienza la reproducción del clip activo.",
+  ],
+  performanceRecordBtn: [
+    "Record performance take",
+    "Grabar toma de interpretación",
+    "Capture the audible master in real time, including the Scratch Deck.",
+    "Captura el master audible en tiempo real, incluido el plato de scratch.",
+  ],
+});
+function applyLanguage(render = false): any {
+  return workflow.applyLanguage(runtime, render);
 }
-function samplerNoteName(pitch:number){return`${pitchNames[(pitch%12+12)%12]}${Math.floor(pitch/12)-1}`}
-function drawSamplerWaveform(){const canvas=$('#samplerWaveform') as HTMLCanvasElement|null,buffer=engine.samplerBuffer;if(!canvas)return;const context=canvas.getContext('2d')!;context.clearRect(0,0,canvas.width,canvas.height);context.fillStyle='#070b16';context.fillRect(0,0,canvas.width,canvas.height);if(!buffer){context.fillStyle='#52607b';context.font='800 12px sans-serif';context.textAlign='center';context.fillText(L('LOAD A SAMPLE TO BEGIN','CARGA UN SAMPLE PARA EMPEZAR'),canvas.width/2,canvas.height/2+4);return}const data=buffer.getChannelData(0),step=Math.max(1,Math.floor(data.length/canvas.width)),middle=canvas.height/2,gradient=context.createLinearGradient(0,0,canvas.width,0);gradient.addColorStop(0,'#2ee8ff');gradient.addColorStop(.5,'#ff3bd4');gradient.addColorStop(1,'#a7ff5b');context.strokeStyle=gradient;context.lineWidth=1.5;context.beginPath();for(let x=0;x<canvas.width;x++){let peak=0;for(let index=x*step;index<Math.min(data.length,(x+1)*step);index++)peak=Math.max(peak,Math.abs(data[index]!));const height=Math.max(1,peak*(canvas.height-8));context.moveTo(x,middle-height/2);context.lineTo(x,middle+height/2)}context.stroke();const settings=samplerSettings();context.fillStyle='#050914aa';context.fillRect(0,0,settings.trimStart*canvas.width,canvas.height);context.fillRect(settings.trimEnd*canvas.width,0,(1-settings.trimEnd)*canvas.width,canvas.height)}
-function startSamplerPerformance(source:string,pitch:number,velocity=.85,element?:HTMLElement|null){if(!samplerSettings().assetId){toast(L('LOAD A SAMPLE FIRST','CARGA PRIMERO UN SAMPLE'));return}element?.classList.add('active','hit');if(element){samplerHeld.set(source,element);setTimeout(()=>element.classList.remove('hit'),260)}$('#samplerLab')?.classList.add('playing');if($('#samplerLiveStatus'))$('#samplerLiveStatus').textContent=`LIVE · ${samplerNoteName(pitch)} · ${Math.round(velocity*127)}`;engine.startSampler(source,pitch,velocity,samplerSettings())}
-function endSamplerPerformance(source:string,element?:HTMLElement|null){(element||samplerHeld.get(source))?.classList.remove('active');samplerHeld.delete(source);engine.stopSampler(source);if(!samplerHeld.size){$('#samplerLab')?.classList.remove('playing');if($('#samplerLiveStatus'))$('#samplerLiveStatus').textContent='READY'}}
-function renderSamplerKeyboard(){if(!$('#samplerKeyboard'))return;const settings=samplerSettings(),keyboard=$('#samplerKeyboard'),black=new Set([1,3,6,8,10]);let whites=0;const keys=[];for(let pitch=48;pitch<=72;pitch++){const dark=black.has(pitch%12),left=dark?whites*72-24:whites++*72,label=keyMap[samplerQwertyPitches.indexOf(pitch)]?.toUpperCase()||'';keys.push(`<button class="sampler-key ${dark?'accidental':'natural'} ${pitch===settings.rootNote?'root':''}" style="--key-left:${left}px;--key-hue:${(pitch%12)*30}" data-sampler-pitch="${pitch}" aria-label="${samplerNoteName(pitch)}"><b>${samplerNoteName(pitch)}</b>${label?`<span>${label}</span>`:''}</button>`)}keyboard.style.width=`${whites*72}px`;keyboard.innerHTML=keys.join('');$$('[data-sampler-pitch]').forEach((key:any)=>{const source=`sampler-pointer-${key.dataset.samplerPitch}`;key.onpointerdown=(event:PointerEvent)=>{event.preventDefault();key.setPointerCapture?.(event.pointerId);startSamplerPerformance(source,+key.dataset.samplerPitch,.88,key)};key.onpointerup=()=>endSamplerPerformance(source,key);key.onpointercancel=()=>endSamplerPerformance(source,key)});$('#samplerName').textContent=settings.assetId?settings.name:L('DROP A SOUND INTO THE CHROMATIC ENGINE','ARRASTRA UN SONIDO AL MOTOR CROMÁTICO');$('#samplerMeta').textContent=settings.assetId?`${settings.duration.toFixed(2)} s · ${samplerNoteName(settings.rootNote)} ROOT · ${settings.mode.toUpperCase()}`:L('WAV · MP3 · OGG · WEBM','WAV · MP3 · OGG · WEBM');$('#samplerArm').disabled=!settings.assetId;$('#samplerArm').setAttribute('aria-pressed',String(samplerArmed));$('#samplerArm').classList.toggle('active',samplerArmed);$('#samplerRemove').disabled=!settings.assetId;for(const [id,key] of [['#samplerRoot','rootNote'],['#samplerMode','mode'],['#samplerTune','tune'],['#samplerGain','gain'],['#samplerAttack','attack'],['#samplerRelease','release'],['#samplerFilter','filter'],['#samplerTrimStart','trimStart'],['#samplerTrimEnd','trimEnd'],['#samplerPolyphony','polyphony']] as Array<[string,keyof SamplerInstrument]>)$(id).value=String(settings[key]);$('#samplerReverse').checked=settings.reverse;$('#samplerRootValue').textContent=samplerNoteName(settings.rootNote);$('#samplerTuneValue').textContent=`${settings.tune>0?'+':''}${settings.tune} st`;$('#samplerGainValue').textContent=`${Math.round(settings.gain*100)}%`;$('#samplerAttackValue').textContent=`${Math.round(settings.attack*1000)} ms`;$('#samplerReleaseValue').textContent=`${Math.round(settings.release*1000)} ms`;$('#samplerFilterValue').textContent=`${Math.round(settings.filter*100)}%`;drawSamplerWaveform()}
-async function loadSamplerAsset(){const settings=samplerSettings();if(!settings.assetId){loadedSamplerAssetId=null;engine.clearSamplerSample();renderSamplerKeyboard();return}try{const blob=await getAsset(settings.assetId);if(!blob)throw new Error('missing');settings.duration=await engine.setSamplerSample(await blob.arrayBuffer(),settings.reverse);loadedSamplerAssetId=settings.assetId}catch{loadedSamplerAssetId=null;engine.clearSamplerSample()}renderSamplerKeyboard()}
-function setupSamplerKeyboard(){if($('#samplerLab'))return;$('.audio-ruler').insertAdjacentHTML('beforebegin','<section id="samplerLab" class="sampler-lab"><header><div><span class="eyebrow">CHROMATIC SAMPLE ENGINE</span><h2>PRISM KEYS</h2><p id="samplerName">NO SAMPLE LOADED</p><small id="samplerMeta">WAV · MP3 · OGG · WEBM</small></div><div class="sampler-actions"><label class="file-button">＋ LOAD SAMPLE<input id="samplerImport" type="file" accept="audio/*"></label><button id="samplerArm" aria-pressed="false" disabled>⌨ ARM QWERTY / MIDI</button><button id="samplerRemove" disabled>REMOVE</button></div></header><canvas id="samplerWaveform" width="1100" height="82" aria-label="Sampler waveform"></canvas><div class="sampler-controls"><label>ROOT <input id="samplerRoot" data-sampler-setting="rootNote" type="range" min="36" max="84" step="1"><output id="samplerRootValue"></output></label><label>MODE <select id="samplerMode" data-sampler-setting="mode"><option value="gate">GATE</option><option value="one-shot">ONE SHOT</option><option value="loop">LOOP</option></select></label><label>TUNE <input id="samplerTune" data-sampler-setting="tune" type="range" min="-24" max="24" step="1"><output id="samplerTuneValue"></output></label><label>LEVEL <input id="samplerGain" data-sampler-setting="gain" type="range" min="0" max="1.5" step=".01"><output id="samplerGainValue"></output></label><label>ATTACK <input id="samplerAttack" data-sampler-setting="attack" type="range" min=".001" max="2" step=".001"><output id="samplerAttackValue"></output></label><label>RELEASE <input id="samplerRelease" data-sampler-setting="release" type="range" min=".01" max="4" step=".01"><output id="samplerReleaseValue"></output></label><label>FILTER <input id="samplerFilter" data-sampler-setting="filter" type="range" min="0" max="1" step=".01"><output id="samplerFilterValue"></output></label><label>START <input id="samplerTrimStart" data-sampler-setting="trimStart" type="range" min="0" max=".99" step=".001"></label><label>END <input id="samplerTrimEnd" data-sampler-setting="trimEnd" type="range" min=".01" max="1" step=".001"></label><label>VOICES <input id="samplerPolyphony" data-sampler-setting="polyphony" type="number" min="1" max="24" step="1"></label><label class="switch"><input id="samplerReverse" data-sampler-setting="reverse" type="checkbox"><span>REVERSE</span></label></div><div class="sampler-keyboard-shell"><div id="samplerKeyboard" class="sampler-keyboard" role="application" aria-label="Chromatic sampler keyboard"></div></div><p class="sampler-hint">A S D F G H J K · velocity-sensitive MIDI · use Record Take to capture the live sampler performance.</p></section>');$('#samplerImport').onchange=async(event:any)=>{const file=event.target.files?.[0] as File|undefined;if(!file)return;try{const previous=samplerSettings().assetId,id=`sampler-${cryptoId()}`,duration=await engine.setSamplerSample(await file.arrayBuffer(),false);await putAsset(id,file);if(previous)await deleteAsset(previous);project.sampler={...samplerDefaults(),assetId:id,name:file.name,size:file.size,type:file.type,duration};samplerArmed=true;changed();renderSamplerKeyboard();toast(L('SAMPLER READY','SAMPLER LISTO'))}catch(error){toast(`${L('SAMPLE ERROR','ERROR DE SAMPLE')}: ${error instanceof Error?error.message:String(error)}`)}event.target.value=''};$('#samplerArm').onclick=()=>{samplerArmed=!samplerArmed;renderSamplerKeyboard();toast(samplerArmed?L('SAMPLER INPUT ARMED','ENTRADA DEL SAMPLER ACTIVADA'):L('SAMPLER INPUT RELEASED','ENTRADA DEL SAMPLER DESACTIVADA'))};$('#samplerRemove').onclick=async()=>{const settings=samplerSettings();if(settings.assetId)await deleteAsset(settings.assetId);project.sampler=samplerDefaults();samplerArmed=false;engine.clearSamplerSample();changed();renderSamplerKeyboard()};$$('[data-sampler-setting]').forEach((input:any)=>input.onchange=async()=>{const settings=samplerSettings(),key=input.dataset.samplerSetting as keyof SamplerInstrument;(settings as any)[key]=input.type==='checkbox'?input.checked:input.tagName==='SELECT'?input.value:+input.value;if(settings.trimEnd<=settings.trimStart)settings.trimEnd=Math.min(1,settings.trimStart+.01);settings.polyphony=Math.max(1,Math.min(24,Math.round(settings.polyphony)));changed();if(key==='reverse')await loadSamplerAsset();else renderSamplerKeyboard()});loadSamplerAsset()}
-function setupV6Studio(){const scale=localStorage.getItem('kiber-vengance-ui-scale-v1')||'1';document.documentElement.style.setProperty('--ui-scale',scale);$('#uiScale').value=scale;$('#uiScale').onchange=()=>{localStorage.setItem('kiber-vengance-ui-scale-v1',$('#uiScale').value);document.documentElement.style.setProperty('--ui-scale',$('#uiScale').value)};$('#audioLaneBtn').onclick=()=>{snapshot();project.audioLanes.push(createAudioLane(`AUDIO ${project.audioLanes.length+1}`,['#2ee8ff','#ff3bd4','#a7ff5b','#ff9f43'][project.audioLanes.length%4]));changed();renderAudioStudio()};$('#audioImport').onchange=async(event:any)=>{for(const file of Array.from(event.target.files||[]) as File[])await addAudioBlob(file);event.target.value=''};$('#audioRecordBtn').onclick=async()=>{const button=$('#audioRecordBtn');if(inputRecorder?.state==='recording'){inputRecorder.stop();button.classList.remove('active');button.textContent=L('Record input','Grabar entrada');return}try{inputStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});inputChunks=[];inputRecorder=new MediaRecorder(inputStream);inputRecorder.ondataavailable=event=>{if(event.data.size)inputChunks.push(event.data)};inputRecorder.onstop=async()=>{inputStream?.getTracks().forEach(track=>track.stop());await addAudioBlob(new Blob(inputChunks,{type:inputRecorder?.mimeType||'audio/webm'}),`Input ${new Date().toLocaleTimeString()}.webm`)};inputRecorder.start(250);button.classList.add('active');button.textContent=L('Stop recording','Terminar grabación')}catch(error){toast(`${L('INPUT UNAVAILABLE','ENTRADA NO DISPONIBLE')}: ${error instanceof Error?error.message:String(error)}`)}};$('#audioScratchBtn').onclick=async()=>{if(!scratchBuffer){toast(L('CAPTURE THE SCRATCH DECK FIRST','CAPTURA PRIMERO EL PLATO'));return}await addAudioBlob(audioBufferWav(scratchBuffer),'Scratch resample.wav')};$('#automationLaneBtn').onclick=()=>{snapshot();const target=$('#automationTarget').value,lane=createAutomationLane(target,target.replace(/[._]/g,' ').toUpperCase());lane.writeMode=$('#automationWriteMode').value;lane.points=[{id:cryptoId(),step:0,value:.5,curve:'smooth'},{id:cryptoId(),step:64,value:.8,curve:'smooth'}];project.automationLanes.push(lane);changed();renderGlobalAutomation()};$('#modulationBtn').onclick=()=>{snapshot();project.modulationRoutes.push({id:cryptoId(),source:'lfo-1',target:$('#automationTarget').value,amount:.25,bipolar:true,rate:.5});changed();renderGlobalAutomation()};$('#monoCheckBtn').onclick=()=>{snapshot();project.masterSettings.monoCheck=!project.masterSettings.monoCheck;changed();renderMixer();renderMixGroups()};for(const id of ['masterTargetLufs','masterCeiling'])$(`#${id}`).onchange=()=>{project.masterSettings[id==='masterTargetLufs'?'targetLufs':'ceilingDb']=+$(`#${id}`).value;changed();engine.setProject(project);renderMixGroups()};const tools=$('.generators');if(tools&&!$('#transformNotes'))tools.insertAdjacentHTML('beforeend','<span id="transformNotes"><button data-transform="retrograde">REVERSE</button><button data-transform="invert">INVERT</button><button data-transform="double">×2</button><button data-transform="half">÷2</button><button data-transform="humanize">HUMANIZE</button></span>');$$('[data-transform]').forEach(button=>button.onclick=()=>{snapshot();transformNotes(clip(),button.dataset.transform,.65);changed();renderPiano();toast(`TRANSFORM · ${button.dataset.transform.toUpperCase()}`)});const toolbar=$('.arrange-toolbar');if(toolbar&&!$('#tempoEventBtn'))toolbar.insertAdjacentHTML('beforeend','<button id="tempoEventBtn">＋ TEMPO</button><button id="meterEventBtn">＋ METER</button>');$('#tempoEventBtn').onclick=()=>{const step=+(prompt('Step','0')||0),bpm=+(prompt('BPM',String(project.tempo))||project.tempo);project.tempoMap.push({id:cryptoId(),step:Math.max(0,step),bpm:Math.max(30,Math.min(300,bpm)),curve:'jump'});changed();renderArrangement();renderTempoMap()};$('#meterEventBtn').onclick=()=>{const step=+(prompt('Step','0')||0),meter=(prompt('Meter','4/4')||'4/4').split('/').map(Number);project.meterMap.push({id:cryptoId(),step:Math.max(0,step),beats:Math.max(1,Math.min(12,meter[0]||4)),unit:meter[1]===8?8:4});changed();renderArrangement();renderTempoMap()};loadAudioAssets()}
-function setupMidiLearnUi(){if(!$('#midiLearnBtn'))$('#globalAutomation').insertAdjacentHTML('beforebegin','<button id="midiLearnBtn">MIDI LEARN</button>');$('#midiLearnBtn').onclick=()=>{midiLearnTarget=$('#automationTarget').value;$('#midiLearnBtn').textContent='MOVE A MIDI CC…';toast(L('MIDI LEARN ARMED','MIDI LEARN ARMADO'))}}
-function setupV6Copy(){const sync=()=>{const projectCopy=$('.export-choice:nth-child(3) span'),bundleCopy=$('.export-choice:nth-child(6) span');if(projectCopy)projectCopy.textContent=L('Portable v6 backup','Copia portátil v6');if(bundleCopy)bundleCopy.textContent=L('Project JSON + local audio assets','JSON del proyecto + audio local')};sync();$('#languageSelect').addEventListener('change',sync);$('#menuLanguageSelect').addEventListener('change',sync)}
-function setupV6Safety(){const syncScale=()=>$('#app').classList.toggle('ui-scaled',Math.abs(+$('#uiScale').value-1)>.001);syncScale();$('#uiScale').addEventListener('change',syncScale);$('#audioLanes').addEventListener('change',(event:Event)=>{const input=event.target as HTMLInputElement|HTMLSelectElement;if(!input.matches('[data-region-key]'))return;event.stopImmediatePropagation();const card=input.closest('[data-audio-region]') as HTMLElement,row=input.closest('[data-audio-lane]') as HTMLElement,lane=project.audioLanes.find((item:AudioLane)=>item.id===row.dataset.audioLane),region=lane?.regions.find((item:AudioRegion)=>item.id===card.dataset.audioRegion);if(!region)return;const key=input.dataset.regionKey!;(region as any)[key]=key==='warp'?input.value==='1':key==='warpMode'?input.value:+input.value;if(region.offsetSeconds>=region.durationSeconds)region.offsetSeconds=Math.max(0,region.durationSeconds-.01);changed();setTimeout(renderAudioStudio,0)},true)}
-function setupSampleSlicing(){const decorate=()=>$$('[data-sample-slot]').forEach(row=>{const slot=+row.dataset.sampleSlot,asset=project.samples.find((item:SampleAsset)=>item.slot===slot);if(!asset||row.querySelector('[data-slice-sample]'))return;const button=document.createElement('button');button.dataset.sliceSample='';button.textContent=asset.slices?.length?`${asset.slices.length} SLICES`:'AUTO SLICE';button.onclick=async()=>{const blob=await getAsset(asset.id);if(!blob)return;await engine.init();const buffer=await engine.ctx.decodeAudioData(await blob.arrayBuffer()),count=Math.max(2,Math.min(16,+(prompt(L('Number of slices','Número de cortes'),'8')||8))),points=detectTransientSlices(buffer.getChannelData(0),count),pairs=points.slice(0,-1).map((start,index)=>({start,end:points[index+1]!})),empty=DRUM_NAMES.map((_,index)=>index).filter(index=>!project.samples.some((sample:SampleAsset)=>sample.slot===index)||index===slot);asset.slices=pairs.map((pair,index)=>({id:cryptoId(),name:`${asset.name} ${index+1}`,start:pair.start,end:pair.end,rootNote:36+index}));for(let index=0;index<Math.min(pairs.length,empty.length);index++){const target=empty[index]!,pair=pairs[index]!,id=index===0?asset.id:`sample-${cryptoId()}`;if(index>0)await putAsset(id,blob);const sliced:SampleAsset={...structuredClone(asset),id,slot:target,name:`${asset.name} · ${index+1}`,trimStart:pair.start,trimEnd:pair.end,slices:[]};project.samples=project.samples.filter((sample:SampleAsset)=>sample.slot!==target);project.samples.push(sliced)}changed();await loadLocalSamples();renderSampleSlots();toast(`${pairs.length} ${L('TRANSIENT SLICES DETECTED','CORTES TRANSITORIOS DETECTADOS')}`)};row.append(button)});new window.MutationObserver(decorate).observe($('#sampleSlots'),{childList:true});decorate()}
-function setupProjectTemplates(){if(!$('#projectTemplate'))$('#newBtn').insertAdjacentHTML('beforebegin','<label class="ui-scale-control"><span>PROJECT TEMPLATE</span><select id="projectTemplate"><option value="cinematic">CINEMATIC DEMO</option><option value="minimal">MINIMAL SIGNAL</option><option value="performance">PERFORMANCE RIG</option><option value="audio">AUDIO / RESAMPLE</option></select><button id="applyTemplateBtn">CREATE</button></label>');$('#applyTemplateBtn').onclick=()=>{const type=$('#projectTemplate').value,next=type==='cinematic'?createProject():createEmptyProject();if(type==='performance'){next.title='Live Voltage';for(const track of TRACKS)activeClip(next,track).bars=4;next.loop={enabled:true,start:0,end:64,punch:false}}if(type==='audio'){next.title='Hybrid Session';next.audioLanes=[createAudioLane('RESAMPLE','#ff3bd4'),createAudioLane('VOCALS','#2ee8ff')]}replaceProject(next);toast(L('PROJECT TEMPLATE CREATED','PLANTILLA DE PROYECTO CREADA'))}}
-function renderAll(){renderTracks();renderInspector();renderArp();renderFx();macroMarkup($('#macros'));macroMarkup($('#performMacros'));renderClipControls();renderHarmony();renderPiano();renderAutomation();renderKeyboard();renderLauncher();renderArrangement();renderTempoMap();renderMixer();renderMixGroups();renderSamplerKeyboard();renderAudioStudio();renderPerformanceTakes();renderLocators();$('#title').value=project.title;$('#tempo').value=project.tempo;$('#meterSelect').value=`${project.meter.beats}/${project.meter.unit}`;$('#recordMode').value=project.editor.recordMode||'quantized';$('#swing').value=Math.round(project.swing*100);$('#masterVolume').value=project.master;$('#masterValue').textContent=Math.round(project.master*100);updateOrb();installControlHelp();syncStudioUi()}
-function syncTransportButtons(running=engine.playing){$('#playBtn').textContent=running?'■':'▶';$('#playBtn').classList.toggle('active',running);$('#pauseBtn').disabled=!running;$('#pauseBtn').classList.toggle('active',false)}
-function pausePlayback(){if(!engine.playing)return;const songMode=engine.songMode,position=songMode?transportPosition:Math.max(0,currentStep);engine.stop();if(songMode){setGlobalStart(position);transportPosition=position}else{setClipStart(position);currentStep=position}syncTransportButtons(false);$('#pauseBtn').classList.add('active');$('#audioState').textContent=L('PAUSED','EN PAUSA');updatePlayheads();updatePosition()}
-async function togglePlay(forceSong?:boolean){if(engine.playing){engine.stop();syncTransportButtons(false)}else{engine.songMode=forceSong??['audio','arrange','mix'].includes(activeView);const startStep=engine.songMode?globalStartStep:(clipStartSteps.get(clip().id)||0);await engine.start(project,{countInBars:recordArmed?+$('#countIn').value:0,startStep});syncTransportButtons(true);$('#audioState').textContent=engine.countingIn?'COUNT IN':'RUNNING';animateMeter();if(activeView==='mix')animateMixer()}}
-function animateMeter(){cancelAnimationFrame(animation);const loop=()=>{if(engine.playing){engine.draw($('#meter'));animation=requestAnimationFrame(loop)}};loop()}
-function wavOptions(){const useRegion=Boolean($('#wavRegion').checked)&&project.loop.end>project.loop.start;return{bitDepth:(+$('#wavDepth').value===32?32:16) as 16|32,normalize:Boolean($('#wavNormalize').checked),sampleRate:(+$('#wavSampleRate').value||48000) as 44100|48000|96000,tailSeconds:+$('#wavTail').value||0,dither:Boolean($('#wavDither').checked),dry:$('#wavFx').value==='dry',region:useRegion?{start:project.loop.start,end:project.loop.end}:undefined,signal:exportController?.signal,drumSamples:engine.drumSamples,audioAssets:engine.audioAssets}}
-function setExportProgress(value:number,status?:string){$('#exportProgress').value=Math.max(0,Math.min(100,value));if(status)$('#renderStatus').textContent=status}
-async function exportWav(song:boolean,target?:QuickTarget){const st=$('#renderStatus'),buttons=$$('#exportDialog button');exportController=new AbortController();buttons.forEach(button=>{if(button.id!=='cancelExportBtn')button.disabled=true});$('#cancelExportBtn').disabled=false;setExportProgress(12,L(song?'RENDERING FULL ARRANGEMENT…':'RENDERING ACTIVE CLIPS…',song?'RENDERIZANDO ARREGLO COMPLETO…':'RENDERIZANDO CLIPS ACTIVOS…'));try{const wav=await renderWav(project,{song,...wavOptions()}),name=`${safeName()}${song?'-song':'-clips'}.wav`;setExportProgress(90,L('WRITING AUDIO…','ESCRIBIENDO AUDIO…'));if(target)await writeQuickExport(target,wav);else download(wav,name);setExportProgress(100,L('WAV READY','WAV LISTO'));toast(target&&!target.fallback?L(`WAV SAVED · ${target.name}`,`WAV GUARDADO · ${target.name}`):L('WAV EXPORTED','WAV EXPORTADO'))}catch(error){if(error instanceof DOMException&&error.name==='AbortError'){st.textContent=L('EXPORT CANCELLED','EXPORTACIÓN CANCELADA');return}throw error}finally{exportController=null;buttons.forEach(button=>button.disabled=false);$('#cancelExportBtn').disabled=true}}
-function crc32(bytes:Uint8Array){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}return(crc^0xffffffff)>>>0}
-async function zipFiles(files:Array<{name:string;data:Blob}>){const encoder=new TextEncoder(),parts:BlobPart[]=[],central:BlobPart[]=[],offsets:number[]=[];let offset=0;const u16=(value:number)=>new Uint8Array([value&255,value>>>8&255]),u32=(value:number)=>new Uint8Array([value&255,value>>>8&255,value>>>16&255,value>>>24&255]);for(const file of files){const name=encoder.encode(file.name),data=new Uint8Array(await file.data.arrayBuffer()),crc=crc32(data),header=new Blob([u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);offsets.push(offset);parts.push(header,data);offset+=header.size+data.length}let centralSize=0;for(let i=0;i<files.length;i++){const file=files[i]!,name=encoder.encode(file.name),data=new Uint8Array(await file.data.arrayBuffer()),entry=new Blob([u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc32(data)),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offsets[i]!),name]);central.push(entry);centralSize+=entry.size}return new Blob([...parts,...central,u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralSize),u32(offset),u16(0)],{type:'application/zip'})}
-async function readStoreZip(blob:Blob){const bytes=new Uint8Array(await blob.arrayBuffer()),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),decoder=new TextDecoder(),files=new Map<string,Blob>();let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const method=view.getUint16(offset+8,true),size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true);if(method!==0)throw new Error('Only uncompressed КИБЕР VENGANCE packages are supported');const nameStart=offset+30,dataStart=nameStart+nameLength+extraLength,name=decoder.decode(bytes.slice(nameStart,nameStart+nameLength));files.set(name,new Blob([bytes.slice(dataStart,dataStart+size)]));offset=dataStart+size}return files}
-async function importProjectFile(file:File){if(file.name.toLowerCase().endsWith('.zip')){const files=await readStoreZip(file),entry=[...files.entries()].find(([name])=>name.endsWith('.kiber.json'));if(!entry)throw new Error('Project package does not contain a .kiber.json file');const next=migrateProject(JSON.parse(await entry[1].text()));for(const asset of next.samples){const sample=[...files.entries()].find(([name])=>name.startsWith(`samples/${asset.slot}-`));if(sample)await putAsset(asset.id,new Blob([await sample[1].arrayBuffer()],{type:asset.type}))}if(next.sampler.assetId){const packed=[...files.entries()].find(([name])=>name.startsWith(`sampler/${next.sampler.assetId}-`));if(packed){const blob=new Blob([await packed[1].arrayBuffer()],{type:next.sampler.type||'audio/wav'});await putAsset(next.sampler.assetId,blob);try{await engine.setSamplerSample(await blob.arrayBuffer(),next.sampler.reverse)}catch{}}}const audioIds=new Set<string>();for(const lane of next.audioLanes)for(const region of lane.regions)audioIds.add(region.assetId);for(const id of audioIds){const entry=[...files.entries()].find(([name])=>name.startsWith(`audio/${id}-`));if(!entry)continue;const blob=new Blob([await entry[1].arrayBuffer()],{type:'audio/wav'});await putAsset(id,blob);try{await engine.setAudioAsset(id,await blob.arrayBuffer())}catch{}}return next}return migrateProject(JSON.parse(await file.text()))}
-async function renderStems(){const files:Array<{name:string;data:Blob}>=[],base=safeName(),selected=new Set($$('[data-stem]:checked').map(input=>input.dataset.stem)),jobs=(selected.has('master')?1:0)+TRACKS.filter(track=>selected.has(track)).length;exportController=new AbortController();$('#cancelExportBtn').disabled=false;let done=0;if(selected.has('master')){setExportProgress(2,L('RENDERING MASTER…','RENDERIZANDO MASTER…'));files.push({name:`${base}-master.wav`,data:await renderWav(project,{song:true,...wavOptions()})});done++}for(const track of TRACKS.filter(track=>selected.has(track))){if(exportController.signal.aborted)throw new DOMException('Export cancelled','AbortError');const isolated=structuredClone(project);TRACKS.forEach(id=>{isolated.tracks[id].solo=id===track;isolated.tracks[id].mute=false});setExportProgress(done/Math.max(1,jobs)*88,L(`RENDERING STEM ${done+1}/${jobs} · ${TRACK_META[track].label}`,`RENDERIZANDO PISTA ${done+1}/${jobs} · ${TRACK_META[track].label}`));files.push({name:`${base}-${track}.wav`,data:await renderWav(isolated,{song:true,...wavOptions()})});done++}if(!files.length)throw new Error(L('Select at least one stem','Selecciona al menos una pista'));files.push({name:'manifest.json',data:new Blob([JSON.stringify({app:'КИБЕР VENGANCE',project:project.title,createdAt:new Date().toISOString(),sampleRate:+$('#wavSampleRate').value,bitDepth:+$('#wavDepth').value,tracks:[...selected]},null,2)],{type:'application/json'})});setExportProgress(94,L('PACKING STEMS…','EMPAQUETANDO PISTAS…'));const zip=await zipFiles(files);setExportProgress(100);exportController=null;$('#cancelExportBtn').disabled=true;return zip}
-async function renderProjectBundle(){const files:Array<{name:string;data:Blob}>=[{name:`${safeName()}.kiber.json`,data:new Blob([JSON.stringify(project,null,2)],{type:'application/json'})}];for(const asset of project.samples){const blob=await getAsset(asset.id);if(blob)files.push({name:`samples/${asset.slot}-${asset.name.replace(/[^a-z0-9._-]+/gi,'-')}`,data:blob})}if(project.sampler.assetId){const blob=await getAsset(project.sampler.assetId);if(blob)files.push({name:`sampler/${project.sampler.assetId}-${project.sampler.name.replace(/[^a-z0-9._-]+/gi,'-')}`,data:blob})}const regionAssets=new Map<string,string>();for(const lane of project.audioLanes)for(const region of lane.regions)regionAssets.set(region.assetId,region.name);for(const [id,name] of regionAssets){const blob=await getAsset(id);if(blob)files.push({name:`audio/${id}-${name.replace(/[^a-z0-9._-]+/gi,'-')}`,data:blob})}files.push({name:'PACKAGE-README.txt',data:new Blob(['КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores sampler, audio-region and drum-sample assets into local browser storage.\n'],{type:'text/plain'})});return zipFiles(files)}
-const exportMeta:Record<QuickExportKind,{extension:string;type:string;description:string}>={wav:{extension:'.wav',type:'audio/wav',description:'Wave audio'},midi:{extension:'.mid',type:'audio/midi',description:'MIDI song'},project:{extension:'.json',type:'application/json',description:'КИБЕР VENGANCE project'},'clip-wav':{extension:'.wav',type:'audio/wav',description:'Wave audio'},'clip-midi':{extension:'.mid',type:'audio/midi',description:'MIDI clips'},stems:{extension:'.zip',type:'application/zip',description:'КИБЕР VENGANCE stems'},bundle:{extension:'.zip',type:'application/zip',description:'КИБЕР VENGANCE project package'},performance:{extension:'.webm',type:'audio/webm',description:'Live performance'}};
-function exportName(kind:QuickExportKind){const suffix:Record<QuickExportKind,string>={wav:'-song.wav',midi:'-song.mid',project:'.kiber.json','clip-wav':'-clips.wav','clip-midi':'-clips.mid',stems:'-stems.zip',bundle:'-project-package.zip',performance:'-performance.webm'};return`${safeName()}${suffix[kind]}`}
-async function performExport(kind:QuickExportKind,forcePicker=false){if(kind==='performance'&&!performanceTake&&activePerformanceTakeId){const take=project.performanceTakes.find((item:PerformanceTake)=>item.id===activePerformanceTakeId);if(take)performanceTake=await loadPerformanceAudio(take)}if(kind==='performance'&&!performanceTake){toast(L('RECORD A PERFORMANCE TAKE FIRST','GRABA PRIMERO UNA TOMA'));return}const meta=exportMeta[kind],target=await prepareQuickExport(kind,exportName(kind),meta.type,meta.extension,meta.description,forcePicker);if(target.cancelled)return;try{let data:Blob|string|Uint8Array;if(kind==='wav'||kind==='clip-wav'){localStorage.setItem(LAST_EXPORT,kind);await exportWav(kind==='wav',target);renderExportTargets();return}else if(kind==='midi'||kind==='clip-midi')data=encodeMidi(project,{song:kind==='midi'});else if(kind==='project')data=JSON.stringify(project,null,2);else if(kind==='stems')data=await renderStems();else if(kind==='bundle')data=await renderProjectBundle();else data=performanceTake!;await writeQuickExport(target,data);localStorage.setItem(LAST_EXPORT,kind);setExportProgress(100,L('EXPORT READY','EXPORTACIÓN LISTA'));toast(target.fallback?L('EXPORT DOWNLOADED','EXPORTACIÓN DESCARGADA'):L(`SAVED · ${target.name}`,`GUARDADO · ${target.name}`));renderExportTargets()}catch(error){if(error instanceof DOMException&&error.name==='AbortError')$('#renderStatus').textContent=L('EXPORT CANCELLED','EXPORTACIÓN CANCELADA');else $('#renderStatus').textContent=`${L('EXPORT FAILED','ERROR DE EXPORTACIÓN')}: ${error instanceof Error?error.message:String(error)}`;toast($('#renderStatus').textContent)}finally{exportController=null;$('#cancelExportBtn').disabled=true}}
-async function quickExportWav(forcePicker=false){await performExport('wav',forcePicker)}
-async function quickExportMidi(forcePicker=false){await performExport('midi',forcePicker)}
-function repeatLastExport(){const kind=(localStorage.getItem(LAST_EXPORT)||'wav') as QuickExportKind;performExport(kind,false)}
-
-$('#playBtn').onclick=()=>togglePlay();$('#pauseBtn').onclick=pausePlayback;$('#rewindBtn').onclick=()=>{engine.stop();currentStep=-1;currentScene=-1;transportPosition=0;setGlobalStart(0);setClipStart(0);updatePlayheads();syncTransportButtons(false);$('#pauseBtn').classList.remove('active')};$('#recordBtn').onclick=()=>{recordArmed=!recordArmed;$('#recordBtn').classList.toggle('active',recordArmed);toast(recordArmed?`RECORD ARMED · ${$('#countIn').value} BAR COUNT-IN`:'RECORD SAFE');syncStudioUi()};$('#metroBtn').onclick=()=>{metronome=!metronome;engine.metronome=metronome;$('#metroBtn').setAttribute('aria-pressed',metronome)};
-$('#tempo').onchange=()=>{snapshot();project.tempo=Math.max(50,Math.min(220,+$('#tempo').value));changed()};$('#meterSelect').onchange=()=>{snapshot();const [beats,unit]=$('#meterSelect').value.split('/').map(Number);setProjectMeter(project,beats,unit);selectedNotes.clear();changed(true)};$('#recordMode').onchange=()=>{snapshot();project.editor.recordMode=$('#recordMode').value;changed();toast(project.editor.recordMode==='free'?'FREE MICROTIMING RECORDING':'QUANTIZED RECORDING')};$('#swing').onchange=()=>{snapshot();project.swing=Math.max(0,Math.min(.6,+$('#swing').value/100));changed()};$('#title').onchange=()=>{snapshot();project.title=$('#title').value.trim()||'Untitled Signal';changed()};$('#masterVolume').onpointerdown=snapshot;$('#masterVolume').oninput=()=>{project.master=+$('#masterVolume').value;$('#masterValue').textContent=Math.round(project.master*100);$('#mixerMaster').value=project.master;$('#mixerMasterValue').textContent=`${Math.round(project.master*100)}%`;engine.setProject(project)};$('#masterVolume').onchange=()=>changed();
-$('#undoBtn').onclick=()=>{project=history.undo(project);engine.project=project;selectedNotes.clear();changed(true)};$('#redoBtn').onclick=()=>{project=history.redo(project);engine.project=project;selectedNotes.clear();changed(true)};$('#newClipBtn').onclick=()=>{snapshot();const source=clip(),c=createClip(selectedTrack,`${TRACK_META[selectedTrack].label} ${clipsForTrack(project,selectedTrack).length+1}`,2,meterSteps(project.meter));c.character=structuredClone(source.character);project.clips.push(c);project.activeClipIds[selectedTrack]=c.id;selectedNotes.clear();changed(true);toast(L('New clip created','Nuevo clip creado'),true)};$('#duplicateBtn').onclick=()=>{snapshot();duplicateClip(project,clip().id);selectedNotes.clear();changed(true);toast(L('Clip duplicated','Clip duplicado'),true)};$('#mutateBtn').onclick=()=>{snapshot();varyClip(project,clip(),clip().character.macros.tension);selectedNotes.clear();changed(true);toast(L('Variation created','Variación creada'),true)};
-$('#noteLength').onchange=()=>editSelection('length',$('#noteLength').value);$('#noteVelocity').onpointerdown=()=>{if(selectedNotes.size)snapshot()};$('#noteVelocity').oninput=()=>{for(const n of clip().notes.filter(n=>selectedNotes.has(n.id)))n.velocity=+$('#noteVelocity').value;renderPiano()};$('#noteVelocity').onchange=()=>changed();$('#deleteNotesBtn').onclick=deleteSelection;$('#automationParam').onchange=()=>{project.editor.automationParam=$('#automationParam').value;changed();renderAutomation()};$('#clearAutomationBtn').onclick=()=>{snapshot();(clip().automation as any)[project.editor.automationParam]={};changed();renderAutomation();toast(L('Automation cleared','Automatización borrada'),true)};
-$('#addSceneBtn').onclick=()=>{snapshot();addArrangementScene(project);changed(true);focusScene(project.arrangement.length-1)};$('#autoArrangeBtn').onclick=()=>{snapshot();distributeArrangementPatterns(project);changed(true);toast('CLIPS DISTRIBUTED ACROSS SONG')};
-function activateView(view:string){activeView=view;$$('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===view));$$('.view').forEach(v=>v.classList.toggle('active',v.id===`${view}View`));engine.songMode=['audio','arrange','mix'].includes(view);if(view==='launch')renderLauncher();if(view==='audio'){renderAudioStudio();renderSamplerKeyboard()}if(view==='arrange'){renderArrangement();renderTempoMap()}if(view==='mix'){renderMixer();renderMixGroups();requestAnimationFrame(animateMixer)}if(view==='perform')renderPerformanceTakes();syncStudioUi()}
-$$('[data-view]').forEach((b:any)=>b.onclick=()=>activateView(b.dataset.view));
-function compatibility(){return{timestamp:new Date().toISOString(),userAgent:navigator.userAgent,audioContext:Boolean(window.AudioContext||window.webkitAudioContext),offlineAudio:Boolean(window.OfflineAudioContext),webMidi:Boolean(navigator.requestMIDIAccess),fileSystemAccess:Boolean(window.showSaveFilePicker),serviceWorker:Boolean(navigator.serviceWorker),secureContext:window.isSecureContext,platform:navigator.platform||'unknown',sampleRate:engine.ctx?.sampleRate||'not initialized',audioState:engine.ctx?.state||'not initialized'}}function showCompatibility(){const data=compatibility();$('#compatReport').innerHTML=Object.entries(data).map(([key,value])=>`<div><span>${esc(key)}</span><b class="${value===false?'bad':'good'}">${esc(value)}</b></div>`).join('');open('#compatDialog');return data}
-const open=(id:string)=>$(id).showModal(),replaceProject=(next:Project)=>{snapshot();project=next;engine.project=project;selectedNotes.clear();globalStartStep=0;clipStartSteps.clear();changed(true);$('#projectMenu').close()};$('#menuBtn').onclick=()=>{renderVersions();renderExportTargets();open('#projectMenu')};$('#exportBtn').onclick=repeatLastExport;$('#exportAsBtn').onclick=()=>open('#exportDialog');$('#helpBtn').onclick=()=>open('#helpDialog');$('#aboutBtn').onclick=()=>open('#aboutDialog');$$('[data-close]').forEach((b:any)=>b.onclick=()=>b.closest('dialog').close());$('#newBtn').onclick=()=>{if(confirm('Create a new demo project? Autosave will be replaced.'))replaceProject(createProject())};$('#emptyBtn').onclick=()=>{if(confirm('Create an empty project? Autosave will be replaced.'))replaceProject(createEmptyProject())};$('#duplicateProjectBtn').onclick=()=>{const copy=migrateProject(structuredClone(project));copy.id=crypto.randomUUID();copy.title=`${project.title} Copy`;replaceProject(copy);toast('PROJECT DUPLICATED')};$('#saveBtn').onclick=saveVersion;$('#exportProjectBtn').onclick=()=>performExport('project',true);$('#compatBtn').onclick=()=>{$('#projectMenu').close();showCompatibility()};$('#copyCompatBtn').onclick=async()=>{const text=JSON.stringify(compatibility(),null,2);try{await navigator.clipboard.writeText(text);toast('COMPATIBILITY REPORT COPIED')}catch{download(text,'kiber-vengance-compatibility.json','application/json')}};$('#importProject').onchange=async (e:any)=>{try{snapshot();project=await importProjectFile(e.target.files[0]);engine.project=project;await loadLocalSamples();selectedNotes.clear();changed(true);$('#projectMenu').close();toast('PROJECT IMPORTED')}catch(err){toast(`IMPORT ERROR: ${err instanceof Error?err.message:String(err)}`)}};
-$('#backingBtn').onclick=()=>open('#backingDialog');$('#backingIntensity').oninput=()=>$('#backingIntensityValue').textContent=Math.round(+$('#backingIntensity').value*100);$('#generateBackingBtn').onclick=()=>{snapshot();generateBacking(project,{sections:+$('#backingSections').value,intensity:+$('#backingIntensity').value,style:$('#backingStyle').value});selectedNotes.clear();changed(true);$('#backingDialog').close();activateView('arrange');toast(L('Backing generated · guitar ready','Base generada · guitarra lista'),true)};
-$('#deleteClipDialog').onclose=()=>pendingDeleteClipId=null;$('#confirmDeleteClipBtn').onclick=()=>{if(!pendingDeleteClipId)return;const target=project.clips.find((c:any)=>c.id===pendingDeleteClipId);if(!target)return;const name=target.name;snapshot();if(!deleteClip(project,pendingDeleteClipId)){toast(L('KEEP AT LEAST ONE CLIP PER TRACK','DEBE QUEDAR UN CLIP POR PISTA'));return}pendingDeleteClipId=null;selectedNotes.clear();$('#deleteClipDialog').close();changed(true);toast(L(`“${name}” DELETED · ARRANGEMENT UPDATED`,`“${name}” BORRADO · ARREGLO ACTUALIZADO`),true)};
-
-document.addEventListener('keydown',e=>{const target=e.target as HTMLElement,typing=Boolean(target?.closest?.('textarea,[contenteditable="true"],input:not([type]),input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],input[type="url"],input[type="tel"]')),blocked=$$('dialog').some(dialog=>dialog.open)||typing,key=e.code==='KeyS'||e.key.toLowerCase()==='s'?'solo':e.code==='KeyM'||e.key.toLowerCase()==='m'?'mute':e.code==='KeyV'||e.key.toLowerCase()==='v'?'mutate':null;if(!blocked&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&e.shiftKey&&key){e.preventDefault();e.stopImmediatePropagation();(key==='mutate'?$('#mutateBtn'):$(`[data-${key}="${selectedTrack}"]`))?.click()}},{capture:true});
-
-document.addEventListener('keydown',e=>{const mod=e.ctrlKey||e.metaKey;if(mod&&e.key.toLowerCase()==='k'){e.preventDefault();openCommands();return}if(mod&&e.key.toLowerCase()==='e'){e.preventDefault();if(e.shiftKey)open('#exportDialog');else repeatLastExport();return}if($('#commandDialog').open)return;if(['INPUT','SELECT','TEXTAREA'].includes((e.target as HTMLElement)?.tagName))return;if(e.shiftKey&&e.key.toLowerCase()==='f'){e.preventDefault();toggleFocus();return}if(e.shiftKey&&e.key.toLowerCase()==='g'){e.preventDefault();activateView('forge');return}if(e.shiftKey&&e.key.toLowerCase()==='a'){e.preventDefault();activateView('arrange');return}if(e.shiftKey&&e.key.toLowerCase()==='l'){e.preventDefault();activateView('launch');return}if(e.shiftKey&&e.key.toLowerCase()==='x'){e.preventDefault();activateView('mix');return}if(e.shiftKey&&e.key.toLowerCase()==='p'){e.preventDefault();activateView('perform');return}if(e.shiftKey&&e.key.toLowerCase()==='n'){e.preventDefault();$('#newClipBtn').click();return}if(e.shiftKey&&e.key.toLowerCase()==='d'){e.preventDefault();$('#duplicateBtn').click();return}if(e.shiftKey&&e.key.toLowerCase()==='v'){e.preventDefault();$('#mutateBtn').click();return}if(e.shiftKey&&e.key.toLowerCase()==='q'){e.preventDefault();$('#quantizeBtn').click();return}if(e.key.toLowerCase()==='r'&&!mod){e.preventDefault();$('#recordBtn').click();return}if(e.code==='Space'){e.preventDefault();togglePlay();return}if(/^Digit[1-5]$/.test(e.code)){selectedTrack=TRACKS[+e.code.at(-1)!-1]??'lead';selectedNotes.clear();renderAll();setDefaultScroll();return}if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();project=e.shiftKey?history.redo(project):history.undo(project);engine.project=project;selectedNotes.clear();changed(true);return}if(mod&&e.key.toLowerCase()==='a'){e.preventDefault();selectedNotes=new Set(clip().notes.map(n=>n.id));syncSelectedClasses();renderSelection();return}if(mod&&e.key.toLowerCase()==='c'){clipboard=clip().notes.filter(n=>selectedNotes.has(n.id)).map(n=>structuredClone(n));toast(`${clipboard.length} NOTES COPIED`);return}if(mod&&e.key.toLowerCase()==='v'&&clipboard.length){e.preventDefault();snapshot();const min=Math.min(...clipboard.map(n=>n.step)),offset=Math.min(clipLengthSteps(clip())-1,min+4)-min,newNotes=clipboard.map(n=>({...n,id:crypto.randomUUID(),step:Math.min(clipLengthSteps(clip())-n.length,n.step+offset)}));clip().notes.push(...newNotes);selectedNotes=new Set(newNotes.map(n=>n.id));changed();renderPiano();return}if(['Delete','Backspace'].includes(e.key)){e.preventDefault();deleteSelection();return}if(selectedNotes.size&&e.key.startsWith('Arrow')){e.preventDefault();snapshot();const delta=e.shiftKey?4:project.editor.snap;for(const n of clip().notes.filter(n=>selectedNotes.has(n.id))){if(e.altKey&&(e.key==='ArrowRight'||e.key==='ArrowLeft'))n.length=Math.max(project.editor.snap,Math.min(clipLengthSteps(clip())-n.step,n.length+(e.key==='ArrowRight'?delta:-delta)));else if(e.key==='ArrowRight'||e.key==='ArrowLeft')n.step=Math.max(0,Math.min(clipLengthSteps(clip())-n.length,n.step+(e.key==='ArrowRight'?delta:-delta)));else if(selectedTrack!=='drums')n.pitch=Math.max(TRACK_META[selectedTrack].low,Math.min(TRACK_META[selectedTrack].high,n.pitch+(e.key==='ArrowUp'?1:-1)));}changed();renderPiano();return}const i=keyMap.indexOf(e.key.toLowerCase());if(i>=0&&!e.repeat&&!recording.has(e.key.toLowerCase())){const key=$$('#keyboard .key')[i];if(key)startPerformance(e.key.toLowerCase(),+key.dataset.pitch,.82,key)}});
-document.addEventListener('keyup',e=>{const i=keyMap.indexOf(e.key.toLowerCase());if(i>=0)endPerformance(e.key.toLowerCase(),$$('#keyboard .key')[i])});
-async function initMidi(){if(!navigator.requestMIDIAccess)return;try{const access=await navigator.requestMIDIAccess({sysex:false}),states=new Map<number,NoteExpression>(),state=(channel:number)=>{if(!states.has(channel))states.set(channel,{bend:0,timbre:.5,pressure:.8});return states.get(channel)!},updateHeld=(channel:number,key:keyof NoteExpression,value:number)=>{engine.updateLiveChannel(channel,{[key]:value});for(const rec of recording.values())if(rec.channel===channel)rec.note.expression[key]=value},bind=(input:MIDIInput)=>input.onmidimessage=({data}:MIDIMessageEvent)=>{const [status=0,data1=0,data2=0]=Array.from(data||[]),command=status&0xf0,channel=status&0x0f,s=state(channel),key=`midi-${channel}-${data1}`,pitch=selectedTrack==='drums'?(({36:0,38:1,42:2,46:3,45:4,39:5,49:6} as Record<number,number>)[data1]??Math.max(0,Math.min(6,data1%7))):data1;if(command===0xe0){s.bend=(((data2<<7)|data1)-8192)/8192*2;updateHeld(channel,'bend',s.bend);return}if(command===0xd0){s.pressure=data1/127;updateHeld(channel,'pressure',s.pressure);return}if(command===0xa0){engine.updateLive(key,{pressure:data2/127});const rec=recording.get(key);if(rec)rec.note.expression.pressure=data2/127;return}if(command===0xb0){if(midiLearnTarget){project.midiMappings=project.midiMappings.filter((mapping:MidiMapping)=>mapping.target!==midiLearnTarget);project.midiMappings.push({id:cryptoId(),channel,controller:data1,target:midiLearnTarget,min:0,max:1});midiLearnTarget=null;$('#midiLearnBtn').textContent='MIDI LEARN';changed();toast(L('MIDI CONTROL MAPPED','CONTROL MIDI ASIGNADO'))}for(const mapping of project.midiMappings.filter((item:MidiMapping)=>item.channel===channel&&item.controller===data1))applyMidiMapping(mapping,data2/127);if(data1===74){s.timbre=data2/127;updateHeld(channel,'timbre',s.timbre)}return}if(command===0x90&&data2){if(activeView==='launch'&&data1>=36&&data1<64){const cells=$$('[data-launch-clip]'),cell=cells[data1-36];if(cell)launchClip(cell.dataset.launchTrack,cell.dataset.launchClip)}else startPerformance(key,pitch,data2/127,null,{...s,pressure:data2/127},channel);}if(command===0x80||(command===0x90&&!data2))endPerformance(key)};for(const input of access.inputs.values())bind(input);access.onstatechange=e=>{if(e.port?.type==='input'&&e.port.state==='connected')bind(e.port as MIDIInput)}}catch{toast('MIDI ACCESS UNAVAILABLE')}}
-setupSamplerKeyboard();setupSamplerOctaveControls();const query=new URLSearchParams(location.search);loadQuickHandles();initWorkflowUi();initLearning();setupScratchDeck();setupStudioExtensions();setupPrecisionControls();setupArrangeTools();setupLauncher();setupLibraries();setupV6Studio();setupMidiLearnUi();setupV6Safety();setupV6Copy();setupSampleSlicing();setupProjectTemplates();renderAll();applyLanguage();loadLocalSamples();if(query.get('view'))activateView(query.get('view')!);if(query.has('qa')){$('#app').hidden=false;$('#boot').remove();setDefaultScroll()}else setTimeout(()=>{const boot=$('#boot');boot.style.opacity=0;$('#app').hidden=false;setTimeout(()=>boot.remove(),450);setDefaultScroll()},250);initMidi();if('serviceWorker'in navigator&&!query.has('qa'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
-
-function syncStudioUi(){
- const context=$('#clipContext');if(!context)return;
- const c=clip();context.textContent=`${TRACK_META[selectedTrack].label} → ${c.name} · ${c.bars} ${L('bars','compases')}`;
- document.body.classList.toggle('sound-panel',soundPanel);
- document.body.dataset.editorTool=editorTool;
- $$('[data-studio-tab]').forEach((b:any)=>{const tab=b.dataset.studioTab;const active=tab==='sound'?activeView==='forge'&&soundPanel:tab==='clips'?activeView==='forge'&&!soundPanel:activeView===tab;b.setAttribute('aria-pressed',String(active));});
- $$('button[data-editor-tool]').forEach((b:any)=>b.setAttribute('aria-pressed',String(b.dataset.editorTool===editorTool)));
- const hint=$('#recordHint');hint.textContent=recordArmed?L('Armed: keyboard / MIDI notes → active clip. Press Play to record.','Preparado: notas de teclado / MIDI → clip activo. Pulsa Play para grabar.'):L('Notes record into the active clip. Record Take captures audio in Perform.','Las notas se graban en el clip activo. Grabar toma captura audio en Perform.');
+function controlInfo(el: any): [string, string] {
+  return workflow.controlInfo(runtime, el);
 }
-function duplicateSelectedNotes(){
- const c=clip(),notes=c.notes.filter(n=>selectedNotes.has(n.id));if(!notes.length)return;
- const first=Math.min(...notes.map(n=>n.step+n.offset)),last=Math.max(...notes.map(n=>n.step+n.offset+n.length));
- const shift=Math.max(project.editor.snap,Math.ceil((last-first)/project.editor.snap)*project.editor.snap);
- if(last+shift>clipLengthSteps(c)){toast(L('Not enough room. Increase the clip bars to duplicate these notes.','No hay espacio. Amplía los compases del clip para duplicar estas notas.'));return}
- snapshot();const copies=notes.map(n=>({...structuredClone(n),id:cryptoId(),step:n.step+shift}));c.notes.push(...copies);selectedNotes=new Set(copies.map(n=>n.id));changed();renderPiano();toast(L('Selected notes duplicated','Notas seleccionadas duplicadas'),true);
+function installControlHelp(): any {
+  return workflow.installControlHelp(runtime);
 }
-function quantizeSelectedNotes(){
- const c=clip(),notes=c.notes.filter(n=>selectedNotes.has(n.id));if(!notes.length)return;snapshot();
- for(const n of notes){n.step=Math.max(0,Math.min(clipLengthSteps(c)-project.editor.snap,Math.round((n.step+n.offset)/project.editor.snap)*project.editor.snap));n.offset=0;n.length=Math.min(clipLengthSteps(c)-n.step,Math.max(project.editor.snap,Math.round(n.length/project.editor.snap)*project.editor.snap))}
- changed();renderPiano();toast(L('Selected notes quantized','Notas seleccionadas cuantizadas'),true);
+function showHelpIntro(): any {
+  return workflow.showHelpIntro(runtime);
 }
-function setupStudioUi(){
- const bar=document.createElement('div');bar.className='studio-context';bar.innerHTML='<strong id="clipContext"></strong><div class="studio-tabs"></div><p id="recordHint"></p><p id="saveWarning" role="alert" hidden></p>';
- $('#forgeView').prepend(bar);
- const nav=document.createElement('nav');nav.className='mobile-studio-nav';nav.setAttribute('aria-label','Studio');document.body.append(nav);
- const choices=[['clips','Clips','Clips'],['sound','Sound','Sonido'],['arrange','Arrange','Arreglo'],['mix','Mix','Mezcla']];
- for(const container of [bar.querySelector('.studio-tabs'),nav])for(const [tab,en,es] of choices){const button=document.createElement('button');button.dataset.studioTab=tab;button.dataset.en=en;button.dataset.es=es;button.textContent=L(en!,es!);button.onclick=()=>{soundPanel=tab==='sound';if(soundPanel)toggleFocus(false,true);activateView(tab==='sound'||tab==='clips'?'forge':tab!);if(window.matchMedia('(max-width:820px)').matches)document.querySelector('.workspace')?.scrollIntoView({block:'start'});};container!.append(button)}
- const tools=document.createElement('div');tools.className='editor-tools';tools.setAttribute('role','group');tools.setAttribute('aria-label','Editor tools');
- for(const [tool,en,es] of [['draw','Draw','Dibujar'],['select','Select','Seleccionar'],['navigate','Navigate','Navegar']]){const button=document.createElement('button');button.dataset.editorTool=tool;button.dataset.en=en;button.dataset.es=es;button.textContent=L(en!,es!);button.onclick=()=>{editorTool=tool as typeof editorTool;syncStudioUi()};tools.append(button)}
- const newClip=document.createElement('button');newClip.dataset.en='+ New clip';newClip.dataset.es='+ Nuevo clip';newClip.textContent=L('+ New clip','+ Nuevo clip');newClip.onclick=()=>$('#newClipBtn').click();tools.append(newClip);
- const undo=document.createElement('button');undo.dataset.en='Undo';undo.dataset.es='Deshacer';undo.textContent=L('Undo','Deshacer');undo.onclick=()=>$('#undoBtn').click();tools.append(undo);
- $('.piano-shell').before(tools);
- const selection=document.createElement('div');selection.className='selection-actions';selection.setAttribute('role','group');selection.setAttribute('aria-label',L('Selected notes','Notas seleccionadas'));
- for(const [action,en,es] of [['duplicate','Duplicate notes','Duplicar notas'],['quantize','Quantize notes','Cuantizar notas'],['delete','Delete notes','Borrar notas']]){const button=document.createElement('button');button.dataset.selectionAction=action;button.dataset.en=en;button.dataset.es=es;button.textContent=L(en!,es!);button.onclick=action==='duplicate'?duplicateSelectedNotes:action==='quantize'?quantizeSelectedNotes:deleteSelection;selection.append(button)}tools.after(selection);renderSelection();
- const automation=document.createElement('details');automation.className='automation-disclosure';const automationLabel=document.createElement('summary');automationLabel.dataset.en='Clip automation';automationLabel.dataset.es='Automatización del clip';automationLabel.textContent=L(automationLabel.dataset.en,automationLabel.dataset.es);automation.append(automationLabel);$('.automation-head').before(automation);automation.append($('.automation-head'),$('#automationPane'));automation.addEventListener('toggle',()=>{if(automation.open){renderAutomation();syncRollScroll()}});
+function toggleHelp(force?: boolean): any {
+  return workflow.toggleHelp(runtime, force);
+}
+function showControlHelp(el: any): any {
+  return workflow.showControlHelp(runtime, el);
+}
+const tutorialSteps = () => [
+  {
+    target: ".transport",
+    view: "forge",
+    title: msg("ui_e9b43f615739"),
+    body: msg("ui_037454240759"),
+  },
+  {
+    target: ".track-rail",
+    view: "forge",
+    title: msg("ui_8147d7cb07cd"),
+    body: msg("ui_ebdf07546c6d"),
+  },
+  {
+    target: "#synthRack",
+    view: "forge",
+    title: msg("ui_f1bd34c2cdfc"),
+    body: msg("ui_f1eee9c6d0aa"),
+  },
+  {
+    target: ".piano-shell",
+    view: "forge",
+    title: msg("ui_fa450dfcc9d4"),
+    body: msg("ui_0c72e968d7d3"),
+  },
+  {
+    target: "#arrangeView .section-title",
+    view: "arrange",
+    title: msg("ui_3c5cfc67663d"),
+    body: msg("ui_db7970e0e1d5"),
+  },
+  {
+    target: "#performView .performance",
+    view: "perform",
+    title: msg("ui_0f34bb074d3d"),
+    body: msg("ui_e888522d73e2"),
+  },
+  {
+    target: ".modebar",
+    view: "forge",
+    title: msg("ui_77c41d35d999"),
+    body: msg("ui_dd7c8962262e"),
+  },
+];
+function showTutorialStep(): any {
+  return workflow.showTutorialStep(runtime);
+}
+function startTutorial(): any {
+  return workflow.startTutorial(runtime);
+}
+function endTutorial(): any {
+  return workflow.endTutorial(runtime);
+}
+function initLearning(): any {
+  return workflow.initLearning(runtime);
+}
 
- const advanced=document.createElement('details');advanced.className='export-advanced';const summary=document.createElement('summary');summary.dataset.en='Advanced export options';summary.dataset.es='Opciones avanzadas de exportación';summary.textContent=L(summary.dataset.en,summary.dataset.es);advanced.append(summary);$('.export-options').before(advanced);advanced.append($('.export-options'),$('.stem-selection'));
- const quick=document.createElement('div');quick.className='export-simple';for(const [kind,en,es] of [['bundle','Save complete project','Guardar proyecto completo'],['wav','Export audio','Exportar audio'],['midi','Export MIDI','Exportar MIDI']]){const button=document.createElement('button');button.dataset.en=en;button.dataset.es=es;button.textContent=L(en!,es!);button.onclick=()=>performExport(kind as QuickExportKind,true);quick.append(button)}advanced.before(quick);
- const other=document.createElement('details');other.className='export-advanced';const otherLabel=document.createElement('summary');otherLabel.dataset.en='More formats and linked destinations';otherLabel.dataset.es='Más formatos y destinos vinculados';otherLabel.textContent=L(otherLabel.dataset.en,otherLabel.dataset.es);other.append(otherLabel);$('.export-grid').before(other);other.append($('.export-grid'));
- const music=document.createElement('details');music.className='composition-options';const musicLabel=document.createElement('summary');musicLabel.dataset.en='Generate music and harmony';musicLabel.dataset.es='Generar música y armonía';musicLabel.textContent=L(musicLabel.dataset.en,musicLabel.dataset.es);music.append(musicLabel);$('.composition-tools').before(music);music.append($('.harmony'),$('.generators'));
- const transport=$('.transport'),anchor=document.createComment('transport');transport.before(anchor);const mobile=window.matchMedia('(max-width:820px)');const placeTransport=()=>{$('#uiScale').disabled=mobile.matches;$('#uiScale').title=mobile.matches?L('Mobile uses the device scale','En móvil se utiliza la escala del dispositivo'):'';if(mobile.matches)document.body.append(transport);else anchor.parentNode!.insertBefore(transport,anchor.nextSibling)};mobile.addEventListener('change',placeTransport);placeTransport();
- const copy:Array<[string,string,string]>=[['#duplicateBtn','Duplicate clip','Duplicar clip'],['#mutateBtn','Create variation','Crear variación'],['#quantizeBtn','Quantize clip','Cuantizar clip'],['#deleteNotesBtn','Delete notes','Borrar notas'],['#backingBtn','Create backing','Crear base'],['#clearAutomationBtn','Clear lane','Borrar curva'],['#exportDialog h2','Save and export','Guardar y exportar'],['#exportDialog>p','Save a complete project to keep your audio assets. Audio and MIDI exports are for sharing your music.','Guarda el proyecto completo para conservar tus archivos de audio. Exporta audio o MIDI para compartir tu música.']];
- for(const [selector,en,es] of copy){const node=$(selector);if(node){node.dataset.en=en;node.dataset.es=es;node.textContent=L(en,es)}}
- const translate=()=>{$$('[data-en][data-es]').forEach((el:any)=>el.textContent=L(el.dataset.en,el.dataset.es));syncStudioUi()};$('#languageSelect').addEventListener('change',translate);$('#menuLanguageSelect').addEventListener('change',translate);syncStudioUi();
+function renderTracks(): any {
+  return instruments.renderTracks(runtime);
+}
+function renderInspector(): any {
+  return instruments.renderInspector(runtime);
+}
+function applyPreset(track: TrackId, name: string): any {
+  return instruments.applyPreset(runtime, track, name);
+}
+function renderArp(): any {
+  return instruments.renderArp(runtime);
+}
+function renderFx(): any {
+  return instruments.renderFx(runtime);
+}
+function macroMarkup(container: any): any {
+  return instruments.macroMarkup(runtime, container);
+}
+
+function renderClipControls(): any {
+  return instruments.renderClipControls(runtime);
+}
+function updateDeleteClipDialog(): any {
+  return workflow.updateDeleteClipDialog(runtime);
+}
+function requestClipDelete(id: string): any {
+  return workflow.requestClipDelete(runtime, id);
+}
+function renderHarmony(): any {
+  return instruments.renderHarmony(runtime);
+}
+
+function renderPiano(): any {
+  return performanceFeature.renderPiano(runtime);
+}
+function bindMarqueeSelection(seq: any): any {
+  return performanceFeature.bindMarqueeSelection(runtime, seq);
+}
+function bindNoteDrag(
+  el: any,
+  c: any,
+  rows: number[],
+  zoom: number,
+  rowH: number,
+): any {
+  return workflow.bindNoteDrag(runtime, el, c, rows, zoom, rowH);
+}
+function syncSelectedClasses(): any {
+  return performanceFeature.syncSelectedClasses(runtime);
+}
+function syncRollScroll(): any {
+  return performanceFeature.syncRollScroll(runtime);
+}
+function setDefaultScroll(): any {
+  return performanceFeature.setDefaultScroll(runtime);
+}
+
+function renderSelection(): any {
+  return performanceFeature.renderSelection(runtime);
+}
+function editSelection(key: any, value: any): any {
+  return performanceFeature.editSelection(runtime, key, value);
+}
+function deleteSelection(): any {
+  return performanceFeature.deleteSelection(runtime);
+}
+
+function renderAutomation(): any {
+  return audio_studio.renderAutomation(runtime);
+}
+
+const heldKeyPointers = new Map<number, { source: string; key: HTMLElement }>();
+function releaseKeyPointer(pointerId: number): any {
+  return performanceFeature.releaseKeyPointer(runtime, pointerId);
+}
+function releaseKeyPointers(): any {
+  return performanceFeature.releaseKeyPointers(runtime);
+}
+window.addEventListener(
+  "pointerup",
+  (event) => releaseKeyPointer(event.pointerId),
+  true,
+);
+window.addEventListener(
+  "pointercancel",
+  (event) => releaseKeyPointer(event.pointerId),
+  true,
+);
+window.addEventListener("blur", releaseKeyPointers);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) releaseKeyPointers();
+});
+let instrumentOctave = 0;
+function renderKeyboard(): any {
+  return performanceFeature.renderKeyboard(runtime);
+}
+function startPerformance(
+  source: string,
+  pitch: number,
+  velocity = 0.8,
+  el: any = null,
+  expression: Partial<NoteExpression> = {},
+  channel: number | null = null,
+): any {
+  return performanceFeature.startPerformance(
+    runtime,
+    source,
+    pitch,
+    velocity,
+    el,
+    expression,
+    channel,
+  );
+}
+function endPerformance(source: string, el: any = null): any {
+  return performanceFeature.endPerformance(runtime, source, el);
+}
+
+function launcherSnapshot(name = "LIVE"): any {
+  return workflow.launcherSnapshot(runtime, name);
+}
+async function launchClip(track: TrackId, clipId: string): Promise<any> {
+  return launcher.launchClip(runtime, track, clipId);
+}
+function renderLauncher(): any {
+  return launcher.renderLauncher(runtime);
+}
+function setupLauncher(): any {
+  return launcher.setupLauncher(runtime);
+}
+
+function renderArrangement(): any {
+  return arrangement.renderArrangement(runtime);
+}
+function sceneLength(scene: any): any {
+  return workflow.sceneLength(runtime, scene);
+}
+function focusScene(i: number): any {
+  return arrangement.focusScene(runtime, i);
+}
+function updatePlayheads(): any {
+  return performanceFeature.updatePlayheads(runtime);
+}
+function updatePosition(): any {
+  return performanceFeature.updatePosition(runtime);
+}
+function updateOrb(): any {
+  return instruments.updateOrb(runtime);
+}
+
+function songLength(): any {
+  return workflow.songLength(runtime);
+}
+function formatLocator(step: number): any {
+  return instruments.formatLocator(runtime, step);
+}
+function setGlobalStart(value: number): any {
+  return workflow.setGlobalStart(runtime, value);
+}
+function setClipStart(value: number): any {
+  return workflow.setClipStart(runtime, value);
+}
+function renderLocators(): any {
+  return performanceFeature.renderLocators(runtime);
+}
+function syncLocatorsFromPlayback(): any {
+  return performanceFeature.syncLocatorsFromPlayback(runtime);
+}
+
+function renderMixer(): any {
+  return mixer.renderMixer(runtime);
+}
+function animateMixer(): any {
+  return mixer.animateMixer(runtime);
+}
+
+function setScratchControls(enabled: boolean): any {
+  return scratch.setScratchControls(runtime, enabled);
+}
+function updateScratchPlayButton(): any {
+  return scratch.updateScratchPlayButton(runtime);
+}
+function drawScratchWaveform(buffer: AudioBuffer): any {
+  return scratch.drawScratchWaveform(runtime, buffer);
+}
+async function armScratchBuffer(
+  buffer: AudioBuffer,
+  label: string,
+): Promise<any> {
+  return scratch.armScratchBuffer(runtime, buffer, label);
+}
+async function importScratchFile(file: File): Promise<any> {
+  return scratch.importScratchFile(runtime, file);
+}
+async function audioRegionScratchBuffer(
+  lane: AudioLane,
+  region: AudioRegion,
+): Promise<any> {
+  return scratch.audioRegionScratchBuffer(runtime, lane, region);
+}
+async function loadAudioRegionIntoScratch(
+  lane: AudioLane,
+  region: AudioRegion,
+  button: HTMLButtonElement,
+): Promise<any> {
+  return scratch.loadAudioRegionIntoScratch(runtime, lane, region, button);
+}
+async function captureScratchMix(): Promise<any> {
+  return scratch.captureScratchMix(runtime);
+}
+function animateScratchDeck(now = performance.now()): any {
+  return scratch.animateScratchDeck(runtime, now);
+}
+
+function scratchMotorRate(): any {
+  return scratch.scratchMotorRate(runtime);
+}
+function setupScratchPro(): any {
+  return scratch.setupScratchPro(runtime);
+}
+
+function setupScratchDeck(): any {
+  return scratch.setupScratchDeck(runtime);
+}
+
+const performanceEventThrottle = new Map<string, number>();
+function performanceStep(): any {
+  return workflow.performanceStep(runtime);
+}
+function recordPerformanceEvent(
+  kind: PerformanceEvent["kind"],
+  target: string,
+  value: number | string | boolean,
+): any {
+  return performanceFeature.recordPerformanceEvent(
+    runtime,
+    kind,
+    target,
+    value,
+  );
+}
+async function loadPerformanceAudio(take: PerformanceTake): Promise<any> {
+  return performanceFeature.loadPerformanceAudio(runtime, take);
+}
+function applyPerformanceEvent(event: PerformanceEvent): any {
+  return performanceFeature.applyPerformanceEvent(runtime, event);
+}
+async function playPerformanceTake(take: PerformanceTake): Promise<any> {
+  return performanceFeature.playPerformanceTake(runtime, take);
+}
+function openTakeEditor(take: PerformanceTake): any {
+  return workflow.openTakeEditor(runtime, take);
+}
+function renderPerformanceTakes(): any {
+  return performanceFeature.renderPerformanceTakes(runtime);
+}
+async function togglePerformanceCapture(): Promise<any> {
+  return performanceFeature.togglePerformanceCapture(runtime);
+}
+function mixSnapshot(): any {
+  return workflow.mixSnapshot(runtime);
+}
+function captureMixerReference(): any {
+  return mixer.captureMixerReference(runtime);
+}
+function toggleMixerReference(): any {
+  return mixer.toggleMixerReference(runtime);
+}
+function setupArrangeTools(): any {
+  return arrangement.setupArrangeTools(runtime);
+}
+type UserPreset = {
+  id: string;
+  name: string;
+  track: TrackId;
+  tags: string[];
+  instrument: TrackState;
+  character: any;
+};
+const USER_PRESETS = "kiber-vengance-user-presets-v1",
+  PRESET_FAVORITES = "kiber-vengance-preset-favorites-v1";
+function userPresets(): UserPreset[] {
+  return instruments.userPresets(runtime);
+}
+function saveUserPresets(items: UserPreset[]): any {
+  return instruments.saveUserPresets(runtime, items);
+}
+function presetFavorites(): any {
+  return workflow.presetFavorites(runtime);
+}
+function renderPresetLibrary(): any {
+  return instruments.renderPresetLibrary(runtime);
+}
+function saveCurrentPreset(): any {
+  return instruments.saveCurrentPreset(runtime);
+}
+async function loadLocalSample(asset: SampleAsset): Promise<any> {
+  return instruments.loadLocalSample(runtime, asset);
+}
+async function loadLocalSamples(): Promise<any> {
+  return instruments.loadLocalSamples(runtime);
+}
+function renderSampleSlots(): any {
+  return instruments.renderSampleSlots(runtime);
+}
+function setupLibraries(): any {
+  return workflow.setupLibraries(runtime);
+}
+function setupPrecisionControls(): any {
+  return mixer.setupPrecisionControls(runtime);
+}
+function setupStudioExtensions(): any {
+  return workflow.setupStudioExtensions(runtime);
+}
+
+type CommandAction = {
+  label: string;
+  labelEs: string;
+  group: string;
+  groupEs: string;
+  shortcut: string;
+  icon: string;
+  keywords: string;
+  run: () => void;
+};
+function readUiPrefs(): {
+  focus: boolean;
+  collapsed: string[];
+  compact: boolean;
+} {
+  return workflow.readUiPrefs(runtime);
+}
+function writeUiPrefs(): any {
+  return workflow.writeUiPrefs(runtime);
+}
+function setRackCollapsed(id: string, collapsed: boolean, persist = true): any {
+  return workflow.setRackCollapsed(runtime, id, collapsed, persist);
+}
+function toggleFocus(force?: boolean, silent = false): any {
+  return workflow.toggleFocus(runtime, force, silent);
+}
+function selectTrack(track: TrackId): any {
+  return workflow.selectTrack(runtime, track);
+}
+const commands: CommandAction[] = [
+  {
+    label: "Play / stop transport",
+    labelEs: "Reproducir / detener transporte",
+    group: "TRANSPORT",
+    groupEs: "TRANSPORTE",
+    shortcut: "SPACE",
+    icon: "▶",
+    keywords: "play stop transport reproducir parar",
+    run: () => togglePlay(),
+  },
+  {
+    label: "Arm / disarm recording",
+    labelEs: "Armar / desarmar grabación",
+    group: "TRANSPORT",
+    groupEs: "TRANSPORTE",
+    shortcut: "R",
+    icon: "●",
+    keywords: "record arm grabar",
+    run: () => $("#recordBtn").click(),
+  },
+  {
+    label: "Toggle metronome",
+    labelEs: "Activar metrónomo",
+    group: "TRANSPORT",
+    groupEs: "TRANSPORTE",
+    shortcut: "",
+    icon: "⌁",
+    keywords: "metro click metrónomo",
+    run: () => $("#metroBtn").click(),
+  },
+  {
+    label: "Toggle Solo on active track",
+    labelEs: "Activar o quitar Solo en la pista activa",
+    group: "MIX",
+    groupEs: "MEZCLA",
+    shortcut: "SHIFT S",
+    icon: "S",
+    keywords:
+      "solo isolate isolation aislar aislamiento restore mix mezcla instrument instrumento",
+    run: () => $(`[data-solo="${selectedTrack}"]`)?.click(),
+  },
+  {
+    label: "Toggle Mute on active track",
+    labelEs: "Silenciar o restaurar la pista activa",
+    group: "MIX",
+    groupEs: "MEZCLA",
+    shortcut: "SHIFT M",
+    icon: "M",
+    keywords:
+      "mute silence silenciar restore restaurar mix mezcla instrument instrumento",
+    run: () => $(`[data-mute="${selectedTrack}"]`)?.click(),
+  },
+  {
+    label: "Open Forge",
+    labelEs: "Abrir Forja",
+    group: "VIEW",
+    groupEs: "VISTA",
+    shortcut: "SHIFT G",
+    icon: "F",
+    keywords: "forge forja editor piano",
+    run: () => activateView("forge"),
+  },
+  {
+    label: "Open Arrange",
+    labelEs: "Abrir Arreglo",
+    group: "VIEW",
+    groupEs: "VISTA",
+    shortcut: "SHIFT A",
+    icon: "A",
+    keywords: "arrange arreglo song scenes",
+    run: () => activateView("arrange"),
+  },
+  {
+    label: "Open Clip Launcher",
+    labelEs: "Abrir Lanzador de clips",
+    group: "VIEW",
+    groupEs: "VISTA",
+    shortcut: "SHIFT L",
+    icon: "L",
+    keywords: "launch launcher clips grid live lanzar matriz",
+    run: () => activateView("launch"),
+  },
+  {
+    label: "Open Mix Console",
+    labelEs: "Abrir mesa de mezcla",
+    group: "VIEW",
+    groupEs: "VISTA",
+    shortcut: "SHIFT X",
+    icon: "X",
+    keywords: "mix mixer mezcla console fader",
+    run: () => activateView("mix"),
+  },
+  {
+    label: "Open Perform",
+    labelEs: "Abrir Interpretación",
+    group: "VIEW",
+    groupEs: "VISTA",
+    shortcut: "SHIFT P",
+    icon: "P",
+    keywords: "perform interpretar live macros",
+    run: () => activateView("perform"),
+  },
+  {
+    label: "Toggle Focus mode",
+    labelEs: "Activar modo Foco",
+    group: "VIEW",
+    groupEs: "VISTA",
+    shortcut: "SHIFT F",
+    icon: "⌖",
+    keywords: "focus foco collapse fast editor",
+    run: () => toggleFocus(),
+  },
+  {
+    label: "New independent clip",
+    labelEs: "Nuevo clip independiente",
+    group: "CLIP",
+    groupEs: "CLIP",
+    shortcut: "SHIFT N",
+    icon: "＋",
+    keywords: "new nuevo clip create",
+    run: () => $("#newClipBtn").click(),
+  },
+  {
+    label: "Duplicate active clip",
+    labelEs: "Duplicar clip activo",
+    group: "CLIP",
+    groupEs: "CLIP",
+    shortcut: "SHIFT D",
+    icon: "⧉",
+    keywords: "duplicate duplicar copy clip",
+    run: () => $("#duplicateBtn").click(),
+  },
+  {
+    label: "Delete active clip",
+    labelEs: "Borrar clip activo",
+    group: "CLIP",
+    groupEs: "CLIP",
+    shortcut: "",
+    icon: "⌫",
+    keywords: "delete remove borrar eliminar clip",
+    run: () => $("#deleteClipBtn").click(),
+  },
+  {
+    label: "Mutate active clip",
+    labelEs: "Mutar clip activo",
+    group: "CLIP",
+    groupEs: "CLIP",
+    shortcut: "SHIFT V",
+    icon: "⌁",
+    keywords: "mutate mutar variation clip",
+    run: () => $("#mutateBtn").click(),
+  },
+  {
+    label: "Quantize active clip",
+    labelEs: "Cuantizar clip activo",
+    group: "CLIP",
+    groupEs: "CLIP",
+    shortcut: "SHIFT Q",
+    icon: "▦",
+    keywords: "quantize cuantizar snap notes",
+    run: () => $("#quantizeBtn").click(),
+  },
+  {
+    label: "Add arrangement section",
+    labelEs: "Añadir sección al arreglo",
+    group: "SONG",
+    groupEs: "CANCIÓN",
+    shortcut: "",
+    icon: "＋",
+    keywords: "section sección scene arrangement arreglo",
+    run: () => {
+      activateView("arrange");
+      $("#addSceneBtn").click();
+    },
+  },
+  {
+    label: "Export to current destination",
+    labelEs: "Exportar al destino actual",
+    group: "PROJECT",
+    groupEs: "PROYECTO",
+    shortcut: "CTRL E",
+    icon: "⇧",
+    keywords: "export save current destino actual wav midi",
+    run: repeatLastExport,
+  },
+  {
+    label: "Export As…",
+    labelEs: "Exportar como…",
+    group: "PROJECT",
+    groupEs: "PROYECTO",
+    shortcut: "CTRL SHIFT E",
+    icon: "…",
+    keywords: "export as save choose elegir formato destino",
+    run: () => open("#exportDialog"),
+  },
+  {
+    label: "Export song WAV",
+    labelEs: "Exportar canción WAV",
+    group: "PROJECT",
+    groupEs: "PROYECTO",
+    shortcut: "",
+    icon: "W",
+    keywords: "export wav render audio canción",
+    run: () => quickExportWav(false),
+  },
+  {
+    label: "Export song MIDI",
+    labelEs: "Exportar canción MIDI",
+    group: "PROJECT",
+    groupEs: "PROYECTO",
+    shortcut: "",
+    icon: "M",
+    keywords: "export midi canción",
+    run: () => quickExportMidi(false),
+  },
+  {
+    label: "Export project as JSON",
+    labelEs: "Exportar proyecto como JSON",
+    group: "PROJECT",
+    groupEs: "PROYECTO",
+    shortcut: "",
+    icon: "J",
+    keywords: "export project json backup proyecto copia",
+    run: () => quickExportProject(true),
+  },
+  {
+    label: "Project, versions & recovery",
+    labelEs: "Proyecto, versiones y recuperación",
+    group: "PROJECT",
+    groupEs: "PROYECTO",
+    shortcut: "",
+    icon: "••",
+    keywords: "project proyecto save import snapshot",
+    run: () => $("#menuBtn").click(),
+  },
+  ...TRACKS.map((track, index) => ({
+    label: `Select ${TRACK_META[track].label}`,
+    labelEs: `Seleccionar ${TRACK_META[track].label}`,
+    group: "TRACK",
+    groupEs: "PISTA",
+    shortcut: String(index + 1),
+    icon: String(index + 1),
+    keywords: `track pista ${track} instrument instrumento`,
+    run: () => selectTrack(track),
+  })),
+];
+function matchingCommands(query: string): any {
+  return workflow.matchingCommands(runtime, query);
+}
+function renderCommands(query = ""): any {
+  return workflow.renderCommands(runtime, query);
+}
+function runCommand(command: CommandAction | undefined): any {
+  return workflow.runCommand(runtime, command);
+}
+function openCommands(): any {
+  return workflow.openCommands(runtime);
+}
+function initWorkflowUi(): any {
+  return workflow.initWorkflowUi(runtime);
+}
+
+function renderVersions(): any {
+  return storage.renderVersions(runtime);
+}
+function loadVersions(): any {
+  return storage.loadVersions(runtime);
+}
+function saveVersion(): any {
+  return storage.saveVersion(runtime);
+}
+
+let inputRecorder: MediaRecorder | null = null,
+  inputStream: MediaStream | null = null,
+  inputChunks: Blob[] = [],
+  midiLearnTarget: string | null = null;
+function applyMidiMapping(mapping: MidiMapping, normalized: number): any {
+  return performanceFeature.applyMidiMapping(runtime, mapping, normalized);
+}
+function audioBufferWav(buffer: AudioBuffer): any {
+  return workflow.audioBufferWav(runtime, buffer);
+}
+async function addAudioBlob(
+  blob: Blob,
+  name = "",
+  lane?: AudioLane,
+): Promise<any> {
+  return audio_studio.addAudioBlob(runtime, blob, name, lane);
+}
+async function loadAudioAssets(): Promise<any> {
+  return storage.loadAudioAssets(runtime);
+}
+function renderAudioStudio(): any {
+  return audio_studio.renderAudioStudio(runtime);
+}
+function renderGlobalAutomation(): any {
+  return audio_studio.renderGlobalAutomation(runtime);
+}
+function renderMixGroups(): any {
+  return mixer.renderMixGroups(runtime);
+}
+function renderTempoMap(): any {
+  return arrangement.renderTempoMap(runtime);
+}
+function samplerSettings(): SamplerInstrument {
+  return sampler.samplerSettings(runtime);
+}
+function setupSamplerOctaveControls(): any {
+  return sampler.setupSamplerOctaveControls(runtime);
+}
+function samplerNoteName(pitch: number): any {
+  return sampler.samplerNoteName(runtime, pitch);
+}
+function drawSamplerWaveform(): any {
+  return sampler.drawSamplerWaveform(runtime);
+}
+function startSamplerPerformance(
+  source: string,
+  pitch: number,
+  velocity = 0.85,
+  element?: HTMLElement | null,
+): any {
+  return sampler.startSamplerPerformance(
+    runtime,
+    source,
+    pitch,
+    velocity,
+    element,
+  );
+}
+function endSamplerPerformance(
+  source: string,
+  element?: HTMLElement | null,
+): any {
+  return sampler.endSamplerPerformance(runtime, source, element);
+}
+function renderSamplerKeyboard(): any {
+  return sampler.renderSamplerKeyboard(runtime);
+}
+async function loadSamplerAsset(): Promise<any> {
+  return sampler.loadSamplerAsset(runtime);
+}
+function setupSamplerKeyboard(): any {
+  return sampler.setupSamplerKeyboard(runtime);
+}
+function setupV6Studio(): any {
+  return audio_studio.setupV6Studio(runtime);
+}
+function setupMidiLearnUi(): any {
+  return performanceFeature.setupMidiLearnUi(runtime);
+}
+function setupV6Copy(): any {
+  return audio_studio.setupV6Copy(runtime);
+}
+function setupV6Safety(): any {
+  return audio_studio.setupV6Safety(runtime);
+}
+function setupSampleSlicing(): any {
+  return instruments.setupSampleSlicing(runtime);
+}
+function setupProjectTemplates(): any {
+  return workflow.setupProjectTemplates(runtime);
+}
+function renderAll() {
+  renderTracks();
+  renderClipControls();
+  renderHarmony();
+  renderLocators();
+  if (soundPanel) {
+    renderInspector();
+    renderArp();
+    renderFx();
+    macroMarkup($("#macros"));
+  }
+  if (activeView === "forge") {
+    renderPiano();
+    renderAutomation();
+    renderKeyboard();
+  }
+  if (activeView === "launch") renderLauncher();
+  if (activeView === "arrange") {
+    renderArrangement();
+    renderTempoMap();
+  }
+  if (activeView === "mix") {
+    renderMixer();
+    renderMixGroups();
+  }
+  if (activeView === "audio") {
+    renderAudioStudio();
+    renderSamplerKeyboard();
+  }
+  if (activeView === "perform") {
+    renderKeyboard();
+    macroMarkup($("#performMacros"));
+    renderPerformanceTakes();
+  }
+  $("#title").value = project.title;
+  $("#tempo").value = project.tempo;
+  $("#meterSelect").value = `${project.meter.beats}/${project.meter.unit}`;
+  $("#recordMode").value = project.editor.recordMode || "quantized";
+  $("#swing").value = Math.round(project.swing * 100);
+  $("#masterVolume").value = project.master;
+  $("#masterValue").textContent = Math.round(project.master * 100);
+  updateOrb();
+  installControlHelp();
+  syncStudioUi();
+}
+function syncTransportButtons(running = engine.playing): any {
+  return workflow.syncTransportButtons(runtime, running);
+}
+function pausePlayback(): any {
+  return performanceFeature.pausePlayback(runtime);
+}
+async function togglePlay(forceSong?: boolean): Promise<any> {
+  return performanceFeature.togglePlay(runtime, forceSong);
+}
+function animateMeter(): any {
+  return performanceFeature.animateMeter(runtime);
+}
+function wavOptions(): any {
+  return workflow.wavOptions(runtime);
+}
+function setExportProgress(value: number, status?: string): any {
+  return storage.setExportProgress(runtime, value, status);
+}
+async function exportWav(song: boolean, target?: QuickTarget): Promise<any> {
+  return storage.exportWav(runtime, song, target);
+}
+function crc32(bytes: Uint8Array): any {
+  return storage.crc32(runtime, bytes);
+}
+async function zipFiles(
+  files: Array<{ name: string; data: Blob }>,
+): Promise<any> {
+  return storage.zipFiles(runtime, files);
+}
+async function readStoreZip(blob: Blob): Promise<any> {
+  return storage.readStoreZip(runtime, blob);
+}
+async function importProjectFile(file: File): Promise<any> {
+  return storage.importProjectFile(runtime, file);
+}
+async function renderStems(): Promise<any> {
+  return workflow.renderStems(runtime);
+}
+async function renderProjectBundle(): Promise<any> {
+  return workflow.renderProjectBundle(runtime);
+}
+const exportMeta: Record<
+  QuickExportKind,
+  { extension: string; type: string; description: string }
+> = {
+  wav: { extension: ".wav", type: "audio/wav", description: "Wave audio" },
+  midi: { extension: ".mid", type: "audio/midi", description: "MIDI song" },
+  project: {
+    extension: ".json",
+    type: "application/json",
+    description: "КИБЕР VENGANCE project",
+  },
+  "clip-wav": {
+    extension: ".wav",
+    type: "audio/wav",
+    description: "Wave audio",
+  },
+  "clip-midi": {
+    extension: ".mid",
+    type: "audio/midi",
+    description: "MIDI clips",
+  },
+  stems: {
+    extension: ".zip",
+    type: "application/zip",
+    description: "КИБЕР VENGANCE stems",
+  },
+  bundle: {
+    extension: ".zip",
+    type: "application/zip",
+    description: "КИБЕР VENGANCE project package",
+  },
+  performance: {
+    extension: ".webm",
+    type: "audio/webm",
+    description: "Live performance",
+  },
+};
+function exportName(kind: QuickExportKind): any {
+  return storage.exportName(runtime, kind);
+}
+async function performExport(
+  kind: QuickExportKind,
+  forcePicker = false,
+): Promise<any> {
+  return storage.performExport(runtime, kind, forcePicker);
+}
+async function quickExportWav(forcePicker = false): Promise<any> {
+  return storage.quickExportWav(runtime, forcePicker);
+}
+async function quickExportMidi(forcePicker = false): Promise<any> {
+  return storage.quickExportMidi(runtime, forcePicker);
+}
+function repeatLastExport(): any {
+  return storage.repeatLastExport(runtime);
+}
+
+$("#playBtn").onclick = () => togglePlay();
+$("#pauseBtn").onclick = pausePlayback;
+$("#rewindBtn").onclick = () => {
+  engine.stop();
+  currentStep = -1;
+  currentScene = -1;
+  transportPosition = 0;
+  setGlobalStart(0);
+  setClipStart(0);
+  updatePlayheads();
+  syncTransportButtons(false);
+  $("#pauseBtn").classList.remove("active");
+};
+$("#recordBtn").onclick = () => {
+  recordArmed = !recordArmed;
+  $("#recordBtn").classList.toggle("active", recordArmed);
+  toast(
+    recordArmed
+      ? `RECORD ARMED · ${$("#countIn").value} BAR COUNT-IN`
+      : "RECORD SAFE",
+  );
+  syncStudioUi();
+};
+$("#metroBtn").onclick = () => {
+  metronome = !metronome;
+  engine.metronome = metronome;
+  $("#metroBtn").setAttribute("aria-pressed", metronome);
+};
+$("#tempo").onchange = () => {
+  snapshot();
+  project.tempo = Math.max(50, Math.min(220, +$("#tempo").value));
+  changed();
+};
+$("#meterSelect").onchange = () => {
+  snapshot();
+  const [beats, unit] = $("#meterSelect").value.split("/").map(Number);
+  setProjectMeter(project, beats, unit);
+  selectedNotes.clear();
+  changed(true);
+};
+$("#recordMode").onchange = () => {
+  snapshot();
+  project.editor.recordMode = $("#recordMode").value;
+  changed();
+  toast(
+    project.editor.recordMode === "free"
+      ? "FREE MICROTIMING RECORDING"
+      : "QUANTIZED RECORDING",
+  );
+};
+$("#swing").onchange = () => {
+  snapshot();
+  project.swing = Math.max(0, Math.min(0.6, +$("#swing").value / 100));
+  changed();
+};
+$("#title").onchange = () => {
+  snapshot();
+  project.title = $("#title").value.trim() || "Untitled Signal";
+  changed();
+};
+$("#masterVolume").onpointerdown = snapshot;
+$("#masterVolume").oninput = () => {
+  project.master = +$("#masterVolume").value;
+  $("#masterValue").textContent = Math.round(project.master * 100);
+  $("#mixerMaster").value = project.master;
+  $("#mixerMasterValue").textContent = `${Math.round(project.master * 100)}%`;
+  engine.setProject(project);
+};
+$("#masterVolume").onchange = () => changed();
+$("#undoBtn").onclick = () => {
+  releaseAllKeyboards();
+  project = history.undo(project);
+  void loadLocalSamples();
+  void loadAudioAssets();
+  engine.project = project;
+  selectedNotes.clear();
+  changed(true);
+};
+$("#redoBtn").onclick = () => {
+  releaseAllKeyboards();
+  project = history.redo(project);
+  void loadLocalSamples();
+  void loadAudioAssets();
+  engine.project = project;
+  selectedNotes.clear();
+  changed(true);
+};
+$("#newClipBtn").onclick = () => {
+  snapshot();
+  const source = clip(),
+    c = createClip(
+      selectedTrack,
+      `${TRACK_META[selectedTrack].label} ${clipsForTrack(project, selectedTrack).length + 1}`,
+      2,
+      meterSteps(project.meter),
+    );
+  c.character = structuredClone(source.character);
+  project.clips.push(c);
+  project.activeClipIds[selectedTrack] = c.id;
+  selectedNotes.clear();
+  changed(true);
+  toast(msg("ui_5c0b75942c31"), true);
+};
+$("#duplicateBtn").onclick = () => {
+  snapshot();
+  duplicateClip(project, clip().id);
+  selectedNotes.clear();
+  changed(true);
+  toast(msg("ui_5872d1663485"), true);
+};
+$("#mutateBtn").onclick = () => {
+  snapshot();
+  varyClip(project, clip(), clip().character.macros.tension);
+  selectedNotes.clear();
+  changed(true);
+  toast(msg("ui_350b42aa6d46"), true);
+};
+$("#noteLength").onchange = () =>
+  editSelection("length", $("#noteLength").value);
+$("#noteVelocity").onpointerdown = () => {
+  if (selectedNotes.size) snapshot();
+};
+$("#noteVelocity").oninput = () => {
+  for (const n of clip().notes.filter((n) => selectedNotes.has(n.id)))
+    n.velocity = +$("#noteVelocity").value;
+  renderPiano();
+};
+$("#noteVelocity").onchange = () => changed();
+$("#deleteNotesBtn").onclick = deleteSelection;
+$("#automationParam").onchange = () => {
+  project.editor.automationParam = $("#automationParam").value;
+  changed();
+  renderAutomation();
+};
+$("#clearAutomationBtn").onclick = () => {
+  snapshot();
+  (clip().automation as any)[project.editor.automationParam] = {};
+  changed();
+  renderAutomation();
+  toast(msg("ui_714477b33131"), true);
+};
+$("#addSceneBtn").onclick = () => {
+  snapshot();
+  addArrangementScene(project);
+  changed(true);
+  focusScene(project.arrangement.length - 1);
+};
+$("#autoArrangeBtn").onclick = () => {
+  snapshot();
+  distributeArrangementPatterns(project);
+  changed(true);
+  toast("CLIPS DISTRIBUTED ACROSS SONG");
+};
+function activateView(view: string) {
+  if (!["forge", "arrange", "audio", "launch", "perform", "mix"].includes(view))
+    return;
+  releaseAllKeyboards();
+  activeView = view;
+  $$("[data-view]").forEach((x) =>
+    x.classList.toggle("active", x.dataset.view === view),
+  );
+  $$(".view").forEach((v) =>
+    v.classList.toggle("active", v.id === `${view}View`),
+  );
+  if (!engine.playing)
+    engine.songMode = ["audio", "arrange", "mix"].includes(view);
+  if (view === "forge") {
+    renderPiano();
+    renderAutomation();
+    renderKeyboard();
+    renderClipControls();
+  }
+  if (view === "launch") renderLauncher();
+  if (view === "audio") {
+    renderAudioStudio();
+    renderSamplerKeyboard();
+  }
+  if (view === "arrange") {
+    renderArrangement();
+    renderTempoMap();
+  }
+  if (view === "mix") {
+    renderMixer();
+    renderMixGroups();
+    requestAnimationFrame(animateMixer);
+  }
+  if (view === "perform") {
+    renderKeyboard();
+    macroMarkup($("#performMacros"));
+    renderPerformanceTakes();
+    animateScratchDeck();
+  }
+  syncStudioUi();
+}
+$$("[data-view]").forEach(
+  (b: any) => (b.onclick = () => activateView(b.dataset.view)),
+);
+function compatibility(): any {
+  return workflow.compatibility(runtime);
+}
+function showCompatibility(): any {
+  return workflow.showCompatibility(runtime);
+}
+const open = (id: string) => $(id).showModal(),
+  replaceProject = (next: Project) => {
+    snapshot();
+    project = next;
+    engine.project = project;
+    selectedNotes.clear();
+    globalStartStep = 0;
+    clipStartSteps.clear();
+    changed(true);
+    $("#projectMenu").close();
+  };
+$("#menuBtn").onclick = () => {
+  renderVersions();
+  renderExportTargets();
+  open("#projectMenu");
+};
+$("#exportBtn").onclick = repeatLastExport;
+$("#exportAsBtn").onclick = () => open("#exportDialog");
+$("#helpBtn").onclick = () => open("#helpDialog");
+$("#aboutBtn").onclick = () => open("#aboutDialog");
+$$("[data-close]").forEach(
+  (b: any) => (b.onclick = () => b.closest("dialog").close()),
+);
+$("#newBtn").onclick = async () => {
+  if (
+    await requestConfirmation(
+      L("New demo project", "Nuevo proyecto demo"),
+      L(
+        "Replace the current project? You can undo this action.",
+        "¿Reemplazar el proyecto actual? Puedes deshacer esta acción.",
+      ),
+    )
+  )
+    replaceProject(createProject());
+};
+$("#emptyBtn").onclick = async () => {
+  if (
+    await requestConfirmation(
+      L("New empty project", "Nuevo proyecto vacío"),
+      L(
+        "Replace the current project? You can undo this action.",
+        "¿Reemplazar el proyecto actual? Puedes deshacer esta acción.",
+      ),
+    )
+  )
+    replaceProject(createEmptyProject());
+};
+$("#duplicateProjectBtn").onclick = () => {
+  const copy = migrateProject(structuredClone(project));
+  copy.id = crypto.randomUUID();
+  copy.title = `${project.title} Copy`;
+  replaceProject(copy);
+  toast("PROJECT DUPLICATED");
+};
+$("#saveBtn").onclick = saveVersion;
+$("#exportProjectBtn").onclick = () => performExport("project", true);
+$("#compatBtn").onclick = () => {
+  $("#projectMenu").close();
+  showCompatibility();
+};
+$("#copyCompatBtn").onclick = async () => {
+  const text = JSON.stringify(compatibility(), null, 2);
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("COMPATIBILITY REPORT COPIED");
+  } catch {
+    download(text, "kiber-vengance-compatibility.json", "application/json");
+  }
+};
+$("#importProject").onchange = async (e: any) => {
+  try {
+    snapshot();
+    project = await importProjectFile(e.target.files[0]);
+    engine.project = project;
+    await loadLocalSamples();
+    selectedNotes.clear();
+    changed(true);
+    $("#projectMenu").close();
+    toast("PROJECT IMPORTED");
+  } catch (err) {
+    toast(`IMPORT ERROR: ${err instanceof Error ? err.message : String(err)}`);
+  }
+};
+$("#backingBtn").onclick = () => open("#backingDialog");
+$("#backingIntensity").oninput = () =>
+  ($("#backingIntensityValue").textContent = Math.round(
+    +$("#backingIntensity").value * 100,
+  ));
+$("#generateBackingBtn").onclick = () => {
+  snapshot();
+  generateBacking(project, {
+    sections: +$("#backingSections").value,
+    intensity: +$("#backingIntensity").value,
+    style: $("#backingStyle").value,
+  });
+  selectedNotes.clear();
+  changed(true);
+  $("#backingDialog").close();
+  activateView("arrange");
+  toast(msg("ui_144560ac18a5"), true);
+};
+$("#deleteClipDialog").onclose = () => (pendingDeleteClipId = null);
+$("#confirmDeleteClipBtn").onclick = () => {
+  if (!pendingDeleteClipId) return;
+  const target = project.clips.find((c: any) => c.id === pendingDeleteClipId);
+  if (!target) return;
+  const name = target.name;
+  snapshot();
+  if (!deleteClip(project, pendingDeleteClipId)) {
+    toast(msg("ui_49594184d6c0"));
+    return;
+  }
+  pendingDeleteClipId = null;
+  selectedNotes.clear();
+  $("#deleteClipDialog").close();
+  changed(true);
+  toast(msg("ui_dabefe4930a0", { arg0: name }), true);
+};
+
+document.addEventListener(
+  "keydown",
+  (e) => {
+    const target = e.target as HTMLElement,
+      typing = Boolean(
+        target?.closest?.(
+          'textarea,[contenteditable="true"],input:not([type]),input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],input[type="url"],input[type="tel"]',
+        ),
+      ),
+      blocked = $$("dialog").some((dialog) => dialog.open) || typing,
+      key =
+        e.code === "KeyS" || e.key.toLowerCase() === "s"
+          ? "solo"
+          : e.code === "KeyM" || e.key.toLowerCase() === "m"
+            ? "mute"
+            : e.code === "KeyV" || e.key.toLowerCase() === "v"
+              ? "mutate"
+              : null;
+    if (
+      !blocked &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      e.shiftKey &&
+      key
+    ) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      (key === "mutate"
+        ? $("#mutateBtn")
+        : $(`[data-${key}="${selectedTrack}"]`)
+      )?.click();
+    }
+  },
+  { capture: true },
+);
+
+document.addEventListener("keydown", (e) => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    openCommands();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "e") {
+    e.preventDefault();
+    if (e.shiftKey) open("#exportDialog");
+    else repeatLastExport();
+    return;
+  }
+  if ($("#commandDialog").open) return;
+  if (
+    ["INPUT", "SELECT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)
+  )
+    return;
+  if (e.shiftKey && e.key.toLowerCase() === "f") {
+    e.preventDefault();
+    toggleFocus();
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "g") {
+    e.preventDefault();
+    activateView("forge");
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "a") {
+    e.preventDefault();
+    activateView("arrange");
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "l") {
+    e.preventDefault();
+    activateView("launch");
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "x") {
+    e.preventDefault();
+    activateView("mix");
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "p") {
+    e.preventDefault();
+    activateView("perform");
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "n") {
+    e.preventDefault();
+    $("#newClipBtn").click();
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "d") {
+    e.preventDefault();
+    $("#duplicateBtn").click();
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "v") {
+    e.preventDefault();
+    $("#mutateBtn").click();
+    return;
+  }
+  if (e.shiftKey && e.key.toLowerCase() === "q") {
+    e.preventDefault();
+    $("#quantizeBtn").click();
+    return;
+  }
+  if (e.key.toLowerCase() === "r" && !mod) {
+    e.preventDefault();
+    $("#recordBtn").click();
+    return;
+  }
+  if (e.code === "Space") {
+    e.preventDefault();
+    togglePlay();
+    return;
+  }
+  if (/^Digit[1-5]$/.test(e.code)) {
+    selectedTrack = TRACKS[+e.code.at(-1)! - 1] ?? "lead";
+    selectedNotes.clear();
+    renderAll();
+    setDefaultScroll();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "z") {
+    e.preventDefault();
+    releaseAllKeyboards();
+    project = e.shiftKey ? history.redo(project) : history.undo(project);
+    void loadLocalSamples();
+    void loadAudioAssets();
+    engine.project = project;
+    selectedNotes.clear();
+    changed(true);
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "a") {
+    e.preventDefault();
+    selectedNotes = new Set(clip().notes.map((n) => n.id));
+    syncSelectedClasses();
+    renderSelection();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "c") {
+    clipboard = clip()
+      .notes.filter((n) => selectedNotes.has(n.id))
+      .map((n) => structuredClone(n));
+    toast(`${clipboard.length} NOTES COPIED`);
+    return;
+  }
+  if (mod && e.key.toLowerCase() === "v" && clipboard.length) {
+    e.preventDefault();
+    snapshot();
+    const min = Math.min(...clipboard.map((n) => n.step)),
+      offset = Math.min(clipLengthSteps(clip()) - 1, min + 4) - min,
+      newNotes = clipboard.map((n) => ({
+        ...n,
+        id: crypto.randomUUID(),
+        step: Math.min(clipLengthSteps(clip()) - n.length, n.step + offset),
+      }));
+    clip().notes.push(...newNotes);
+    selectedNotes = new Set(newNotes.map((n) => n.id));
+    changed();
+    renderPiano();
+    return;
+  }
+  if (["Delete", "Backspace"].includes(e.key)) {
+    e.preventDefault();
+    deleteSelection();
+    return;
+  }
+  if (selectedNotes.size && e.key.startsWith("Arrow")) {
+    e.preventDefault();
+    snapshot();
+    const delta = e.shiftKey ? 4 : project.editor.snap;
+    for (const n of clip().notes.filter((n) => selectedNotes.has(n.id))) {
+      if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft"))
+        n.length = Math.max(
+          project.editor.snap,
+          Math.min(
+            clipLengthSteps(clip()) - n.step,
+            n.length + (e.key === "ArrowRight" ? delta : -delta),
+          ),
+        );
+      else if (e.key === "ArrowRight" || e.key === "ArrowLeft")
+        n.step = Math.max(
+          0,
+          Math.min(
+            clipLengthSteps(clip()) - n.length,
+            n.step + (e.key === "ArrowRight" ? delta : -delta),
+          ),
+        );
+      else if (selectedTrack !== "drums")
+        n.pitch = Math.max(
+          TRACK_META[selectedTrack].low,
+          Math.min(
+            TRACK_META[selectedTrack].high,
+            n.pitch + (e.key === "ArrowUp" ? 1 : -1),
+          ),
+        );
+    }
+    changed();
+    renderPiano();
+    return;
+  }
+  const i = keyMap.indexOf(e.key.toLowerCase());
+  if (i >= 0 && !e.repeat && !recording.has(e.key.toLowerCase())) {
+    const key = $(`#keyboard .key[data-source="${e.key.toLowerCase()}"]`);
+    if (key)
+      startPerformance(e.key.toLowerCase(), +key.dataset.pitch, 0.82, key);
+  }
+});
+document.addEventListener("keyup", (e) => {
+  const i = keyMap.indexOf(e.key.toLowerCase());
+  if (i >= 0)
+    endPerformance(
+      e.key.toLowerCase(),
+      $(`#keyboard .key[data-source="${e.key.toLowerCase()}"]`),
+    );
+});
+async function initMidi(): Promise<any> {
+  return performanceFeature.initMidi(runtime);
+}
+setupSamplerKeyboard();
+setupSamplerOctaveControls();
+const query = new URLSearchParams(location.search);
+loadQuickHandles();
+initWorkflowUi();
+initLearning();
+setupScratchDeck();
+setupStudioExtensions();
+setupPrecisionControls();
+setupArrangeTools();
+setupLauncher();
+setupLibraries();
+setupV6Studio();
+setupMidiLearnUi();
+setupV6Safety();
+setupV6Copy();
+setupSampleSlicing();
+setupProjectTemplates();
+renderAll();
+applyLanguage();
+loadLocalSamples();
+if (query.get("view")) activateView(query.get("view")!);
+$("#app").hidden = false;
+$("#boot")?.remove();
+setDefaultScroll();
+initMidi();
+if ("serviceWorker" in navigator && !query.has("qa"))
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+function syncStudioUi() {
+  if (!copyQueued) {
+    copyQueued = true;
+    queueMicrotask(() => {
+      copyQueued = false;
+      translateDOM();
+    });
+  }
+  studioBridge.update({
+    view: activeView as StudioView,
+    language,
+    context: TRACK_META[selectedTrack].label,
+    inspector: soundPanel,
+    playing: Boolean(engine.playing),
+    paused: studioBridge.getSnapshot().paused,
+    songMode: Boolean(engine.songMode),
+    armed: recordArmed,
+  });
+  const context = $("#clipContext");
+  if (!context) return;
+  const c = clip();
+  context.textContent = `${TRACK_META[selectedTrack].label} → ${c.name} · ${c.bars} ${msg("ui_5a599b482fc1")}`;
+  document.body.classList.toggle("sound-panel", soundPanel);
+  document.body.dataset.editorTool = editorTool;
+  $$("[data-studio-tab]").forEach((b: any) => {
+    const tab = b.dataset.studioTab;
+    const active =
+      tab === "sound"
+        ? activeView === "forge" && soundPanel
+        : tab === "clips"
+          ? activeView === "forge" && !soundPanel
+          : activeView === tab;
+    b.setAttribute("aria-pressed", String(active));
+  });
+  $$("button[data-editor-tool]").forEach((b: any) =>
+    b.setAttribute("aria-pressed", String(b.dataset.editorTool === editorTool)),
+  );
+  const hint = $("#recordHint");
+  hint.textContent = recordArmed
+    ? msg("ui_bef5cb5becd0")
+    : msg("ui_401015e021e1");
+}
+function duplicateSelectedNotes(): any {
+  return performanceFeature.duplicateSelectedNotes(runtime);
+}
+function quantizeSelectedNotes(): any {
+  return performanceFeature.quantizeSelectedNotes(runtime);
+}
+function setupStudioUi(): any {
+  return workflow.setupStudioUi(runtime);
 }
 setupStudioUi();
 
-function setupConsistentControls(){
- const labels:Array<[string,string,string]>=[['scratchCaptureBtn','Capture mix','Capturar mezcla'],['scratchBrakeBtn','Brake','Frenar'],['scratchSpinBtn','Spinback','Retroceso'],['scratchStutterBtn','Stutter','Repetir'],['audioLaneBtn','Add audio lane','Añadir pista de audio'],['automationLaneBtn','Add automation','Añadir automatización'],['modulationBtn','Add modulation','Añadir modulación'],['scratchReverse','Reverse','Reversa'],['scratchRestart','Back to start','Volver al inicio']];
- for(const [id,en,es] of labels){const node=$('#'+id);node.dataset.en=en;node.dataset.es=es;node.textContent=L(en,es)}
- const refreshState=()=>{updateScratchPlayButton();$('#audioRecordBtn').textContent=inputRecorder?.state==='recording'?L('Stop recording','Terminar grabación'):L('Record input','Grabar entrada');};
- $('#languageSelect').addEventListener('change',refreshState);$('#menuLanguageSelect').addEventListener('change',refreshState);refreshState();
- const wave=$('#scratchWaveform');wave.tabIndex=0;wave.setAttribute('role','slider');wave.setAttribute('aria-label',L('Position in scratch audio','Posición en audio de scratch'));wave.setAttribute('aria-valuemin','0');wave.setAttribute('aria-valuemax','100');
- const seek=(fraction:number)=>{if(!scratchBuffer||!engine.scratchFrames)return;const f=Math.max(0,Math.min(1,fraction));scratchStuttering=false;engine.setScratchStutter(0);$('#scratchStutterBtn').setAttribute('aria-pressed','false');const frame=Math.round(f*(engine.scratchFrames-1));engine.scratchNode?.port.postMessage({type:'seek',frame});engine.scratchPosition=frame;wave.setAttribute('aria-valuenow',String(Math.round(f*100)));$('#scratchWavePlayhead').style.left=`${f*100}%`};
- let pointer:number|null=null;const at=(e:PointerEvent)=>{const r=wave.getBoundingClientRect();seek((e.clientX-r.left)/r.width)};
- wave.onpointerdown=(e:PointerEvent)=>{if(!scratchBuffer||e.button!==0||pointer!==null)return;e.preventDefault();pointer=e.pointerId;wave.setPointerCapture(pointer);at(e)};
- wave.onpointermove=(e:PointerEvent)=>{if(e.pointerId===pointer){e.preventDefault();at(e)}};
- const end=(e:PointerEvent)=>{if(pointer!==e.pointerId)return;pointer=null;if(wave.hasPointerCapture(e.pointerId))wave.releasePointerCapture(e.pointerId)};
- wave.onpointerup=wave.onpointercancel=wave.onlostpointercapture=end;
- wave.onkeydown=(e:KeyboardEvent)=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const fraction=(engine.scratchPosition||0)/Math.max(1,engine.scratchFrames||1);seek(e.key==='Home'?0:e.key==='End'?1:fraction+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?.1:.01))};
- const save=document.createElement('button');save.id='scratchKeep';save.dataset.en='Keep in project';save.dataset.es='Guardar en proyecto';save.textContent=L(save.dataset.en,save.dataset.es);$('.scratch-pro').append(save);save.onclick=async()=>{if(!scratchBuffer){toast(L('Load or record audio first','Carga o graba audio primero'));return}save.disabled=true;try{await addAudioBlob(audioBufferWav(scratchBuffer),'Scratch.wav')}catch(error){toast(String(error))}finally{save.disabled=false}};
- const hint=document.createElement('p');hint.dataset.en='Temporary deck audio · touch or drag the waveform to seek. Keep in project saves a copy in Audio.';hint.dataset.es='Audio temporal del plato · toca o arrastra la onda para moverte. Guardar en proyecto conserva una copia en Audio.';hint.textContent=L(hint.dataset.en,hint.dataset.es);$('.scratch-pro p').replaceWith(hint);
- for(const id of ['audioLaneBtn','automationLaneBtn','modulationBtn','monoCheckBtn']){const el=$('#'+id),original=el.onclick;el.onclick=(event:Event)=>{original?.call(el,event);toast(L('Project updated','Proyecto actualizado'),true)}}
- const dialog=document.createElement('dialog');dialog.id='timingDialog';document.body.append(dialog);
- const editTiming=(meter:boolean)=>{dialog.innerHTML=`<form method="dialog"><h2>${meter?L('Add meter change','Añadir cambio de compás'):L('Add tempo change','Añadir cambio de tempo')}</h2><label>${L('Position (steps)','Posición (pasos)')}<input name="position" type="number" min="0" step="1" value="0" required></label>${meter?`<label>${L('Beats','Pulsos')}<input name="beats" type="number" min="1" max="12" value="4" required></label><label>${L('Beat unit','Unidad')}<select name="unit"><option>4</option><option>8</option></select></label>`:`<label>BPM<input name="bpm" type="number" min="30" max="300" value="${project.tempo}" required></label>`}<div><button type="button" id="cancelTiming">${L('Cancel','Cancelar')}</button><button type="submit">${L('Add change','Añadir cambio')}</button></div></form>`;$('#cancelTiming').onclick=()=>dialog.close();dialog.querySelector('form')!.onsubmit=e=>{e.preventDefault();const data=new window.FormData(dialog.querySelector('form')!);snapshot();const step=Number(data.get('position'));if(meter)project.meterMap.push({id:cryptoId(),step,beats:Number(data.get('beats')),unit:Number(data.get('unit'))});else project.tempoMap.push({id:cryptoId(),step,bpm:Number(data.get('bpm')),curve:'jump'});changed();renderArrangement();renderTempoMap();dialog.close();toast(L('Timing change added','Cambio añadido'),true)};dialog.showModal()};
- $('#tempoEventBtn').onclick=()=>editTiming(false);$('#meterEventBtn').onclick=()=>editTiming(true);
+function setupConsistentControls(): any {
+  return workflow.setupConsistentControls(runtime);
 }
 setupConsistentControls();
+syncTransportButtons();
+
+studioBridge.navigate = (view) => activateView(view);
+studioBridge.toggleFocus = () => toggleFocus();
+studioBridge.toggleInspector = () => {
+  soundPanel = !soundPanel;
+  if (soundPanel) {
+    renderInspector();
+    renderArp();
+    renderFx();
+    macroMarkup($("#macros"));
+    installControlHelp();
+  }
+  syncStudioUi();
+};
+studioBridge.release = () => {
+  releaseKeyPointers();
+  releaseAllKeyboards();
+  for (const key of keyMap) endPerformance(key);
+  for (const source of samplerHeld.keys()) endSamplerPerformance(source);
+};
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    if (activeView === "perform") animateScratchDeck();
+    if (activeView === "mix") animateMixer();
+  }
+});

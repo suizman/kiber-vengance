@@ -1,0 +1,1742 @@
+/* Unified control and panel vocabulary. The sequencing coordinate system is unchanged. */
+#app .view :is(button, select, input, output, label),
+#app .studio-inspector :is(button, select, input, output, label),
+dialog :is(button, select, input, label) {
+  font-family: var(--ui-font);
+  font-size: var(--text-base);
+  letter-spacing: normal;
+  line-height: 1.4;
+}
+#app
+  .view
+  button:not(.note-block):not(.key):not(.sampler-key):not(.keyboard-key):not(
+    .knob
+  ),
+#app .studio-inspector button {
+  min-height: 44px;
+  height: auto;
+  padding: 9px 12px;
+  border-radius: 7px;
+}
+#app
+  .view
+  button:not(.note-block):not(.key):not(.sampler-key):not(.keyboard-key):not(
+    .knob
+  ):not(.primary):not([aria-pressed="true"]):not(.active) {
+  background: var(--panel2);
+}
+#app .view :is(select, input[type="number"], input[type="text"]),
+#app .studio-inspector :is(select, input[type="number"], input[type="text"]) {
+  height: auto;
+  min-height: 44px;
+  padding: 8px 10px;
+}
+#app .view input[type="range"],
+#app .studio-inspector input[type="range"] {
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+}
+#app
+  .view
+  :is(
+    small,
+    .eyebrow,
+    .macro label,
+    .fx-unit,
+    .deck-slider span,
+    .scene-clips label span,
+    .mix-peak
+  ) {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  letter-spacing: normal;
+}
+#app .view p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+#app .view h1 {
+  font: 650 24px/1.15 var(--ui-font);
+  letter-spacing: -0.02em;
+}
+#app .view h2 {
+  font: 650 18px/1.25 var(--ui-font);
+  letter-spacing: -0.015em;
+}
+#app
+  :is(
+    .editor-head,
+    .composition-tools,
+    .composition-options,
+    .automation-disclosure,
+    .section-title,
+    .sampler-lab,
+    .audio-lab,
+    .mixer,
+    .launcher,
+    .scratch-deck,
+    .performance-take,
+    .master-strip,
+    .mix-groups
+  ) {
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+#app
+  :is(
+    .editor-head,
+    .fx-rack,
+    .macro-strip,
+    .arp-rack,
+    .scratch-deck,
+    .section-title,
+    .scene,
+    .performance-orb
+  )::before,
+#app :is(.editor-head, .section-title, .scratch-deck)::after {
+  display: none;
+}
+#app .editor-head {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 70px;
+  padding: 16px;
+  margin: 0 0 12px;
+}
+#app .editor-head > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+#app .editor-head > div:first-child {
+  flex: 1;
+}
+#app .editor-head .eyebrow {
+  width: 100%;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+#app .editor-head #clipSelect {
+  min-width: 160px;
+  max-width: 360px;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #202631;
+}
+#app .editor-head label {
+  height: auto;
+  min-height: 44px;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+#app .editor-head #zoomRange {
+  width: 90px;
+}
+#app :is(.global-locator, .clip-locator) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+}
+#app :is(.global-locator, .clip-locator) label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+#app :is(.global-locator, .clip-locator) label span {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+#app :is(.global-locator, .clip-locator) input {
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+}
+#app :is(.global-locator, .clip-locator) output {
+  font: 11px var(--mono-font);
+  color: var(--muted);
+  white-space: nowrap;
+}
+#app .composition-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+#app .composition-tools > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+#app .composition-tools label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#app .selection-editor input[type="number"] {
+  width: 70px;
+}
+#app .selection-editor input[type="range"] {
+  width: 90px;
+}
+#app .composition-options {
+  padding: 12px 16px;
+  margin: 12px 0;
+}
+#app .composition-options summary,
+#app .automation-disclosure summary {
+  color: var(--ink);
+  font: 600 13px/1.4 var(--ui-font);
+  padding: 10px 0;
+  min-height: 40px;
+  cursor: pointer;
+}
+#app .composition-options :is(.harmony, .generators) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+#app :is(.editor-tools, .selection-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+#app .editor-tools button {
+  padding: 9px 14px;
+}
+#app .editor-tools button[aria-pressed="true"] {
+  background: #213c3c;
+  border-color: #568f86;
+  color: var(--cyan);
+}
+#app .piano-shell {
+  height: clamp(320px, 48vh, 560px);
+  grid-template-columns: 58px minmax(0, 1fr);
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #11161d;
+}
+#app .roll-corner {
+  background: #1d252f;
+  color: var(--muted);
+  font-size: 10px;
+}
+#app .roll-ruler {
+  background: #19212c;
+  border-color: var(--line);
+}
+#app .ruler-content span {
+  font: 10px/1 var(--mono-font);
+  color: var(--muted);
+  border-color: #3d4a5e;
+}
+#app .piano-labels {
+  border-color: var(--line);
+}
+#app .pitch-label {
+  color: #adb8c9;
+  font: 10px/1 var(--mono-font);
+  background: #202630;
+  border-bottom-color: #303946;
+}
+#app .pitch-label.in-scale {
+  color: #e4eaf1;
+  background: #2b3541;
+}
+#app .sequencer {
+  background-color: #121820;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      #27313e 0 1px,
+      transparent 1px var(--step)
+    ),
+    repeating-linear-gradient(
+      to right,
+      #3b4a5e 0 1px,
+      transparent 1px var(--beat)
+    ),
+    repeating-linear-gradient(
+      to right,
+      #566a7e 0 2px,
+      transparent 2px var(--bar)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      #27303d 0 1px,
+      transparent 1px var(--row)
+    );
+}
+#app .note-block {
+  min-height: 0;
+  min-width: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 0;
+  border-color: color-mix(in srgb, var(--track) 75%, white);
+  background: color-mix(
+    in srgb,
+    var(--track) calc(35% + var(--vel) * 35%),
+    #16212e
+  );
+}
+#app .note-block.selected {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+#app :is(.roll-playhead, .automation-playhead) {
+  background: var(--magenta);
+  box-shadow: none;
+  width: 2px;
+}
+#app .automation-disclosure {
+  margin: 12px 0;
+  overflow: hidden;
+}
+#app .automation-disclosure summary {
+  padding: 14px 16px;
+}
+#app .automation-head {
+  background: #1d242e;
+  border-color: var(--line2);
+  padding: 12px 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+  height: auto;
+}
+#app .automation-head > span {
+  font-size: 11px;
+  color: var(--muted);
+}
+#app .automation-pane {
+  margin: 0 0 0 58px;
+  background: #121820;
+}
+#app .automation-step {
+  background: #66e5d638;
+  border-right: 1px solid #66e5d666;
+}
+#app .automation-step.point::before {
+  background: var(--cyan);
+  box-shadow: none;
+}
+/* Sound inspector uses one vertical hierarchy on every device. */
+.studio-inspector :is(.inspector, .arp-rack, .fx-rack, .macro-strip) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 18px 0;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+.studio-inspector
+  :is(
+    .voice-title,
+    .arp-rack > div:first-child,
+    .fx-title,
+    .macro-strip > div:first-child
+  ) {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.studio-inspector
+  :is(
+    .voice-title h1,
+    .fx-title strong,
+    .macro-strip strong,
+    .arp-rack strong
+  ) {
+  font: 650 17px/1.3 var(--ui-font);
+  letter-spacing: normal;
+  margin: 0 0 12px;
+}
+.studio-inspector .preset-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.studio-inspector .preset-row select {
+  max-width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--ink);
+}
+.studio-inspector .preset-row select:first-child {
+  grid-column: 1/-1;
+}
+.studio-inspector .synth-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 10px;
+  padding: 0;
+  overflow: visible;
+}
+.studio-inspector .knob-control {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  justify-items: center;
+  gap: 5px;
+}
+.studio-inspector .knob-control .knob {
+  grid-column: 1/-1;
+  grid-row: 1;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  min-height: 56px;
+  background: conic-gradient(
+    from 225deg,
+    var(--track) 0 var(--v),
+    #3b4553 var(--v) 75%,
+    transparent 75%
+  );
+  border-color: #5c6b80;
+  box-shadow: none;
+  touch-action: none;
+}
+.studio-inspector .knob::after {
+  inset: 7px;
+  background: #222b36;
+  border-color: #425066;
+}
+.studio-inspector .knob::before {
+  top: 6px;
+  height: 11px;
+  width: 2px;
+  background: #e9f2f7;
+  transform-origin: 50% 21px;
+}
+.studio-inspector .knob-control :is(label, output) {
+  grid-column: 1/-1;
+  font-size: 11px;
+  margin: 0;
+  color: var(--muted);
+}
+.studio-inspector .knob-control output {
+  color: var(--ink);
+  font-family: var(--mono-font);
+}
+.studio-inspector .knob-control .knob-nudge {
+  min-height: 28px;
+  height: 28px;
+  width: 30px;
+  padding: 0;
+  border-color: transparent;
+  color: var(--muted);
+  background: transparent;
+}
+.studio-inspector .knob-control input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.studio-inspector :is(.fx-controls, .macros) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 0;
+}
+.studio-inspector .arp-rack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.studio-inspector .arp-rack > div:first-child {
+  grid-column: 1/-1;
+}
+.studio-inspector .arp-rack > label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+}
+.studio-inspector :is(.macro label, .fx-unit) {
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: normal;
+  color: var(--muted);
+}
+.studio-inspector .rack-toggle {
+  float: right;
+  position: static;
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0;
+}
+/* Shared piano. White/black geometry is determined by the component. */
+.instrument-keyboard {
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+.keyboard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line2);
+  color: var(--muted);
+  font-size: 12px;
+}
+.keyboard-octave {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.keyboard-octave button {
+  min-height: 32px;
+  width: 34px;
+  padding: 4px;
+}
+.keyboard-octave output {
+  min-width: 44px;
+  text-align: center;
+  font: 12px var(--mono-font);
+}
+.keyboard-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  padding: 12px;
+  scrollbar-width: thin;
+}
+.instrument-keyboard .keyboard,
+.instrument-keyboard .keyboard-bed,
+.instrument-keyboard .keyboard-keys {
+  position: relative;
+  display: block;
+  min-width: 100%;
+  height: 142px;
+  padding: 0;
+  background: #111820;
+}
+#app .instrument-keyboard .keyboard-key {
+  position: absolute;
+  left: var(--key-left);
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 12px;
+  border-radius: 0 0 6px 6px;
+  font: 600 11px/1 var(--mono-font);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    background 0.07s,
+    box-shadow 0.07s;
+  transform: none;
+}
+#app .instrument-keyboard .keyboard-key.natural {
+  width: var(--key-width, 54px);
+  height: 138px;
+  color: #4a5565;
+  border: 1px solid #9ba8b9;
+  background: #e4e9f0;
+  box-shadow: inset 0 -5px #b4bfcd;
+  z-index: 1;
+}
+#app .instrument-keyboard .keyboard-key.accidental {
+  width: calc(var(--key-width, 54px) * 0.62);
+  height: 86px;
+  background: #26303e;
+  color: #c0c9d6;
+  border: 1px solid #0a1019;
+  box-shadow: inset 0 -5px #111a26;
+  z-index: 2;
+}
+#app .instrument-keyboard .keyboard-key.active {
+  background: var(--track);
+  color: #102627;
+  box-shadow: inset 0 -2px #0003;
+}
+#app .instrument-keyboard .keyboard-key span {
+  font-size: 10px;
+  opacity: 0.7;
+}
+#app .instrument-keyboard .keyboard-key.root::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #20867e;
+  position: absolute;
+  bottom: 34px;
+}
+/* Arrange / audio / launcher / mixer. */
+#app
+  :is(
+    .section-title,
+    .audio-head,
+    .mixer-head,
+    .launcher-head,
+    .performance-head
+  ) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  margin: 0 0 16px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  text-align: left;
+}
+#app
+  :is(
+    .section-title,
+    .audio-head,
+    .mixer-head,
+    .launcher-head,
+    .performance-head
+  )
+  h1 {
+  margin: 0 0 8px;
+}
+#app .song-stats {
+  font: 12px var(--mono-font);
+  color: var(--cyan);
+  letter-spacing: normal;
+}
+#app
+  :is(
+    .arrange-toolbar,
+    .arrange-actions,
+    .audio-actions,
+    .launcher-actions,
+    .mix-reference,
+    .performance-record,
+    .library-tools
+  ) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+#app .arrange-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+#app .arrangement {
+  padding: 0 0 16px;
+  gap: 12px;
+  min-height: 0;
+}
+#app .scene {
+  min-width: 310px;
+  height: auto;
+  min-height: 350px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+#app .scene.playing {
+  border-color: var(--cyan);
+  background: #1a2d2e;
+  transform: none;
+}
+#app .scene-top {
+  grid-template-columns: 20px minmax(0, 1fr) 44px;
+  gap: 8px;
+}
+#app .scene-top input {
+  font: 600 15px var(--ui-font);
+  text-transform: none;
+  letter-spacing: normal;
+  background: #222a35;
+  border: 1px solid var(--line);
+}
+#app .scene-top button {
+  width: 44px;
+}
+#app .scene-clips {
+  gap: 8px;
+}
+.scene-clips label {
+  min-width: 0;
+}
+#app .scene-clips label {
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 6px;
+}
+#app .scene-clips label span {
+  font-size: 11px;
+}
+#app .scene-bottom {
+  grid-template-columns: 68px 1fr 30px;
+  margin-top: 16px;
+}
+.scene-actions {
+  flex-wrap: wrap;
+}
+#app .scene-actions button {
+  min-width: 36px;
+  width: auto;
+  padding: 7px;
+}
+#app .scene-repeats input {
+  width: 64px;
+}
+#app :is(.audio-studio, .mixer, .launcher, .performance) {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  text-align: left;
+}
+#app .audio-lanes {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+#app .audio-lane {
+  background: #151c25;
+  border-color: var(--line);
+}
+#app .audio-lane-head {
+  padding: 14px;
+  background: #202834;
+  min-width: 0;
+}
+#app .audio-lane-head input[type="text"] {
+  font-size: 13px;
+  min-width: 0;
+  width: 100%;
+}
+#app .audio-track {
+  background-color: #121820;
+}
+#app .audio-region {
+  border-radius: 8px;
+  border-color: color-mix(in srgb, var(--track) 60%, var(--line));
+  background: #233540;
+  min-width: 180px;
+}
+#app .audio-region header {
+  padding: 8px 10px;
+  gap: 8px;
+}
+#app .audio-region header button {
+  min-height: 32px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+#app .audio-region b {
+  font-size: 12px;
+}
+#app .audio-region-controls {
+  gap: 8px;
+  padding: 10px;
+}
+.audio-region-controls label {
+  min-width: 0;
+}
+#app .audio-region-controls :is(input, select) {
+  min-height: 34px;
+  padding: 5px;
+  font-size: 12px;
+}
+#app .audio-lab {
+  padding: 20px;
+  margin-top: 20px;
+  gap: 20px;
+}
+#app .audio-empty {
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+}
+#app .sampler-lab {
+  padding: 20px;
+  margin: 20px 0;
+  background: var(--panel);
+}
+#app .sampler-lab > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0;
+  margin-bottom: 18px;
+}
+#app .sampler-lab h2 {
+  margin: 0 0 8px;
+}
+.sampler-lab header small {
+  color: var(--muted);
+}
+#app .sampler-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#app .sampler-controls {
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 16px;
+}
+#app .sampler-controls label {
+  min-width: 0;
+  font-size: 12px;
+}
+.sampler-controls :is(input, select) {
+  max-width: 100%;
+}
+#app .sampler-keyboard-shell {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin-top: 16px;
+  padding: 0;
+}
+#app .launcher-grid {
+  gap: 12px;
+}
+#app .launcher-track {
+  min-width: 170px;
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--panel);
+}
+#app .launcher-track header {
+  margin-bottom: 12px;
+  padding: 0;
+}
+.launcher-track header b {
+  font-size: 13px;
+}
+#app .launcher-cell {
+  min-height: 80px;
+  padding: 14px;
+  margin-bottom: 8px;
+  border-color: var(--line);
+  border-radius: 8px;
+  background: #232b36;
+}
+#app .launcher-cell b {
+  font-size: 13px;
+}
+.launcher-cell small {
+  display: block;
+  margin-top: 5px;
+}
+#app .launcher-cell.active {
+  border-color: var(--track);
+  background: color-mix(in srgb, var(--track) 13%, var(--panel));
+}
+#app .launcher-status {
+  padding: 12px 0;
+  font: 12px var(--mono-font);
+  color: var(--muted);
+}
+#app .mixer-channels {
+  padding: 0 0 16px;
+  gap: 12px;
+}
+#app .mixer-channel {
+  min-width: 188px;
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+#app .mixer-channel::before {
+  height: 3px;
+  top: 0;
+  border-radius: 12px 12px 0 0;
+}
+#app .mixer-channel header b {
+  font-size: 13px;
+}
+.mixer-channel header span {
+  font-size: 11px;
+}
+#app .mixer-channel label {
+  font-size: 12px;
+  margin: 12px 0;
+}
+#app .mixer-channel .mix-fader {
+  min-height: 180px;
+}
+.mixer-channel .mix-fader input {
+  min-height: 0;
+}
+#app .mix-groups,
+#app .master-strip {
+  padding: 18px;
+  margin-top: 16px;
+}
+#app .mix-group {
+  background: #212a35;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+#app .mix-group label {
+  font-size: 12px;
+}
+/* Live deck hierarchy. */
+#app .perform-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+#app .perform-instrument {
+  min-width: 0;
+}
+#app .perform-macros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  padding: 20px;
+  margin: 0;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: 12px;
+}
+#app .perform-macros .macro label {
+  font-size: 12px;
+  color: var(--muted);
+}
+#app .performance-orb.compact {
+  display: none;
+}
+#app .performance-takes {
+  margin: 0 0 20px;
+  gap: 12px;
+}
+#app .performance-take {
+  min-width: 310px;
+  padding: 16px;
+}
+#app .performance-take small {
+  color: var(--muted);
+  font-size: 12px;
+}
+#app .scratch-deck {
+  padding: 24px;
+  margin: 0;
+  overflow: hidden;
+}
+#app .scratch-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+#app .scratch-head h2 {
+  margin: 5px 0 0;
+  font-size: 22px;
+}
+#app .scratch-capture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+#app .scratch-capture label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+}
+#app .scratch-capture select {
+  min-width: 90px;
+  width: auto;
+}
+#app .scratch-wave-shell {
+  height: 128px;
+  margin: 0 0 24px;
+  border: 1px solid #3a4c5d;
+  border-radius: 10px;
+  background: #101923;
+  box-shadow: none;
+  overflow: hidden;
+}
+#app .scratch-wave-shell canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+#app .scratch-wave-shell > i {
+  background: var(--magenta);
+  width: 2px;
+  box-shadow: none;
+  pointer-events: none;
+}
+#app .scratch-wave-shell > span {
+  bottom: 8px;
+  left: 12px;
+  color: #c7d3e3;
+  font: 10px/1.4 var(--mono-font);
+  letter-spacing: normal;
+  pointer-events: none;
+}
+#app .scratch-console {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
+  gap: 28px;
+  align-items: center;
+}
+#app .turntable-shell {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+#app .scratch-platter {
+  width: min(100%, 300px);
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0;
+  border-color: #627487;
+  background: repeating-radial-gradient(
+    circle at center,
+    #151b24 0 3px,
+    #232b36 3px 4px
+  );
+  box-shadow:
+    0 12px 30px #0005,
+    inset 0 0 0 8px #0a1019;
+  touch-action: none;
+}
+#app .scratch-platter:not(.disabled):active {
+  box-shadow:
+    0 0 0 2px var(--cyan),
+    0 12px 30px #0005;
+}
+#app .record-label {
+  background: #254c4c;
+  box-shadow: none;
+  border: 1px solid #527b79;
+}
+#app .record-label .brand-emblem {
+  width: 54px;
+  height: 54px;
+  filter: none;
+}
+#app .deck-speed {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.deck-speed b {
+  font: 600 20px var(--mono-font);
+}
+.deck-speed span {
+  font-size: 10px;
+  color: var(--muted);
+}
+#app .scratch-controls {
+  min-width: 0;
+  padding: 0;
+}
+#app .scratch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+#app .scratch-actions button {
+  flex: 1;
+  min-width: 90px;
+}
+#app .scratch-actions button:first-child {
+  background: var(--cyan);
+  color: #102725;
+  border-color: var(--cyan);
+}
+#app .deck-slider {
+  margin: 18px 0;
+  display: grid;
+  gap: 10px;
+}
+#app .deck-slider span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+#app .deck-slider output {
+  color: var(--ink);
+  font: 12px var(--mono-font);
+}
+#app .scratch-pro {
+  gap: 16px;
+  padding-top: 18px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+}
+#app .scratch-pro label {
+  font-size: 12px;
+  gap: 8px;
+}
+#app .scratch-hint,
+#app .scratch-pro p {
+  font-size: 12px;
+  margin: 14px 0 0;
+  color: var(--muted);
+}
+/* Dialogs share the same rhythm as panels. */
+dialog {
+  max-width: min(880px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  padding: 28px;
+  border: 1px solid #4b5a70;
+  border-radius: 16px;
+  background: #1a2029;
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  overflow: auto;
+}
+dialog::backdrop {
+  background: #080c14b3;
+  backdrop-filter: blur(5px);
+}
+dialog h2 {
+  font: 650 24px/1.2 var(--ui-font);
+  letter-spacing: -0.02em;
+  margin: 8px 36px 16px 0;
+}
+dialog p {
+  font: 400 14px/1.6 var(--ui-font);
+  color: var(--muted);
+}
+dialog label {
+  font-size: 13px;
+}
+dialog button {
+  min-height: 44px;
+  height: auto;
+  padding: 10px 14px;
+  font: 600 13px/1.4 var(--ui-font);
+  letter-spacing: normal;
+}
+dialog .dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  min-height: 36px;
+  padding: 4px;
+}
+.file-button {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--panel2);
+  font: 600 13px/1.4 var(--ui-font);
+  cursor: pointer;
+  overflow: hidden;
+}
+.file-button:focus-within {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+.file-button input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.export-simple {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+}
+.export-simple button {
+  flex: 1;
+  min-width: 140px;
+}
+.export-grid {
+  gap: 12px;
+}
+.export-grid b {
+  font-size: 16px;
+}
+.export-grid span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.export-choice {
+  padding: 16px;
+  border-radius: 10px;
+  background: #242d39;
+}
+.export-options {
+  gap: 12px;
+}
+.export-options label {
+  display: grid;
+  gap: 7px;
+}
+.command-dialog {
+  padding: 20px;
+}
+.command-head {
+  margin-bottom: 18px;
+}
+.command-search input {
+  font-size: 16px;
+}
+.command-item {
+  min-height: 52px;
+  padding: 10px 12px;
+  border-radius: 7px;
+}
+.command-item span {
+  font-size: 14px;
+}
+.command-item kbd {
+  font-size: 11px;
+}
+.command-item.active {
+  background: #2a4545;
+  border-color: #578b85;
+}
+#projectMenu > button:not(.dialog-close),
+#projectMenu > .file-button {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  font-size: 13px;
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+.help-grid {
+  gap: 12px;
+}
+.help-grid span {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.help-grid b {
+  font-size: 12px;
+}
+#toast {
+  max-width: min(460px, calc(100vw - 32px));
+  right: 24px;
+  bottom: 24px;
+  padding: 14px 18px;
+  border: 1px solid #4d6675;
+  border-radius: 12px;
+  background: #24323f;
+  box-shadow: 0 8px 32px #0006;
+  font: 500 13px/1.5 var(--ui-font);
+  color: var(--ink);
+  letter-spacing: normal;
+  z-index: 90;
+}
+#toast button {
+  margin-left: 12px;
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+#saveWarning {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid #8d733d;
+  border-radius: 8px;
+  color: #ffe0a5;
+  background: #392f1f;
+  font-size: 13px;
+}
+@media (max-width: 1100px) {
+  #app .scratch-console {
+    grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.2fr);
+    gap: 20px;
+  }
+}
+@media (max-width: 820px) {
+  #app .view :is(select, input[type="number"], input[type="text"]) {
+    font-size: 16px;
+  }
+  #app .editor-head {
+    padding: 12px;
+    gap: 12px;
+  }
+  .editor-head > div {
+    width: 100%;
+  }
+  #app .editor-head #clipSelect {
+    min-width: 0;
+    max-width: none;
+  }
+  #app :is(.global-locator, .clip-locator) {
+    gap: 8px;
+    padding: 8px;
+  }
+  #app :is(.global-locator, .clip-locator) output {
+    display: none;
+  }
+  #app :is(.global-locator, .clip-locator) label span {
+    display: none;
+  }
+  #app .composition-tools {
+    padding: 12px;
+  }
+  .composition-tools > div {
+    max-width: 100%;
+  }
+  #app .piano-shell {
+    height: 360px;
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .automation-pane {
+    margin-left: 48px;
+  }
+  #app :is(.editor-tools, .selection-actions) {
+    gap: 6px;
+  }
+  #app .editor-tools button {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+  }
+  #app .selection-actions button {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+    min-width: 90px;
+  }
+  #app
+    :is(
+      .section-title,
+      .audio-head,
+      .mixer-head,
+      .launcher-head,
+      .performance-head
+    ) {
+    padding: 16px;
+    gap: 12px;
+  }
+  #app .scene {
+    min-width: 290px;
+    padding: 14px;
+  }
+  #app .scene-clips label {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+  #app .audio-lane {
+    display: block;
+  }
+  .audio-lane-head {
+    width: 100%;
+  }
+  #app .audio-lane-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #app .audio-lane-head input[type="text"] {
+    flex: 1;
+    min-width: 120px;
+  }
+  #app .audio-track {
+    min-height: 230px;
+    overflow-x: auto;
+  }
+  #app .audio-lab {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .audio-lab > div {
+    min-width: 0;
+  }
+  #app .sampler-lab {
+    padding: 16px;
+  }
+  #app .sampler-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 12px;
+  }
+  #app .launcher-grid {
+    overflow-x: auto;
+    grid-template-columns: repeat(5, minmax(160px, 1fr));
+    padding-bottom: 10px;
+  }
+  #app .mixer-channels {
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+  #app .mixer-channel {
+    min-width: 188px;
+  }
+  #app .mix-groups {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .mix-group {
+    min-width: 0;
+  }
+  #app .perform-macros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px;
+    gap: 18px;
+  }
+  #app .scratch-deck {
+    padding: 16px;
+  }
+  #app .scratch-head {
+    gap: 14px;
+  }
+  #app .scratch-capture {
+    width: 100%;
+  }
+  #app .scratch-capture > * {
+    flex: 1;
+  }
+  #app .scratch-capture label {
+    min-width: 90px;
+  }
+  #app .scratch-console {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  #app .scratch-platter {
+    width: min(76vw, 290px);
+  }
+  #app .scratch-wave-shell {
+    height: 112px;
+    margin-bottom: 20px;
+  }
+  #app .scratch-pro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #app .scratch-pro label {
+    min-width: 0;
+  }
+  .keyboard-toolbar {
+    padding: 10px;
+    gap: 8px;
+  }
+  .keyboard-scroll {
+    padding: 10px;
+  }
+  dialog {
+    padding: 22px 18px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 24px);
+  }
+  dialog h2 {
+    font-size: 22px;
+  }
+  .export-simple {
+    flex-direction: column;
+  }
+  .export-options {
+    grid-template-columns: 1fr 1fr;
+  }
+  .take-event {
+    grid-template-columns: 1fr 1fr;
+  }
+  #toast {
+    right: 12px;
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  }
+}
+/* The exact keyboard surface is shared by synth, live and sampler adapters. */
+.instrument-keyboard .keyboard-surface {
+  position: relative;
+  display: block;
+  height: 144px;
+  min-width: 100%;
+  padding: 0;
+  background: #111820;
+}
+.keyboard-scroll {
+  touch-action: pan-x;
+}
+#app .instrument-keyboard .keyboard-key {
+  touch-action: none;
+  flex: none;
+  max-width: none;
+}
+#app .instrument-keyboard .keyboard-key b {
+  font: 600 11px/1 var(--mono-font);
+  color: inherit;
+}
+#app .instrument-pads .keyboard-key {
+  height: 92px;
+  border-radius: 8px;
+  background: #273d46;
+  color: #ddf5f2;
+  border: 1px solid #567a80;
+  box-shadow: inset 0 -4px #142c35;
+}
+#app .instrument-pads .keyboard-key.active {
+  background: var(--track);
+  color: #102627;
+}
+
+/* Existing mount points contain complete shared keyboards, not a fixed key row. */
+#app :is(#keyboard, #performanceKeyboard, #samplerKeyboard) {
+  display: block;
+  position: static;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  margin: 16px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+#app
+  :is(#keyboard, #performanceKeyboard, #samplerKeyboard)
+  > .instrument-keyboard {
+  width: 100%;
+  margin: 0;
+}
+#app .instrument-keyboard {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  max-height: none;
+}
+#app .instrument-keyboard .keyboard-toolbar {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  height: auto;
+  padding: 10px 14px;
+}
+#app .instrument-keyboard .keyboard-scroll {
+  display: block;
+  height: auto;
+  max-height: none;
+  width: 100%;
+  padding: 12px;
+}
+#app .instrument-keyboard .keyboard-surface {
+  display: block;
+  position: relative;
+  min-height: 144px;
+  background: #111820;
+}
+#app .instrument-pads .keyboard-surface {
+  min-height: 96px;
+}
+#app .selection-editor > span {
+  font: 500 12px/1.4 var(--ui-font);
+  letter-spacing: normal;
+  color: var(--muted);
+}
+#app .sampler-keyboard-shell {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+#app #samplerKeyboard {
+  width: 100% !important;
+}
+#app .sampler-controls {
+  margin-top: 18px;
+}
+#app .sampler-controls label {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+}
+#app .sampler-actions :is(button, .file-button) {
+  height: auto;
+  min-height: 44px;
+}
+#app #scratchPlayBtn {
+  background: var(--cyan);
+  color: #102725;
+  border-color: var(--cyan);
+}
+#app .scratch-hint {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  letter-spacing: normal;
+}
+#app .performance-takes > p {
+  padding: 12px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  letter-spacing: normal;
+}
+#app .studio-inspector .knob-control {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+#app .studio-inspector .knob-control .knob {
+  margin: 0 auto;
+}
+#app .studio-trackbar .track-select {
+  padding: 10px 10px 0;
+}
+#app .studio-trackbar .track-switches {
+  padding: 0 10px 10px;
+}
+#app .studio-trackbar .track {
+  padding: 0 !important;
+}
+#app .studio-trackbar .track-name {
+  font-size: 12px;
+}
+#app #samplerKeyboard {
+  min-width: 0;
+  max-width: 100%;
+}
+#app .sampler-keyboard-shell .instrument-keyboard {
+  min-width: 0;
+  max-width: 100%;
+}
+#app .sampler-live-status {
+  position: static;
+  display: inline-block;
+  margin: 8px 0 0;
+  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  font: 11px var(--mono-font);
+  color: var(--muted);
+}
+#app
+  .view
+  :is(
+    .section-title,
+    .audio-head,
+    .mixer-head,
+    .launcher-head,
+    .performance-head
+  )
+  h1,
+#app
+  .view
+  :is(
+    .section-title,
+    .audio-head,
+    .mixer-head,
+    .launcher-head,
+    .performance-head
+  )
+  .eyebrow {
+  display: none;
+}
+#app
+  .view
+  :is(
+    .section-title,
+    .audio-head,
+    .mixer-head,
+    .launcher-head,
+    .performance-head
+  ) {
+  padding: 14px 16px;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+#app
+  .view
+  :is(
+    .section-title,
+    .audio-head,
+    .mixer-head,
+    .launcher-head,
+    .performance-head
+  )
+  p {
+  margin: 0;
+}
+/* Musical transport icons are vectors, independent of emoji fonts. */
+.transport button svg {
+  display: block;
+  margin: auto;
+}
+.transport button {
+  font-variant-emoji: text;
+}

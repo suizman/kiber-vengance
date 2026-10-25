@@ -1,33 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { Builder, By, until } from 'selenium-webdriver';
-import firefox from 'selenium-webdriver/firefox.js';
-import { download as downloadGecko } from 'geckodriver';
+import { launchBrowser, preview, goToView } from './browser-support.js';
 
-const port=4199,url=`http://127.0.0.1:${port}`,server=spawn(process.execPath,['scripts/serve.mjs'],{cwd:process.cwd(),env:{...process.env,PORT:String(port)},stdio:'ignore'});
-async function ready(){for(let i=0;i<40;i++){try{if((await fetch(url)).ok)return}catch{}await new Promise(r=>setTimeout(r,100))}throw new Error('Preview server did not start')}
+const server=preview(4199),{url,ready}=server;
+test.after(()=>server.close());
 
-test('complete composition flow works in Firefox',async t=>{
-  await ready();const binary=await downloadGecko('0.37.1'),options=new firefox.Options().addArguments('-headless').windowSize({width:1440,height:1000}),service=new firefox.ServiceBuilder(binary),driver=await new Builder().forBrowser('firefox').setFirefoxOptions(options).setFirefoxService(service).build();
-  t.after(async()=>{await driver.quit();server.kill('SIGTERM')});
-  await driver.get(`${url}/?qa=1`);await driver.wait(until.elementLocated(By.css('.note-block')),5000);
-  assert.equal((await driver.findElements(By.css('.track'))).length,5);
-  assert.ok((await driver.findElements(By.css('.pitch-label'))).length>=40);
-  assert.ok((await driver.findElements(By.css('.note-block'))).length>5);
-  assert.equal((await driver.findElements(By.css('[data-fx="saturation"]'))).length,1);
-
-  const before=await driver.findElements(By.css('.note-block')),seq=await driver.findElement(By.id('sequencer'));
-  await driver.executeScript("const el=arguments[0],r=el.getBoundingClientRect();el.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+350,clientY:r.bottom-12}))",seq);
-  assert.equal((await driver.findElements(By.css('.note-block'))).length,before.length+1);
-
-  await driver.findElement(By.css('[data-view="arrange"]')).click();await driver.wait(until.elementLocated(By.css('.scene-clips')),2000);const sceneCount=(await driver.findElements(By.css('.scene'))).length;await driver.findElement(By.id('addSceneBtn')).click();assert.equal((await driver.findElements(By.css('.scene'))).length,sceneCount+1);assert.equal((await driver.findElements(By.css('.scene-clips select'))).length,(sceneCount+1)*5);
-
-  await driver.findElement(By.id('playBtn')).click();await driver.sleep(5500);assert.match(await driver.findElement(By.id('audioState')).getText(),/RUNNING|COUNT/);
-  await driver.findElement(By.css('[data-view="forge"]')).click();const liveKey=await driver.findElement(By.css('#keyboard .key'));await driver.executeScript('arguments[0].scrollIntoView({block:"center"})',liveKey);await driver.actions({async:true}).move({origin:liveKey}).press().perform();await driver.sleep(650);assert.equal((await driver.executeScript('return window.__kvDiagnostics()')).liveVoices,1);await driver.actions({async:true}).release().perform();await driver.sleep(250);assert.equal((await driver.executeScript('return window.__kvDiagnostics()')).liveVoices,0);
-  await driver.findElement(By.id('playBtn')).click();
-  await driver.findElement(By.id('exportAsBtn')).click();await driver.executeScript("document.querySelectorAll('.export-advanced')[1].open=true");const clipWav=await driver.findElement(By.css('[data-export="clip-wav"]'));await driver.executeScript('arguments[0].scrollIntoView({block:"center"})',clipWav);await clipWav.click();await driver.wait(async()=>/WAV READY/.test(await driver.findElement(By.id('renderStatus')).getText()),20000);
-  const stored=await driver.executeScript("return JSON.parse(localStorage.getItem('kiber-vengance-project-v6'))");assert.equal(stored.version,6);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));assert.deepEqual(await driver.executeScript('return window.__kvErrors'),[]);
+test('complete composition, live input, persistence and export work in Firefox',async t=>{
+  await ready();const browser=await launchBrowser('firefox');t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(`${url}/?qa=1`);await page.locator('.note-block').first().waitFor();
+  assert.equal(await page.locator('.track').count(),5);
+  assert.ok(await page.locator('.pitch-label').count()>=40);
+  assert.ok(await page.locator('.note-block').count()>5);
+  const count=await page.locator('#clipSelect option').count();
+  await page.locator('#duplicateBtn').click();assert.equal(await page.locator('#clipSelect option').count(),count+1);
+  await page.locator('#undoBtn').click();assert.equal(await page.locator('#clipSelect option').count(),count);
+  await page.locator('#redoBtn').click();assert.equal(await page.locator('#clipSelect option').count(),count+1);
+  await goToView(page,'arrange');const scenes=await page.locator('.scene').count();await page.locator('#addSceneBtn').click();assert.equal(await page.locator('.scene').count(),scenes+1);
+  await page.locator('#playBtn').click();await page.waitForFunction(()=>globalThis.__kvDiagnostics().schedulerActive);
+  await page.locator('#pauseBtn').click();await page.waitForFunction(()=>!globalThis.__kvDiagnostics().schedulerActive);
+  await goToView(page,'forge');
+  const liveKey=page.locator('#keyboard .key').first();await liveKey.scrollIntoViewIfNeeded();const box=await liveKey.boundingBox();assert.ok(box);
+  await page.mouse.move(box.x+box.width/2,box.y+box.height*.8);await page.mouse.down();await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===1);await page.mouse.up();await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
+  await page.locator('#exportAsBtn').click();await page.locator('.export-advanced').nth(1).locator('summary').click();
+  const downloadPromise=page.waitForEvent('download');await page.locator('[data-export="clip-wav"]').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/\.wav$/);assert.equal(await download.failure(),null);
+  await page.waitForFunction(()=>Boolean(globalThis.localStorage.getItem('kiber-vengance-project-v6')));
+  const stored=await page.evaluate(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')));assert.equal(stored.version,6);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));
+  await page.reload();await page.locator('.note-block').first().waitFor();assert.equal(await page.locator('#clipSelect option').count(),count+1);assert.deepEqual(errors,[]);
 });
-
-test.after(()=>{if(!server.killed)server.kill('SIGTERM')});

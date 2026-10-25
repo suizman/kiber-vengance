@@ -5,13 +5,13 @@
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/serve.mjs",
+    "dev": "vite",
     "test": "node --test tests/core.test.js",
     "test:e2e": "node --test tests/e2e.test.js tests/browser.test.js",
-    "typecheck": "tsc -p tsconfig.json && node --check dist/app.js && node --check dist/core.js && node --check dist/audio.js",
-    "lint": "eslint dist tests scripts eslint.config.js",
-    "build:runtime": "tsc -p tsconfig.runtime.json",
-    "build": "npm run build:runtime && node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint tests scripts eslint.config.js",
+    "build:runtime": "vite build",
+    "build": "vite build && node scripts/build.mjs",
     "check": "npm run typecheck && npm run build && npm run lint && npm test",
     "check:full": "npm run check && npm run test:e2e"
   },
@@ -20,7 +20,12 @@
     "eslint": "^10.13.0",
     "geckodriver": "^8.0.0",
     "playwright": "^1.64.1",
+    "prettier": "^3.9.10",
     "selenium-webdriver": "^4.51.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "preact": "^11.0.2"
   }
 }
