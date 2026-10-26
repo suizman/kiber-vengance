@@ -8,6 +8,7 @@ Last updated: 2026-10-26.
 
 - The footer's PROJECT identifier is the short Git source commit embedded by Vite, replacing the fixed v6 label. The project file schema remains v6.
 - Source-only changes are committed before the release build; generated dist artifacts are committed separately so the footer identifies the source revision rather than an earlier feature. No runtime Git or network request is needed.
+- Development and production resolve the last commit touching build inputs (src/public/scripts, HTML, Vite/TypeScript configuration and package manifests), rather than HEAD. Distribution-only and documentation commits cannot advance the local identifier past the published build.
 - Builds without Git metadata can provide KV_BUILD_COMMIT (7–40 hex characters); otherwise the footer honestly shows unknown.
 - Validation: Chromium verified the visible source hash in English and Spanish. Typecheck/build/lint and 29 core tests passed; check:full could not complete its browser phase because the restricted environment denied the test servers' listen calls.
 

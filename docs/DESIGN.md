@@ -64,7 +64,7 @@ Do not reintroduce per-panel font-size patches. New actions use the shared butto
 
 ## Validation boundaries
 
-The footer shows `PROJECT <short Git hash>` to identify the compiled source revision. Vite embeds it in development and production HTML; this identifier does not change the v6 project file format. Release builds follow the source commit, with generated distribution files committed separately. Source archives without Git metadata can set `KV_BUILD_COMMIT`; unavailable revisions display `unknown` rather than a fabricated version.
+The footer shows `PROJECT <short Git hash>` to identify the compiled source revision. Vite embeds the last commit touching build inputs (src/public/scripts, HTML, Vite/TypeScript configuration and package manifests) in development and production HTML; distribution-only and documentation commits do not change it. This identifier does not change the v6 project file format. Release builds follow the source commit, with generated distribution files committed separately. Source archives without Git metadata can set `KV_BUILD_COMMIT`; unavailable revisions display `unknown` rather than a fabricated version.
 
 These files define the system and component states; visual acceptance requires screenshots and real workflow checks after integration. CSS alone does not establish audio behavior, focus management, responsive overflow safety or physical iOS validation.
 

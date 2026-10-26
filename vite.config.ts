@@ -9,11 +9,15 @@ function sourceCommit() {
     return supplied.slice(0, 7);
   }
   try {
-    return execFileSync("git", ["rev-parse", "--short=7", "HEAD"], {
+    return execFileSync("git", [
+      "log", "-1", "--format=%H", "--",
+      "src", "public", "scripts", "index.html", "vite.config.ts",
+      "package.json", "package-lock.json", "tsconfig.json",
+    ], {
       cwd: import.meta.dirname,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
+    }).trim().slice(0, 7) || "unknown";
   } catch {
     return "unknown";
   }
