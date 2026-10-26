@@ -2,7 +2,12 @@
 
 This file is the operational memory for КИБЕР VENGANCE. It must be read alongside `kiber-vengance.md` before development continues. It records the product's actual state, established decisions, and user expectations; it does not replace the code or tests as the ultimate source of truth.
 
-Last updated: 2026-10-25.
+Last updated: 2026-10-26.
+
+## Scratch header alignment (2026-10-26)
+
+- Both Scratch Deck headers share an aligned title and control grid. Capture length and TRACK BPM occupy the first row; capture/import/microphone actions occupy the next row. The former Deck A eyebrow no longer adds unequal title height.
+- Validation: `npm run check` passed (28 unit tests). Targeted Chromium 140 layout checks passed at 320/390/820/1366/1440/1920 px; full E2E was not run for this CSS correction. The current Playwright Chromium release cannot install on this macOS 13 host, so the targeted check used a compatible older Chromium.
 
 ## Product intent
 
@@ -151,6 +156,7 @@ Last updated: 2026-10-25.
 
 ## User collaboration preferences
 
+- Git commit identity for this repository: `suizman <[redacted email]>` (configured locally).
 - Implement autonomously and completely, avoiding partial deliveries.
 - Third-party software may be used when it clearly improves the result.
 - Fix real limitations instead of hiding them, and keep documentation honest.
