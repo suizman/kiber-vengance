@@ -585,7 +585,7 @@ export function setGlobalStart(ctx: RuntimeContext, value: number) {
   }
 }
 
-export function setClipStart(ctx: RuntimeContext, value: number) {
+export function setClipStart(ctx: RuntimeContext, value: number, seek = true) {
   const c = ctx.clip(),
     length = clipLengthSteps(c),
     step = Math.max(0, Math.min(length - 1, Math.round(value)));
@@ -593,7 +593,7 @@ export function setClipStart(ctx: RuntimeContext, value: number) {
   ctx.$("#clipPosition").value = step;
   ctx.$("#clipPositionValue").textContent =
     `${msg("ui_a5d5c1bba91f")} ${Math.floor(step / meterSteps(ctx.project.meter)) + 1} · ${msg("ui_0c9b85f56357")} ${(step % meterSteps(ctx.project.meter)) + 1}`;
-  if (ctx.engine.playing && !ctx.engine.songMode) {
+  if (seek && ctx.engine.playing && !ctx.engine.songMode) {
     ctx.engine.seek(step, false);
     ctx.currentStep = step;
     ctx.updatePlayheads();

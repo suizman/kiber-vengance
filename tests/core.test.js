@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PROJECT_VERSION, TRACKS, createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, meterSteps, setProjectMeter,
-  makeNote, toggleNote, duplicateClip, deleteClip, varyClip, resizeClip, quantizeClip, automationValue, notesAtStep,
+  makeNote, toggleNote, duplicateClip, deleteClip, varyClip, resizeClip, clipLengthSteps, quantizeClip, automationValue, notesAtStep,
   generateClip, generateBacking, sceneLengthSteps, playbackEvents, encodeMidi, addArrangementScene, duplicateArrangementScene,
   moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake,
   quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, dbToGain, gainToDb, History,
@@ -146,6 +146,35 @@ test('diagnostics keep the effects graph at exactly five persistent buses', () =
 test('metronome emits accented bar clicks while music is scheduled', () => {const p=createProject();TRACKS.forEach(t=>p.tracks[t].mute=true);const e=new AudioEngine();e.project=p;e.position=0;e.songMode=false;e.metronome=true;let accents=[];e.click=(_time,accent)=>accents.push(accent);e.scheduleMusicStep(0);e.position=4;e.scheduleMusicStep(.1);assert.deepEqual(accents,[true,false])});
 
 test('transport seeks to exact clip and global arrangement positions',()=>{const p=createProject(),e=new AudioEngine();e.project=p;assert.equal(e.seek(9,false),9);const firstLength=sceneLengthSteps(p,p.arrangement[0]);assert.equal(e.seek(firstLength+5,true),firstLength+5);assert.ok(e.sceneIndex>0||e.sceneRepeat>0);assert.equal(e.sceneStep,5);assert.equal(e.seek(playbackEvents(p,{song:true}).durationSteps,true),0)});
+
+test('resized clips play their full length independently of the arrangement loop', () => {
+  const project = createEmptyProject(), clip = activeClip(project, 'lead');
+  resizeClip(clip, 2);
+  project.loop = { enabled: true, start: 8, end: 32, punch: false };
+  const steps = [], voices = [], engine = new AudioEngine(step => steps.push(step));
+  engine.project = project;
+  engine.ctx = { currentTime: 0 };
+  engine.updateEffectBus = () => {};
+  engine.scheduleAudioRegions = () => {};
+  engine.voice = track => voices.push([track, engine.position]);
+  for (const other of project.clips) other.notes = [];
+  clip.character.arp.enabled = false;
+  for (let step = 0; step < 24; step++) { engine.scheduleMusicStep(step); engine.advanceTransport(); }
+  resizeClip(clip, 8);
+  clip.notes = [makeNote(112, 60, 1)];
+  for (let step = 24; step <= 128; step++) { engine.scheduleMusicStep(step); engine.advanceTransport(); }
+  assert.deepEqual(steps, Array.from({ length: 129 }, (_, step) => step));
+  assert.equal(steps[127] % clipLengthSteps(clip), 127);
+  assert.equal(steps[128] % clipLengthSteps(clip), 0);
+  assert.deepEqual(voices, [['lead', 112]]);
+  resizeClip(clip, 1);
+  assert.equal(engine.seek(31, false) % clipLengthSteps(clip), 15);
+  engine.songMode = true;
+  engine.seek(31, true);
+  engine.advanceTransport();
+  assert.equal(engine.position, 8);
+  assert.equal(engine.sceneStep, 8);
+});
 
 test('legacy instruments migrate into independent clips without copying mixer state', () => {
   for (const version of [3, 4, 5, 6]) {

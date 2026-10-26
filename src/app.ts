@@ -2291,8 +2291,8 @@ function formatLocator(step: number): any {
 function setGlobalStart(value: number): any {
   return workflow.setGlobalStart(runtime, value);
 }
-function setClipStart(value: number): any {
-  return workflow.setClipStart(runtime, value);
+function setClipStart(value: number, seek = true): any {
+  return workflow.setClipStart(runtime, value, seek);
 }
 function renderLocators(): any {
   return performanceFeature.renderLocators(runtime);

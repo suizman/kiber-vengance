@@ -4,6 +4,12 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Clip duration and transport consistency (2026-10-26)
+
+- Arrange loop limits apply only to song playback. Active clips loop independently over their current Bars length, including newly added bars.
+- Refreshing clip controls after an edit does not seek the running transport. Explicit locator gestures still seek. The clip locator, bar/step readout and pause/resume use the same local position as the piano-roll cursor after each loop.
+- Validation: typecheck/build/lint and all 29 unit tests passed. Targeted Chromium workflows cover live 2→4-bar expansion, 8-bar playback and wrap, reduction to one bar, Undo, and clip pause/resume. `npm run check:full` reached E2E but failed because its default Chromium/Firefox binaries are absent; targeted tests used the compatible installed Chromium 140. No full-suite pass is claimed on this macOS 13 host.
+
 ## Scratch header alignment (2026-10-26)
 
 - Both Scratch Deck headers share an aligned title and control grid. Capture length and TRACK BPM occupy the first row; capture/import/microphone actions occupy the next row. The former Deck A eyebrow no longer adds unequal title height.

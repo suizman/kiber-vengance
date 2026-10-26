@@ -541,9 +541,12 @@ export function updatePosition(ctx: RuntimeContext) {
     ctx.$("#positionReadout").textContent = "BAR 1 · STEP 1";
     return;
   }
-  const bar = meterSteps(ctx.project.meter);
+  const bar = ctx.clip().stepsPerBar || meterSteps(ctx.project.meter),
+    step = ctx.engine.songMode
+      ? ctx.currentStep
+      : ctx.currentStep % clipLengthSteps(ctx.clip());
   ctx.$("#positionReadout").textContent =
-    `BAR ${Math.floor(ctx.currentStep / bar) + 1} · STEP ${(ctx.currentStep % bar) + 1}`;
+    `BAR ${Math.floor(step / bar) + 1} · STEP ${(step % bar) + 1}`;
 }
 
 export function renderLocators(ctx: RuntimeContext) {
@@ -562,7 +565,7 @@ export function renderLocators(ctx: RuntimeContext) {
   ctx.clipStartSteps.set(ctx.clip().id, local);
   ctx.$("#clipPosition").max = Math.max(1, clipLength - 1);
   ctx.$("#clipPosition").value = local;
-  ctx.setClipStart(local);
+  ctx.setClipStart(local, false);
 }
 
 export function syncLocatorsFromPlayback(ctx: RuntimeContext) {
@@ -573,7 +576,7 @@ export function syncLocatorsFromPlayback(ctx: RuntimeContext) {
       ctx.transportPosition,
     );
   } else {
-    const step = Math.max(0, ctx.currentStep);
+    const step = Math.max(0, ctx.currentStep) % clipLengthSteps(ctx.clip());
     ctx.$("#clipPosition").value = step;
     ctx.$("#clipPositionValue").textContent =
       `${msg("ui_a5d5c1bba91f")} ${Math.floor(step / meterSteps(ctx.project.meter)) + 1} · ${msg("ui_0c9b85f56357")} ${(step % meterSteps(ctx.project.meter)) + 1}`;
@@ -850,7 +853,9 @@ export function setupMidiLearnUi(ctx: RuntimeContext) {
 export function pausePlayback(ctx: RuntimeContext) {
   if (!ctx.engine.playing) return;
   const songMode = ctx.engine.songMode,
-    position = songMode ? ctx.transportPosition : Math.max(0, ctx.currentStep);
+    position = songMode
+      ? ctx.transportPosition
+      : Math.max(0, ctx.currentStep) % clipLengthSteps(ctx.clip());
   ctx.engine.stop();
   if (songMode) {
     ctx.setGlobalStart(position);

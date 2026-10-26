@@ -1032,7 +1032,11 @@ export class AudioEngine {
           this.onLaunch?.(track, launch.clipId, this.position);
         }
     }
-    if (this.project.loop?.enabled && this.position >= this.project.loop.end) {
+    if (
+      this.songMode &&
+      this.project.loop?.enabled &&
+      this.position >= this.project.loop.end
+    ) {
       this.seek(this.project.loop.start, this.songMode);
       return;
     }
