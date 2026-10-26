@@ -1,6 +1,30 @@
 import { defineConfig } from "vite";
+import { execFileSync } from "node:child_process";
+
+function sourceCommit() {
+  const supplied = process.env.KV_BUILD_COMMIT;
+  if (supplied) {
+    if (!/^[a-f0-9]{7,40}$/i.test(supplied))
+      throw new Error("KV_BUILD_COMMIT must be a Git commit hash");
+    return supplied.slice(0, 7);
+  }
+  try {
+    return execFileSync("git", ["rev-parse", "--short=7", "HEAD"], {
+      cwd: import.meta.dirname,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "unknown";
+  }
+}
+
 export default defineConfig({
   base: "./",
+  plugins: [{
+    name: "source-commit",
+    transformIndexHtml: (html) => html.replaceAll("__BUILD_COMMIT__", sourceCommit()),
+  }],
   build: {
     outDir: "dist",
     emptyOutDir: true,

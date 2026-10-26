@@ -4,6 +4,12 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Footer source revision (2026-10-26)
+
+- The footer's PROJECT identifier is the short Git source commit embedded by Vite, replacing the fixed v6 label. The project file schema remains v6.
+- Source-only changes are committed before the release build; generated dist artifacts are committed separately so the footer identifies the source revision rather than an earlier feature. No runtime Git or network request is needed.
+- Builds without Git metadata can provide KV_BUILD_COMMIT (7–40 hex characters); otherwise the footer honestly shows unknown.
+
 ## Shared control feedback (2026-10-26)
 
 - `src/ui/styles/interactions.css` is the final shared interaction layer: cyan hover/focus, visible keyboard outlines, slider thumb glow, adjusting knob feedback and highlighted values. Hover is limited to fine pointers; disabled controls retain their disabled cursor and no glow; reduced-motion preference suppresses transitions.
