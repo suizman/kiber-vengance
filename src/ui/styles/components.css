@@ -1798,6 +1798,84 @@ dialog {
   padding: 0;
   border-radius: 0;
 }
+#app .sampler-controls label:not(.switch) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 20px 44px;
+  align-items: center;
+  gap: 6px 8px;
+  align-content: start;
+}
+#app .sampler-controls label:not(.switch) > :is(input, select) {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: center;
+  width: 100%;
+  margin: 0;
+}
+#app .sampler-controls label > output {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  white-space: nowrap;
+}
+#app .sampler-controls label.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  align-self: start;
+  margin-top: 26px;
+}
+#app .studio-inspector .arp-rack > label:not(.switch) {
+  grid-template-rows: 20px 44px;
+  align-content: start;
+  align-items: center;
+}
+#app .studio-inspector .arp-rack > label:not(.switch) > :is(input, select) {
+  grid-row: 2;
+  width: 100%;
+  margin: 0;
+  align-self: center;
+}
+#app .studio-inspector .arp-rack > label.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  align-self: start;
+  margin-top: 26px;
+}
+#app .studio-inspector .fx-unit {
+  grid-template-rows: 40px 24px 20px;
+  align-content: start;
+  align-items: center;
+}
+#app .studio-inspector .fx-unit > input {
+  grid-row: 2;
+  width: 100%;
+  margin: 0;
+}
+#app .studio-inspector .fx-unit > output {
+  grid-row: 3;
+  grid-column: 1 / -1;
+}
+#app :is(.studio-inspector .macro, .perform-macros .macro) {
+  display: grid;
+  grid-template-rows: 40px 24px;
+  gap: 6px;
+  align-content: start;
+}
+#app :is(.studio-inspector .macro, .perform-macros .macro) > label {
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+#app :is(.studio-inspector .macro, .perform-macros .macro) > input {
+  width: 100%;
+  margin: 0;
+  align-self: center;
+}
 #app .sampler-actions :is(button, .file-button) {
   height: auto;
   min-height: 44px;

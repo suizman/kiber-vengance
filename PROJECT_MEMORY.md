@@ -4,6 +4,13 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Control row alignment (2026-10-26)
+
+- Audio & Sampler controls use a consistent 20 px label/value row above a 44 px control area. Sliders, selects and numeric fields share the same vertical center; trim controls no longer sit lower than their neighbours.
+- Sound Motion controls share the same row geometry, including switches. FX and Sound/Live macros reserve equal label heights so wrapped labels do not shift sliders.
+- Visual geometry was checked in Chromium at 1366 px and 390 px. The broader control hover/illumination redesign remains a proposal, not an implemented feature.
+- `check:full` passed typecheck/build/lint and 29 core tests, then failed at E2E because default browser binaries are missing on this host. The sampler illumination assertion now waits for the CSS transition to paint rather than reading the first unpainted frame.
+
 ## Sound rack reopening (2026-10-26)
 
 - The Sound inspector preserves its independent rack states. A collapsed synth, Motion, FX, or macro rack now expands from either its `+` control or its visible heading, avoiding a small-target dead end on touch devices.

@@ -28,6 +28,10 @@ The computer-keyboard performance map is chromatic and follows the visible QWERT
 
 Active keys inherit the selected track color where one exists; independent keyboards such as Prism Keys use the cyan interaction color as a visible fallback.
 
+## Parameter rows
+
+Audio & Sampler and Sound Motion controls use a 20 px label row and a 44 px control row separated by 6 px. Sampler values sit alongside their labels; slider tracks, selects, number fields and switches align by their vertical centre. FX and macro grids reserve consistent label heights, including wrapped bilingual labels, before their slider row.
+
 ## Header controls
 
 The project title, language selector, and export actions share a 40 px control line on desktop. The local-save indicator sits below the title field, while a fixed action gap keeps the language selector visually and physically separate from export controls. The selector reserves space for its disclosure arrow at every supported interface scale.
