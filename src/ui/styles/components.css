@@ -618,6 +618,7 @@ dialog :is(button, select, input, label) {
 }
 #app .instrument-keyboard .keyboard-key.active {
   background: var(--track, var(--cyan));
+  transition: none;
   color: #102627;
   box-shadow: inset 0 -2px #0003;
 }
@@ -1942,6 +1943,7 @@ dialog {
 }
 #app #samplerKeyboard .keyboard-key.active {
   background: var(--cyan) !important;
+  transition: none;
   color: #081d29;
   box-shadow:
     inset 0 -3px #0004,

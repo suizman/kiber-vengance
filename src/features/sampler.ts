@@ -274,7 +274,9 @@ export function startSamplerPerformance(
     ctx.toast(msg("ui_01a0a439375a"));
     return;
   }
+  element ??= ctx.$(`#samplerKeyboard [data-sampler-pitch="${pitch}"]`);
   element?.classList.add("active", "hit");
+  element?.setAttribute("aria-pressed", "true");
   if (element) {
     ctx.samplerHeld.set(source, element);
     setTimeout(() => element.classList.remove("hit"), 260);
@@ -291,8 +293,11 @@ export function endSamplerPerformance(
   source: string,
   element?: HTMLElement | null,
 ) {
-  (element || ctx.samplerHeld.get(source))?.classList.remove("active");
+  const key = element || ctx.samplerHeld.get(source);
   ctx.samplerHeld.delete(source);
+  const held = [...ctx.samplerHeld.values()].some((other) => other === key);
+  key?.classList.toggle("active", held);
+  key?.setAttribute("aria-pressed", String(held));
   ctx.engine.stopSampler(source);
   if (!ctx.samplerHeld.size) {
     ctx.$("#samplerLab")?.classList.remove("playing");

@@ -118,6 +118,8 @@ type CommandAction = {
   run: () => void;
 };
 
+const heldPerformanceKeys = new Map<string, HTMLElement[]>();
+
 export function pitches(ctx: RuntimeContext) {
   if (ctx.selectedTrack === "drums")
     return DRUM_NAMES.map((_, i) => DRUM_NAMES.length - 1 - i);
@@ -423,16 +425,23 @@ export function startPerformance(
   channel: number | null = null,
 ) {
   if (ctx.samplerArmed && ctx.activeView === "audio") {
-    const keyboardIndex = ctx.keyMap.indexOf(source),
+    const keyboardOffset = ctx.samplerQwertyMap[source],
       samplerPitch =
-        keyboardIndex >= 0 ? ctx.samplerQwertyPitches[keyboardIndex]! : pitch,
+        keyboardOffset != null ? ctx.samplerQwertyBase + keyboardOffset : pitch,
       samplerKey = ctx.$(
         `[data-sampler-pitch="${samplerPitch}"]`,
       ) as HTMLElement | null;
     ctx.startSamplerPerformance(source, samplerPitch, velocity, samplerKey);
     return;
   }
-  el?.classList.add("active");
+  const keys = ctx.keyMap.includes(source) && source.length === 1
+    ? ctx.$$(`#keyboard .key[data-pitch="${pitch}"], #performanceKeyboard .key[data-pitch="${pitch}"]`)
+    : el ? [el] : [];
+  heldPerformanceKeys.set(source, keys);
+  for (const key of keys) {
+    key.classList.add("active");
+    key.setAttribute("aria-pressed", "true");
+  }
   ctx.engine.startLive(
     source,
     ctx.selectedTrack,
@@ -489,7 +498,13 @@ export function endPerformance(
     ctx.endSamplerPerformance(source);
     return;
   }
-  el?.classList.remove("active");
+  const keys = heldPerformanceKeys.get(source) || (el ? [el] : []);
+  heldPerformanceKeys.delete(source);
+  for (const key of keys) {
+    const held = [...heldPerformanceKeys.values()].some((other) => other.includes(key));
+    key.classList.toggle("active", held);
+    key.setAttribute("aria-pressed", String(held));
+  }
   ctx.engine.stopLive(source);
   const rec = ctx.recording.get(source);
   if (!rec) return;

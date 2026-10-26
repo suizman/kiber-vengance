@@ -116,6 +116,8 @@ test('main performance keyboard exposes the full chromatic QWERTY row',async t=>
   await page.keyboard.down('w');
   await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===1);
   assert.equal(await chromatic.evaluate(node=>node.classList.contains('active')),true);
+  assert.equal(await chromatic.getAttribute('aria-pressed'),'true');
+  assert.notEqual(await chromatic.evaluate(node=>globalThis.getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.keyboard.up('w');
   await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
   await goToView(page,'perform');
@@ -123,8 +125,11 @@ test('main performance keyboard exposes the full chromatic QWERTY row',async t=>
   await page.keyboard.down('w');
   await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===1);
   assert.equal(await liveChromatic.evaluate(node=>node.classList.contains('active')),true);
+  assert.equal(await liveChromatic.getAttribute('aria-pressed'),'true');
+  assert.notEqual(await liveChromatic.evaluate(node=>globalThis.getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)');
   await page.keyboard.up('w');
   await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
+  assert.equal(await liveChromatic.getAttribute('aria-pressed'),'false');
 });
 
 test('header title, language and export controls keep a clear aligned desktop row',async t=>{

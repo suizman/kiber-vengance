@@ -3644,6 +3644,10 @@ studioBridge.release = () => {
   for (const key of keyMap) endPerformance(key);
   for (const source of samplerHeld.keys()) endSamplerPerformance(source);
 };
+window.addEventListener("blur", () => studioBridge.release());
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) studioBridge.release();
+});
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {

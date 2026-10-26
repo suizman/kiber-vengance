@@ -28,6 +28,8 @@ The computer-keyboard performance map is chromatic and follows the visible QWERT
 
 Active keys inherit the selected track color where one exists; independent keyboards such as Prism Keys use the cyan interaction color as a visible fallback.
 
+Note-down illumination has no entry transition: even a short physical-key tap must paint the active fill immediately. QWERTY state is mirrored between Compose and Live; sampler state is resolved by pitch and octave. Losing window focus releases held notes and their illumination.
+
 ## Parameter rows
 
 Audio & Sampler and Sound Motion controls use a 20 px label row and a 44 px control row separated by 6 px. Sampler values sit alongside their labels; slider tracks, selects, number fields and switches align by their vertical centre. FX and macro grids reserve consistent label heights, including wrapped bilingual labels, before their slider row.

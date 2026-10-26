@@ -4,6 +4,12 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Physical-key illumination (2026-10-26)
+
+- Note-down illumination is immediate, including short taps. Compose and Live mirror QWERTY note states, update aria-pressed, and release held states when focus is lost. Sampler note routing uses chromatic offsets and the active octave rather than the old natural-note array.
+- Sampler resolves its visual key by pitch when the caller supplies none, preserves highlighting while another source holds the same key, and updates its pressed state for QWERTY/MIDI as well as pointer input.
+- Chromium checks passed for actual illuminated backgrounds and physical-key pressed/released states in Compose, Live and Prism Keys; `npm run check` passed with 29 core tests.
+
 ## Control row alignment (2026-10-26)
 
 - Audio & Sampler controls use a consistent 20 px label/value row above a 44 px control area. Sliders, selects and numeric fields share the same vertical center; trim controls no longer sit lower than their neighbours.
