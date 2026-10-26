@@ -1900,3 +1900,202 @@ dialog {
 .transport button {
   font-variant-emoji: text;
 }
+
+/* Two independent live decks share a visible master crossfader. */
+#app .dual-deck-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+#app .dual-deck-layout :is(.scratch-deck, .scratch-deck-b) {
+  min-width: 0;
+  margin: 0;
+}
+#app .scratch-deck-b {
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid #715491;
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 22% 44%, #2e80aa25, transparent 45%),
+    linear-gradient(140deg, #182536, #201b38 72%);
+}
+#app .dual-deck-layout .scratch-console {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+#app .dual-deck-layout .scratch-platter {
+  width: min(100%, 250px);
+}
+#app .dual-deck-layout .scratch-capture {
+  flex-wrap: wrap;
+}
+#app .dual-deck-layout .scratch-capture > * {
+  min-width: 105px;
+}
+#app .dual-deck-layout .scratch-capture .deck-bpm {
+  width: 108px;
+  min-width: 108px;
+}
+#app .dual-deck-layout .deck-bpm input {
+  width: 100%;
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+#app .dual-deck-layout .scratch-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+#app .dual-deck-layout .scratch-actions button {
+  flex: 1 1 90px;
+}
+#app .dual-deck-layout .scratch-pro {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#app .dual-deck-layout .scratch-pro > p,
+#app .dual-deck-layout .scratch-pro > #scratchKeep,
+#app .dual-deck-layout .scratch-pro > #deckBKeep {
+  grid-column: 1 / -1;
+}
+#app .dual-deck-layout .scratch-pro label {
+  min-width: 0;
+}
+#app .dual-deck-layout .scratch-pro input[type="range"] {
+  width: 100%;
+}
+#app .deck-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 8px 6px 0;
+  border: 1px solid var(--magenta);
+  border-radius: 8px;
+  color: var(--magenta);
+  font: 700 18px var(--mono-font);
+  box-shadow: 0 0 14px #ff73d435;
+}
+#app .scratch-deck-b .deck-letter {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 14px #59eaff35;
+}
+#app .scratch-deck-b .scratch-wave-shell {
+  border-color: #608faf;
+}
+#app .scratch-deck-b #deckBPlay,
+#app .scratch-deck #scratchPlayBtn {
+  color: #08232d;
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+#app .dual-deck-mixer {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  margin: 0 0 16px;
+  border: 1px solid #765b9c;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #2b1b38, #182438 52%, #122d3c);
+  box-shadow: 0 8px 28px #0008;
+  color: var(--ink);
+  font: 700 13px var(--mono-font);
+}
+#app .dual-deck-mixer > span:first-child {
+  color: var(--magenta);
+}
+#app .dual-deck-mixer > span:last-child {
+  color: var(--cyan);
+}
+#app .dual-deck-mixer label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+#app .dual-deck-mixer label input {
+  display: block;
+  width: 100%;
+  min-width: 80px;
+}
+#app .dual-deck-mixer > .crossfader {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid var(--line2);
+}
+#app .dual-deck-mixer > .crossfader > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+#app .deck-cue-controls {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line2);
+}
+#app .deck-cue-controls small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+#app .dual-deck-mixer output {
+  min-width: 110px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink);
+}
+@media (max-width: 1150px) {
+  #app .dual-deck-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app .dual-deck-layout .scratch-console {
+    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+@media (max-width: 820px) {
+  #app .dual-deck-mixer {
+    top: 128px;
+    grid-template-columns: 1fr 1fr;
+    padding: 10px;
+    gap: 7px;
+  }
+  #app .dual-deck-mixer > span:last-of-type {
+    text-align: right;
+  }
+  #app .dual-deck-mixer label {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  #app .dual-deck-mixer label > span {
+    display: none;
+  }
+  #app .dual-deck-mixer > .crossfader > span {
+    display: flex;
+  }
+  #app .dual-deck-mixer output {
+    text-align: center;
+    min-width: 0;
+  }
+  #app .dual-deck-layout .scratch-console {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app .scratch-deck-b {
+    padding: 16px;
+  }
+  #app .dual-deck-layout .scratch-capture > * {
+    flex: 1 1 105px;
+  }
+}

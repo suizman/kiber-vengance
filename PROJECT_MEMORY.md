@@ -229,6 +229,12 @@ Scratch Deck loads Vite-transformed source in development and a Vite-bundled, ha
 
 Resumed validation after the interrupted session: `npm run check:full` passed on 2026-10-25 with 26 core tests and 14 Chromium/Firefox workflows, with no skips. Firefox independently initialized the deck through local WAV import and Capture Mix in development and production. The static build and offline cache include the hashed processor. Tests required execution outside the restricted process sandbox; this host used its existing audio service, without the optional PulseAudio null-sink wrapper. Physical sound output was not assessed.
 
+## Dual live decks (2026-10-26)
+
+Live has independent Deck A and Deck B AudioWorklets, waveforms, touch platters, import/capture/microphone sources, seek, filters, motor speeds, stutter and transport. A constant-power crossfader balances the two decks; the existing Program/Deck slider balances their combined output against the song. Each deck accepts an editable source BPM; Sync adjusts playback rate and pitch to the project BPM. Deck A remains the target of Audio Studio's Load Deck action for compatibility. Both temporary buffers can be kept in Audio Studio, and both decks enter Record Take's audible master. Cue can route one deck at a time to a user-selected separate output when `selectAudioOutput` and `setSinkId` are available; it is excluded from master capture. Cue is disabled when separate routing is unavailable. Buffers remain temporary until kept, and pitch-preserving stretch is not offered.
+
+Validation: `node scripts/with-null-audio.mjs npm run check:full` passed outside the restricted process sandbox with 28 core tests and 21 Chromium/Firefox browser workflows. The new mobile workflow loads Deck B before A, verifies independent BPM/play states, waveform seek, actual crossfade gain values, a simulated separate Cue output, and axe serious/critical findings. A real headphone device, audible output latency and physical Safari/iOS remain unverified.
+
 
 ## Instrument presets per clip (2026-10-25)
 

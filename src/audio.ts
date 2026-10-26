@@ -130,6 +130,11 @@ export class AudioEngine {
       this.programGain = this.ctx.createGain();
       this.scratchFilter = this.ctx.createBiquadFilter();
       this.scratchGain = this.ctx.createGain();
+      this.scratchFilterB = this.ctx.createBiquadFilter();
+      this.scratchGainB = this.ctx.createGain();
+      this.scratchCueDestination = this.ctx.createMediaStreamDestination();
+      this.scratchCueGainA = this.ctx.createGain();
+      this.scratchCueGainB = this.ctx.createGain();
       this.analyser = this.ctx.createAnalyser();
       this.captureDestination = this.ctx.createMediaStreamDestination();
       this.masterTone.type = "highshelf";
@@ -148,7 +153,14 @@ export class AudioEngine {
       this.analyser.fftSize = 256;
       this.scratchFilter.type = "lowpass";
       this.scratchFilter.frequency.value = 20000;
+      this.scratchFilterB.type = "lowpass";
+      this.scratchFilterB.frequency.value = 20000;
       this.scratchGain.gain.value = 0;
+      this.scratchGainB.gain.value = 0;
+      this.scratchCueGainA.gain.value = 0;
+      this.scratchCueGainB.gain.value = 0;
+      this.scratchCrossfade = 0;
+      this.scratchMix = 0;
       this.master
         .connect(this.masterTone)
         .connect(this.compressor)
@@ -158,6 +170,13 @@ export class AudioEngine {
       this.analyser.connect(this.ctx.destination);
       this.analyser.connect(this.captureDestination);
       this.scratchFilter.connect(this.scratchGain).connect(this.analyser);
+      this.scratchFilterB.connect(this.scratchGainB).connect(this.analyser);
+      this.scratchFilter
+        .connect(this.scratchCueGainA)
+        .connect(this.scratchCueDestination);
+      this.scratchFilterB
+        .connect(this.scratchCueGainB)
+        .connect(this.scratchCueDestination);
       this.createEffectBuses();
       if (this.ctx.state === "suspended") await this.ctx.resume();
       await this.initScratchDeck();
@@ -195,50 +214,76 @@ export class AudioEngine {
           this.onScratchPosition?.(event.data);
         }
       };
+      this.scratchNodeB = new AudioWorkletNode(this.ctx, "kv-scratch-deck", {
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        parameterData: { speed: 1 },
+      });
+      this.scratchNodeB.connect(this.scratchFilterB);
+      this.scratchNodeB.port.onmessage = (event: MessageEvent) => {
+        if (event.data.type === "ready") {
+          this.scratchReadyB = true;
+          this.scratchPlayingB = true;
+          this.pendingScratchReadyB?.();
+          this.pendingScratchReadyB = null;
+        } else if (event.data.type === "position") {
+          this.scratchPositionB = event.data.frame;
+          this.scratchSpeedB = event.data.speed;
+          this.scratchPlayingB = event.data.playing;
+          this.onScratchPositionB?.(event.data);
+        }
+      };
     } catch (error) {
       this.scratchError =
         error instanceof Error ? error.message : String(error);
     }
   }
-  async loadScratchBuffer(buffer: AudioBuffer) {
+  async loadScratchBuffer(buffer: AudioBuffer, deck: "A" | "B" = "A") {
     await this.init();
-    if (!this.scratchNode)
+    const suffix = deck === "B" ? "B" : "";
+    const node = this[`scratchNode${suffix}`] as AudioWorkletNode | undefined;
+    if (!node)
       throw new Error(this.scratchError || "Scratch AudioWorklet unavailable");
     const left = new Float32Array(buffer.getChannelData(0)),
       right = new Float32Array(
         buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : left,
       );
-    this.scratchFrames = left.length;
-    this.scratchSampleRate = buffer.sampleRate;
-    this.scratchReady = false;
+    this[`scratchFrames${suffix}`] = left.length;
+    this[`scratchSampleRate${suffix}`] = buffer.sampleRate;
+    this[`scratchReady${suffix}`] = false;
     const ready = new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(
         () =>
           reject(new Error("Scratch processor did not acknowledge the buffer")),
         3000,
       );
-      this.pendingScratchReady = () => {
+      this[`pendingScratchReady${suffix}`] = () => {
         clearTimeout(timeout);
         resolve();
       };
     });
-    this.scratchNode.port.postMessage({ type: "load", left, right }, [
+    node.port.postMessage({ type: "load", left, right }, [
       left.buffer,
       right.buffer,
     ]);
     await ready;
-    this.setScratchSpeed(1, 0);
+    this.setScratchSpeed(1, 0, deck);
     this.setScratchMix(0.72);
   }
-  setScratchPlaying(value: boolean) {
-    if (!this.scratchNode) return;
-    this.scratchPlaying = value;
-    this.scratchNode.port.postMessage({ type: "play", value });
-    this.onScratchGesture?.("playing", value);
+  setScratchPlaying(value: boolean, deck: "A" | "B" = "A") {
+    const suffix = deck === "B" ? "B" : "";
+    const node = this[`scratchNode${suffix}`] as AudioWorkletNode | undefined;
+    if (!node) return;
+    this[`scratchPlaying${suffix}`] = value;
+    node.port.postMessage({ type: "play", value });
+    this.onScratchGesture?.(`${suffix ? "B:" : ""}playing`, value);
   }
-  setScratchSpeed(value: number, ramp = 0.025) {
-    if (!this.scratchNode || !this.ctx) return;
-    const speed = this.scratchNode.parameters.get("speed"),
+  setScratchSpeed(value: number, ramp = 0.025, deck: "A" | "B" = "A") {
+    const suffix = deck === "B" ? "B" : "";
+    const node = this[`scratchNode${suffix}`] as AudioWorkletNode | undefined;
+    if (!node || !this.ctx) return;
+    const speed = node.parameters.get("speed"),
       now = this.ctx.currentTime,
       target = Math.max(-6, Math.min(6, value));
     if (!speed) return;
@@ -246,44 +291,74 @@ export class AudioEngine {
     speed.setValueAtTime(speed.value, now);
     if (ramp > 0) speed.linearRampToValueAtTime(target, now + ramp);
     else speed.setValueAtTime(target, now);
-    this.scratchSpeed = target;
-    this.onScratchGesture?.("speed", target);
+    this[`scratchSpeed${suffix}`] = target;
+    this.onScratchGesture?.(`${suffix ? "B:" : ""}speed`, target);
   }
   setScratchMix(value: number) {
-    if (!this.ctx || !this.programGain || !this.scratchGain) return;
-    const mix = Math.max(0, Math.min(1, value)),
-      now = this.ctx.currentTime;
-    this.scratchMix = mix;
+    this.scratchMix = Math.max(0, Math.min(1, value));
+    this.updateScratchGains();
+    this.onScratchGesture?.("mix", this.scratchMix);
+  }
+  setScratchCrossfade(value: number) {
+    this.scratchCrossfade = Math.max(0, Math.min(1, value));
+    this.updateScratchGains();
+    this.onScratchGesture?.("crossfade", this.scratchCrossfade);
+  }
+  setScratchCue(deck: "A" | "B" | null) {
+    if (!this.ctx || !this.scratchCueGainA || !this.scratchCueGainB) return;
+    const now = this.ctx.currentTime;
+    this.scratchCueGainA.gain.setTargetAtTime(deck === "A" ? 1 : 0, now, 0.015);
+    this.scratchCueGainB.gain.setTargetAtTime(deck === "B" ? 1 : 0, now, 0.015);
+  }
+  updateScratchGains() {
+    if (
+      !this.ctx ||
+      !this.programGain ||
+      !this.scratchGain ||
+      !this.scratchGainB
+    )
+      return;
+    const mix = this.scratchMix ?? 0,
+      crossfade = this.scratchCrossfade ?? 0,
+      now = this.ctx.currentTime,
+      deckGain = Math.sin((mix * Math.PI) / 2);
     this.programGain.gain.setTargetAtTime(
       Math.cos((mix * Math.PI) / 2),
       now,
       0.018,
     );
     this.scratchGain.gain.setTargetAtTime(
-      Math.sin((mix * Math.PI) / 2),
+      deckGain * Math.cos((crossfade * Math.PI) / 2),
       now,
       0.018,
     );
-    this.onScratchGesture?.("mix", mix);
-  }
-  setScratchFilter(value: number) {
-    if (!this.ctx || !this.scratchFilter) return;
-    const normalized = Math.max(0, Math.min(1, value)),
-      frequency = 120 * Math.pow(20000 / 120, normalized);
-    this.scratchFilter.frequency.setTargetAtTime(
-      frequency,
-      this.ctx.currentTime,
+    this.scratchGainB.gain.setTargetAtTime(
+      deckGain * Math.sin((crossfade * Math.PI) / 2),
+      now,
       0.018,
     );
-    this.onScratchGesture?.("filter", normalized);
   }
-  setScratchStutter(frames: number) {
-    this.scratchNode?.port.postMessage({ type: "stutter", frames });
-    this.onScratchGesture?.("stutter", frames > 0);
+  setScratchFilter(value: number, deck: "A" | "B" = "A") {
+    const filter = deck === "B" ? this.scratchFilterB : this.scratchFilter;
+    if (!this.ctx || !filter) return;
+    const normalized = Math.max(0, Math.min(1, value)),
+      frequency = 120 * Math.pow(20000 / 120, normalized);
+    filter.frequency.setTargetAtTime(frequency, this.ctx.currentTime, 0.018);
+    this.onScratchGesture?.(`${deck === "B" ? "B:" : ""}filter`, normalized);
   }
-  syncScratch(beatFrames: number) {
-    this.scratchNode?.port.postMessage({ type: "sync", beatFrames });
-    this.setScratchSpeed(1, 0.08);
+  setScratchStutter(frames: number, deck: "A" | "B" = "A") {
+    (deck === "B" ? this.scratchNodeB : this.scratchNode)?.port.postMessage({
+      type: "stutter",
+      frames,
+    });
+    this.onScratchGesture?.(`${deck === "B" ? "B:" : ""}stutter`, frames > 0);
+  }
+  syncScratch(beatFrames: number, deck: "A" | "B" = "A", speed = 1) {
+    (deck === "B" ? this.scratchNodeB : this.scratchNode)?.port.postMessage({
+      type: "sync",
+      beatFrames,
+    });
+    this.setScratchSpeed(speed, 0.08, deck);
   }
   setProject(project: Project) {
     this.project = project;
@@ -1652,6 +1727,15 @@ export class AudioEngine {
       scratchPlaying: Boolean(this.scratchPlaying),
       scratchSpeed: Number(this.scratchSpeed || 0),
       scratchMix: Number(this.scratchMix || 0),
+      scratchReadyB: Boolean(this.scratchReadyB),
+      scratchFramesB: this.scratchFramesB || 0,
+      scratchPlayingB: Boolean(this.scratchPlayingB),
+      scratchSpeedB: Number(this.scratchSpeedB || 0),
+      scratchCrossfade: Number(this.scratchCrossfade || 0),
+      scratchGainA: Number(this.scratchGain?.gain.value || 0),
+      scratchGainB: Number(this.scratchGainB?.gain.value || 0),
+      scratchCueGainA: Number(this.scratchCueGainA?.gain.value || 0),
+      scratchCueGainB: Number(this.scratchCueGainB?.gain.value || 0),
     };
   }
 }

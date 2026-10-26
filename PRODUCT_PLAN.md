@@ -155,3 +155,13 @@ Validación final: `npm run check:full` superado, con 28 pruebas del núcleo y 1
 - [x] Firefox y Chromium verifican los cinco clips activos y la etiqueta en español.
 
 Validación completa: 28 pruebas del núcleo y 20 recorridos Firefox/Chromium, sin omisiones.
+
+## Dos platos en Live (2026-10-26)
+
+- [x] Platos A y B con AudioWorklet y controles independientes de reproducción, scratch, onda, búsqueda, velocidad, BPM de origen, Sync, filtros y stutter.
+- [x] Carga de archivo, captura de mezcla y grabación de micrófono en ambos; conservación opcional del búfer en Audio Studio.
+- [x] Crossfader de potencia constante entre platos y control Program/Deck para mezclarlos con la composición. La grabación de tomas captura el master de ambos platos.
+- [x] Preescucha opcional a una salida de auriculares elegida por el usuario cuando el navegador ofrece `selectAudioOutput` y `setSinkId`; queda fuera del master. En navegadores sin salida separada, el control aparece desactivado y explica por qué.
+- [x] Diseño lado a lado en escritorio y apilado en móvil, con crossfader accesible al desplazarse. El ajuste de tempo usa velocidad de reproducción y cambia el tono.
+
+Validación: `check:full` superado con 28 pruebas del núcleo y 21 recorridos de navegador en Chromium y Firefox. La prueba nueva cubre mezcla simultánea y preescucha con salida simulada; la separación física de auriculares y Safari/iPhone reales siguen pendientes de verificación.

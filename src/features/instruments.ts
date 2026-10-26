@@ -570,7 +570,7 @@ export function macroMarkup(ctx: RuntimeContext, container: any) {
   container.innerHTML = (Object.entries(macros) as Array<[string, number]>)
     .map(
       ([k, v]) =>
-        `<div class="macro"><label><span>${names[k] || k.toUpperCase()}</span><output>${Math.round(v * 100)}</output></label><input data-macro="${k}" type="range" min="0" max="1" step=".01" value="${v}"></div>`,
+        `<div class="macro"><label><span>${names[k] || k.toUpperCase()}</span><output>${Math.round(v * 100)}</output></label><input data-macro="${k}" aria-label="${names[k] || k.toUpperCase()}" type="range" min="0" max="1" step=".01" value="${v}"></div>`,
     )
     .join("");
   container.querySelectorAll("input").forEach((i: any) => {

@@ -151,3 +151,104 @@ test('microphone capture, waveform seeking and keeping scratch audio form a pers
   await page.reload();await goToView(page,'audio');assert.equal(await page.locator('.audio-region').count(),1);
   assert.equal(await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=document.documentElement.clientWidth),true);assert.deepEqual(errors,[]);
 });
+
+test("two live decks load independently, mix, seek and follow separate BPM controls", async (t) => {
+  await ready();
+  const browser = await launchBrowser("chromium");
+  t.after(() => browser.close());
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator.mediaDevices, 'selectAudioOutput', {value:async()=>({deviceId:'test-headphones'}),configurable:true});
+    globalThis.HTMLMediaElement.prototype.setSinkId=async function(id){this.dataset.sink=id};
+    globalThis.HTMLMediaElement.prototype.play=async function(){};
+  });
+  await page.goto(`${url}/?qa=1`);
+  await goToView(page, "perform");
+  assert.equal(await page.locator(".dual-deck-layout > section").count(), 2);
+  await page
+    .locator("#deckBImport")
+    .setInputFiles({
+      name: "track-b.wav",
+      mimeType: "audio/wav",
+      buffer: silentWav(),
+    });
+  await page.waitForFunction(() => globalThis.__kvDiagnostics().scratchReadyB);
+  assert.equal(await page.locator('#scratchMix').isEnabled(),true);
+  assert.equal((await page.evaluate(()=>globalThis.__kvDiagnostics())).scratchCrossfade,1);
+  await page
+    .locator("#scratchImport")
+    .setInputFiles({
+      name: "track-a.wav",
+      mimeType: "audio/wav",
+      buffer: silentWav(),
+    });
+  await page.waitForFunction(() => globalThis.__kvDiagnostics().scratchReady);
+  assert.match(await page.locator("#scratchStatus").textContent(), /track-a/);
+  assert.match(await page.locator("#deckBStatus").textContent(), /track-b/);
+  assert.equal(
+    (await page.evaluate(() => globalThis.__kvDiagnostics())).scratchCrossfade,
+    0.5,
+  );
+  await page.waitForFunction(() => {
+    const state = globalThis.__kvDiagnostics();
+    return state.scratchGainA > 0.1 && state.scratchGainB > 0.1;
+  });
+  await page.locator('#deckCueOutput').click();
+  assert.equal(await page.locator('#deckACue').isEnabled(),true);
+  assert.equal(await page.locator('#deckBCue').isEnabled(),true);
+  await page.locator('#deckBCue').click();
+  await page.waitForFunction(()=>globalThis.__kvDiagnostics().scratchCueGainB>.5);
+  assert.equal(await page.locator('#deckBCue').getAttribute('aria-pressed'),'true');
+  assert.ok((await page.evaluate(()=>globalThis.__kvDiagnostics())).scratchGainA>.1);
+  await page.locator('#deckACue').click();
+  await page.waitForFunction(()=>globalThis.__kvDiagnostics().scratchCueGainA>.5&&globalThis.__kvDiagnostics().scratchCueGainB<.01);
+  await page.locator("#deckBBpm").fill("100");
+  await page.locator("#deckBSync").click();
+  await page.waitForFunction(
+    () => Math.abs(globalThis.__kvDiagnostics().scratchSpeedB - 1.32) < 0.02,
+  );
+  assert.ok(
+    Math.abs(
+      (await page.evaluate(() => globalThis.__kvDiagnostics())).scratchSpeed -
+        1,
+    ) < 0.001,
+  );
+  await page.locator("#scratchCrossfader").fill("1");
+  assert.equal(
+    (await page.evaluate(() => globalThis.__kvDiagnostics())).scratchCrossfade,
+    1,
+  );
+  await page.waitForFunction(() => {
+    const state = globalThis.__kvDiagnostics();
+    return state.scratchGainA < 0.01 && state.scratchGainB > 0.5;
+  });
+  const wave = page.locator("#deckBWave");
+  await wave.press("End");
+  assert.equal(await wave.getAttribute("aria-valuenow"), "100");
+  await page.locator("#deckBPlay").click();
+  assert.equal(
+    (await page.evaluate(() => globalThis.__kvDiagnostics())).scratchPlayingB,
+    false,
+  );
+  assert.equal(
+    (await page.evaluate(() => globalThis.__kvDiagnostics())).scratchPlaying,
+    true,
+  );
+  await page.addScriptTag({content:axe.source});
+  const audit=await page.evaluate(async()=>await globalThis.axe.run(document));
+  assert.deepEqual(audit.violations.filter(v=>['serious','critical'].includes(v.impact)).flatMap(v=>v.nodes.map(n=>`${v.id}: ${n.target.join(' > ')}`)),[]);
+  assert.equal(
+    await page.evaluate(
+      () =>
+        Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth,
+        ) <= document.documentElement.clientWidth,
+    ),
+    true,
+  );
+});

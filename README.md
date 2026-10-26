@@ -72,18 +72,25 @@ The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, m
 
 The visual keyboard responds to mouse and touch, sustaining voices until the key is released. Web MIDI records note-on, note-off, velocity, and per-channel expression: pitch bend, channel/poly pressure, and CC74 timbre; drum mapping follows the usual GM notes. The recording selector provides quantized or free mode: the latter preserves microtiming and sub-step durations, while `Quantize` can align them afterward.
 
-### Scratch Deck
+### Two Scratch Decks
 
-Perform includes a bidirectional Scratch Deck driven by a dedicated
-`AudioWorklet`. `Capture Mix` renders the active clips into a mastered 1, 2, 4,
+Live includes two independent bidirectional Scratch Decks, each driven by its
+own `AudioWorklet`. Both can play at once with separate audio buffers, position,
+speed, BPM, filter, stutter and platter gestures. The equal-power crossfader
+balances Deck A and Deck B; the Program/Deck slider balances their combined
+output against the composed song. `Capture Mix` renders the active clips into a mastered 1, 2, 4,
 or 8-bar memory buffer; shorter source clips repeat cleanly to fill the selected
 length. `Import Audio` also decodes a local WAV, MP3, OGG, WebM, or any other
 audio format supported by the current browser directly into the deck. Audio
-Studio regions can send their edited signal to the same temporary buffer with
-`Load Deck`. The platter supports mouse, touch, wheel/trackpad, and keyboard control,
+Studio regions can send their edited signal to Deck A with
+`Load Deck`. Both platters support mouse, touch, wheel/trackpad, and keyboard control,
 with interpolated forward and reverse playback, a smooth motor return, waveform
 and playhead feedback, equal-power crossfading against the live program, a deck
-low-pass filter, beat sync, brake, spinback, and tempo-derived stutter.
+low-pass filter, beat sync, brake, spinback, and tempo-derived stutter. Enter a
+track's source BPM to use Sync; it changes playback speed and pitch to match
+the project tempo. Browser-supported audio-output selection can route Cue A or
+Cue B to a separate headphone output, outside the master recording. When the
+browser offers no separate output routing, the Cue controls are disabled.
 
 Scratch capture is intentionally non-destructive until `Resample Deck` is used: it does not modify the v6
 project or its clips. The temporary buffer lives in memory and is cleared when
@@ -132,6 +139,7 @@ Versioned autosave is stored in `localStorage`. The project menu provides cinema
 - `src/core.ts`: v6 model logic, migrations, audio/automation primitives, transforms, performance data, launcher capture, arrangement, generators, history, and expressive MIDI.
 - `src/audio.ts`: look-ahead scheduler, hybrid audio regions, global automation/modulation, polyphonic and sustained/MPE voices, guitar, drum synth, persistent FX buses, routing, master, analyzer, and offline WAV.
 - `src/scratch-worklet.ts`: real-time bidirectional scratch playback, interpolation, looping, stutter, and position reporting off the UI thread.
+- `src/features/dual-deck.ts`: second deck controls, BPM/crossfader workflow, optional Cue output, and responsive Live layout.
 - `src/app.ts`: UI state, piano roll, free/quantized recording, MIDI, versions, diagnostics, export, and editing flows.
 - `src/model.ts`: strict serializable contract. `npm run build` compiles the runtime modules into `dist/`.
 - `tests/`: model, migrations, ten-minute transport, MIDI, Firefox, Chromium, accessibility, and responsiveness.

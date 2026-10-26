@@ -640,23 +640,31 @@ export function applyPerformanceEvent(
       activeClip(ctx.project, track).character.fx[key] = +event.value;
     else (cfg as any)[key] = event.value;
   } else if (event.kind === "scratch") {
-    if (event.target === "speed")
-      ctx.engine.setScratchSpeed(+event.value, 0.01);
-    if (event.target === "mix") ctx.engine.setScratchMix(+event.value);
-    if (event.target === "filter") ctx.engine.setScratchFilter(+event.value);
-    if (event.target === "stutter")
+    const deck = event.target.startsWith("B:") ? "B" : "A";
+    const target = deck === "B" ? event.target.slice(2) : event.target;
+    if (target === "speed")
+      ctx.engine.setScratchSpeed(+event.value, 0.01, deck);
+    if (target === "mix") ctx.engine.setScratchMix(+event.value);
+    if (target === "crossfade") ctx.engine.setScratchCrossfade(+event.value);
+    if (target === "filter") ctx.engine.setScratchFilter(+event.value, deck);
+    if (target === "stutter")
       ctx.engine.setScratchStutter(
         event.value
           ? Math.round(
-              ((((ctx.engine.scratchSampleRate || 44100) * 60) /
+              ((((ctx.engine[
+                deck === "B" ? "scratchSampleRateB" : "scratchSampleRate"
+              ] || 44100) *
+                60) /
                 ctx.project.tempo) *
                 4) /
-                +ctx.$("#scratchDivision").value,
+                +ctx.$(deck === "B" ? "#deckBDivision" : "#scratchDivision")
+                  .value,
             )
           : 0,
+        deck,
       );
-    if (event.target === "playing")
-      ctx.engine.setScratchPlaying(Boolean(event.value));
+    if (target === "playing")
+      ctx.engine.setScratchPlaying(Boolean(event.value), deck);
   } else if (event.kind === "launcher") {
     const track = event.target as TrackId;
     if (event.value === "stop") ctx.engine.stopLauncherTrack(track, true);
@@ -814,7 +822,8 @@ export function applyMidiMapping(
       const track = match[1] as TrackId;
       if (match[2] === "cutoff")
         activeClip(ctx.project, track).instrument.cutoff = 120 + value * 11880;
-      else if (match[2] === "pan") ctx.project.tracks[track].pan = value * 2 - 1;
+      else if (match[2] === "pan")
+        ctx.project.tracks[track].pan = value * 2 - 1;
       else ctx.project.tracks[track].volume = value;
     }
   }

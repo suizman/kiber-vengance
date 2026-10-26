@@ -24,6 +24,10 @@ Synth, Live and sampler use the same keyboard component and styles. Light keys a
 
 The component defines note geometry; CSS must not infer black keys using `nth-child`. The exact structure is `.instrument-keyboard > .keyboard-toolbar + .keyboard-scroll > .keyboard-surface > .keyboard-key`. A key receives `.natural`, `.accidental`, `.root` and `.active` according to musical state. Pointer ownership belongs to each musical key; horizontal browsing is available in the surrounding scroll surface.
 
+## Live decks
+
+Deck A and Deck B sit side by side on wide screens and stack on mobile. The equal-power crossfader precedes them and remains accessible while scrolling. Magenta and cyan distinguish the two platters without replacing labels or transport state. Each deck keeps its own waveform, track BPM, speed, filter, stutter and source actions. Cue output selection is explicit because headphones require a separate browser-supported audio device; unavailable controls explain the limitation. The Program/Deck control balances the combined decks with the composed song.
+
 ## Logo
 
 `public/brand-options.svg` documents two viable geometric KV directions. **Signal (01)** is selected: square-cut paths, an open silhouette and a small magenta terminal accent. It is legible at small sizes, is easy to engrave or print in one color, and removes the overlapping waveform/glow decoration of the previous logo. `public/icon.svg` is the production favicon/PWA mark. Keep the name **КИБЕР VENGANCE** unchanged.

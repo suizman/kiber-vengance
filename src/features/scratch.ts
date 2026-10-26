@@ -1,4 +1,5 @@
 import { waveformPeaks } from "../audio/waveform-cache";
+import { setupDualDeck } from "./dual-deck";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
 import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
@@ -190,6 +191,11 @@ export async function armScratchBuffer(
   ctx.engine.setScratchFilter(+ctx.$("#scratchFilter").value);
   ctx.engine.setScratchMix(+ctx.$("#scratchMix").value);
   ctx.setScratchControls(true);
+  if (ctx.engine.scratchReadyB && ctx.$("#scratchCrossfader")) {
+    ctx.$("#scratchCrossfader").value = ".5";
+    ctx.$("#scratchCrossfader").dispatchEvent(new Event("input"));
+  }
+  ctx.$(".scratch-deck").dispatchEvent(new Event("scratcharmed"));
   ctx.updateScratchPlayButton();
   ctx.$("#scratchStatus").textContent = msg("ui_a38c300dea37", { arg0: label });
   ctx.toast(msg("ui_d081121455bb"));
@@ -657,5 +663,6 @@ export function setupScratchDeck(ctx: RuntimeContext) {
     if (event.key === "ArrowLeft" || event.key === "ArrowRight")
       ctx.engine.setScratchSpeed(ctx.scratchMotorRate(), 0.1);
   };
+  setupDualDeck(ctx);
   ctx.animateScratchDeck();
 }

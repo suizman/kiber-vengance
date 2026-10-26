@@ -237,6 +237,7 @@ export function mountStudioShell() {
               <label class="density-control">
                 <span>{es ? "Densidad" : "Density"}</span>
                 <select
+                  aria-label={es ? "Densidad de interfaz" : "Interface density"}
                   value={density}
                   onChange={(e) => setDensity(e.currentTarget.value)}
                 >

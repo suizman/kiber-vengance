@@ -1481,6 +1481,7 @@ export function setupConsistentControls(ctx: RuntimeContext) {
   wave.setAttribute("aria-label", msg("ui_ecf5bd269a5d"));
   wave.setAttribute("aria-valuemin", "0");
   wave.setAttribute("aria-valuemax", "100");
+  wave.setAttribute("aria-valuenow", "0");
   const seek = (fraction: number) => {
     if (!ctx.scratchBuffer || !ctx.engine.scratchFrames) return;
     const f = Math.max(0, Math.min(1, fraction));
