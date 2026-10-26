@@ -992,6 +992,15 @@ export function initWorkflowUi(ctx: RuntimeContext) {
             !ctx.$(`#${button.dataset.rack}`).classList.contains("collapsed"),
           )),
     );
+  ctx.$$(".collapsible-rack").forEach((rack) => {
+    const header = rack.firstElementChild as HTMLElement | null;
+    header?.addEventListener("click", (event) => {
+      if (!rack.classList.contains("collapsed")) return;
+      const target = event.target as Element;
+      if (target.closest("button, input, select, label")) return;
+      ctx.setRackCollapsed(rack.id, false);
+    });
+  });
   ctx.$("#commandSearch").oninput = () => {
     ctx.commandIndex = 0;
     ctx.renderCommands(ctx.$("#commandSearch").value);

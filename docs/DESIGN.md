@@ -64,6 +64,10 @@ The clip locator button toggles between `▶ CLIP` and `Ⅱ PAUSE` (`Ⅱ PAUSA` 
 
 Clip playback uses the current Bars length independently of Arrange loop bounds. Changing Bars or refreshing the editor preserves the running transport; only an explicit locator gesture seeks. After every clip loop, the piano-roll cursor, locator, bar/step readout and pause/resume share the same local position. Shorter active clips continue looping independently alongside longer clips.
 
+Each collapsed Sound rack keeps a visible `+` control and its heading is also an expand target. This gives touch users a reliable way to reopen synth, Motion, FX, and macro controls.
+
+Sound rack headings reserve 44 px for the cyan expand/collapse button on the right. A collapsed rack fits its heading content rather than clipping it to a fixed height; the whole button must remain visible and reachable.
+
 Touch editing: drag a note body to change time/pitch and its visible right edge to change duration. Select supports dragging as well as tap selection. Navigate is the explicit surface-scrolling tool. Touch resize targets are enlarged without covering the whole note body.
 
 Mobile deck mixer: A/B crossfade, Program/Deck balance and Cue occupy separate rows; never assign both slider labels to the same grid row.

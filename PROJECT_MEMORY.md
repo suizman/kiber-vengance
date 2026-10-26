@@ -4,6 +4,12 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Sound rack reopening (2026-10-26)
+
+- The Sound inspector preserves its independent rack states. A collapsed synth, Motion, FX, or macro rack now expands from either its `+` control or its visible heading, avoiding a small-target dead end on touch devices.
+- Rack headings reserve a fixed 44 px button at the right. Collapsed racks size to their heading instead of clipping it to the legacy 42/46 px height; the cyan `+` stays fully visible and clickable.
+- Validation: targeted Chromium desktop and touch-emulation workflows expand and collapse every Sound rack through both controls.
+
 ## Clip duration and transport consistency (2026-10-26)
 
 - Arrange loop limits apply only to song playback. Active clips loop independently over their current Bars length, including newly added bars.

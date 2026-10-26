@@ -321,3 +321,39 @@ test('clip Bars changes keep playback and progress consistent with the full clip
   await page.locator('#rewindBtn').click();
   assert.deepEqual(errors, []);
 });
+
+test('Sound inspector racks reopen after being collapsed', async t => {
+  await ready();
+  const browser = await launchBrowser();
+  t.after(() => browser.close());
+  for (const viewport of [{ width: 1366, height: 900 }, { width: 390, height: 844 }]) {
+    const context = await browser.newContext({ viewport, isMobile: viewport.width < 500, hasTouch: viewport.width < 500 });
+    const page = await context.newPage();
+    await page.goto(`${url}/?qa=1`, { waitUntil: 'networkidle' });
+    await setSoundInspector(page, true);
+    for (const id of ['synthRack', 'motionRack', 'effectsRack', 'macroRack']) {
+      const toggle = page.locator(`[data-rack="${id}"]`);
+      await toggle.scrollIntoViewIfNeeded();
+      const before = await page.locator(`#${id}`).evaluate(rack => rack.classList.contains('collapsed'));
+      await toggle.click();
+      assert.equal(await page.locator(`#${id}`).evaluate(rack => rack.classList.contains('collapsed')), !before);
+      assert.equal(await toggle.getAttribute('aria-expanded'), String(before));
+      assert.equal(await toggle.isVisible(), true);
+      if (!await page.locator(`#${id}`).evaluate(rack => rack.classList.contains('collapsed'))) await toggle.click();
+      assert.equal(await page.locator(`#${id}`).evaluate(rack => rack.classList.contains('collapsed')), true);
+      assert.equal(await toggle.textContent(), '+');
+      await toggle.scrollIntoViewIfNeeded();
+      assert.equal(await toggle.evaluate(button => {
+        const box = button.getBoundingClientRect(), rack = button.closest('.collapsible-rack').getBoundingClientRect();
+        return box.top >= rack.top && box.bottom <= rack.bottom && box.left >= rack.left && box.right <= rack.right && document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === button;
+      }), true, `${id}: the complete + control must remain visible and clickable when collapsed`);
+      await toggle.click();
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+      await toggle.click();
+      await page.locator(`#${id} :is(h1, strong)`).first().click();
+      assert.equal(await page.locator(`#${id}`).evaluate(rack => rack.classList.contains('collapsed')), false);
+      assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+    }
+    await context.close();
+  }
+});
