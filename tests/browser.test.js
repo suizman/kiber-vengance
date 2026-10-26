@@ -252,3 +252,29 @@ test("two live decks load independently, mix, seek and follow separate BPM contr
     true,
   );
 });
+
+test('mobile note gestures move pitch and time and resize from the edge',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  await page.goto(`${url}/?qa=1`);await page.locator('.note-block').first().waitFor();
+  const note=page.locator('.note-block').first(),id=await note.getAttribute('data-note');
+  const target=page.locator(`[data-note="${id}"]`);
+  await target.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));
+  const session=await page.context().newCDPSession(page);
+  const drag=async(x,y,dx,dy)=>{
+    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+    for(let i=1;i<=5;i++)await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx*i/5,y:y+dy*i/5}]});
+    await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  };
+  const before=await target.evaluate(el=>({left:el.style.left,top:el.style.top,width:el.style.width}));
+  let box=await target.boundingBox();
+  await drag(box.x+box.width*.25,box.y+box.height/2,45,-box.height*2);
+  const moved=await target.evaluate(el=>({left:el.style.left,top:el.style.top,width:el.style.width}));
+  assert.notEqual(moved.left,before.left);assert.notEqual(moved.top,before.top);assert.equal(moved.width,before.width);
+  await target.evaluate(el=>el.scrollIntoView({block:'center',inline:'center'}));
+  box=await target.locator('.note-resize').boundingBox();
+  await drag(box.x+box.width/2,box.y+box.height/2,55,0);
+  assert.ok(parseFloat(await target.evaluate(el=>el.style.width))>parseFloat(moved.width));
+  await page.locator('#undoBtn').click();
+  assert.equal(await target.evaluate(el=>el.style.width),moved.width);
+});

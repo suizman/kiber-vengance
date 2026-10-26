@@ -258,3 +258,6 @@ Validation: `npm run check:full` passed with 28 core tests and 18 Chromium/Firef
 Every Arrange section exposes `LOAD TO COMPOSE` / `CARGAR EN COMPOSE`. It copies the section's five clip assignments into the active clip set, clears note selection, closes the Sound inspector and opens the Compose clip editor while preserving the selected track. It does not alter the section, notes or mixer. This is navigation/session state and participates in autosave like changing an individual Active Clip selector. Firefox and Chromium verify all five resulting selectors and the bilingual label.
 
 Validation: `npm run check:full` passed with 28 core tests and 20 Chromium/Firefox workflows, without skips. The accessibility audit also covers the new action's visible and spoken labels.
+
+## Touch note editing (2026-10-26)
+Notes own touch gestures in Draw and Select, with pointer capture on the stable roll surface while note DOM is redrawn. Dragging the body changes time and pitch; the enlarged right edge changes duration. Select still toggles on a stationary tap. Navigate permits scrolling. A Chromium CDP touch regression checks movement, edge resizing and undo; physical iPhone remains unverified.

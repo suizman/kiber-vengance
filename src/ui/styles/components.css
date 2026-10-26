@@ -1901,6 +1901,25 @@ dialog {
   font-variant-emoji: text;
 }
 
+/* Notes own edit gestures; Navigate leaves the surface available for scrolling. */
+#app .note-block {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body[data-editor-tool="navigate"] #app .note-block {
+  touch-action: pan-x pan-y;
+}
+@media (pointer: coarse) {
+  #app .note-resize {
+    width: 18px;
+    max-width: 45%;
+    background: #ffffff66;
+    border-left: 2px solid #fff;
+    touch-action: none;
+  }
+}
+
 /* Two independent live decks share a visible master crossfader. */
 #app .dual-deck-layout {
   display: grid;

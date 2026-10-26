@@ -59,3 +59,5 @@ Cada tarjeta de sección de Arrange ofrece `LOAD TO COMPOSE` / `CARGAR EN COMPOS
 ## Local clip play/pause (2026-10-25)
 
 The clip locator button toggles between `▶ CLIP` and `Ⅱ PAUSE` (`Ⅱ PAUSA` in Spanish). During clip playback it pauses through the shared transport, retaining the clip cursor; pressing it again resumes there. Its visible state, accessible label and help follow global play/pause/stop and language changes. While song playback is running it remains a clip-start action and switches to clip playback, preserving the previous behavior. Startup disables the local button until audio initialization completes to prevent duplicate starts. This controls the active-clip mix, not a solo of the selected track.
+
+Touch editing: drag a note body to change time/pitch and its visible right edge to change duration. Select supports dragging as well as tap selection. Navigate is the explicit surface-scrolling tool. Touch resize targets are enlarged without covering the whole note body.

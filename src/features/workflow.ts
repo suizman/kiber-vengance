@@ -454,22 +454,23 @@ export function bindNoteDrag(
   rowH: number,
 ) {
   el.onpointerdown = (e: any) => {
-    if (ctx.editorTool === "navigate") return;
+    if (ctx.editorTool === "navigate" || e.button !== 0) return;
+    e.preventDefault();
     e.stopPropagation();
     const id = el.dataset.note;
-    if (ctx.editorTool === "select") {
-      ctx.selectedNotes.has(id)
-        ? ctx.selectedNotes.delete(id)
-        : ctx.selectedNotes.add(id);
-      ctx.syncSelectedClasses();
-      ctx.renderSelection();
-      return;
-    }
+    const wasSelected = ctx.selectedNotes.has(id);
+    const selecting = ctx.editorTool === "select";
+    const pointerId = e.pointerId;
+    const capture = el.closest(".roll-pane") as HTMLElement;
+    capture?.setPointerCapture(pointerId);
     if (e.shiftKey) {
       ctx.selectedNotes.has(id)
         ? ctx.selectedNotes.delete(id)
         : ctx.selectedNotes.add(id);
-    } else if (!ctx.selectedNotes.has(id)) ctx.selectedNotes = new Set([id]);
+    } else if (!wasSelected) {
+      if (selecting) ctx.selectedNotes.add(id);
+      else ctx.selectedNotes = new Set([id]);
+    }
     ctx.syncSelectedClasses();
     ctx.renderSelection();
     const originals = new Map(
@@ -486,11 +487,13 @@ export function bindNoteDrag(
       before = structuredClone(ctx.project);
     let moved = false;
     const move = (ev: any) => {
+      if (ev.pointerId !== pointerId) return;
+      ev.preventDefault();
       const dx =
           Math.round((ev.clientX - startX) / zoom / ctx.project.editor.snap) *
           ctx.project.editor.snap,
         dy = Math.round((ev.clientY - startY) / rowH);
-      if (!dx && !dy) return;
+      if (!moved && !dx && (!dy || resizing)) return;
       if (!moved) {
         ctx.history.push(before);
         moved = true;
@@ -516,10 +519,17 @@ export function bindNoteDrag(
       }
       ctx.renderPiano();
     };
-    const up = () => {
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
+      if (capture?.hasPointerCapture(pointerId)) capture.releasePointerCapture(pointerId);
+      if (!moved && selecting && wasSelected && ev.type !== "pointercancel") {
+        ctx.selectedNotes.delete(id);
+        ctx.syncSelectedClasses();
+        ctx.renderSelection();
+      }
       if (moved) ctx.changed();
     };
     window.addEventListener("pointermove", move);
