@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { launchBrowser, preview } from '../tests/browser-support.js';
 import { webkit } from 'playwright';
 const server=preview(Number(process.env.AI_TEST_PORT)||4206);let browser,monitor;
@@ -27,6 +28,14 @@ try {
     console.log('Real local model loaded:',await page.locator('#localAIStatus').textContent());
   };
   await load();
+  if(process.env.AI_TEST_PRESETS==='1'){
+    await page.locator('#aiPresetCatalog > summary').click();
+    await page.locator('[data-ai-preset="scarlett-protocol"] button').click();
+    await page.locator('[data-ai-preset="sound-scarlett-lead"] button').first().click();
+    await page.locator('#aiApplyTempo').check();
+    await page.locator('#aiPresetCatalog > summary').click();
+    assert.equal(await page.locator('#aiRhythm').inputValue(),'driving');
+  }
   await page.locator('#aiKey').selectOption('D');
   await page.locator('#aiPrompt').fill('A dark synthwave melody with short notes and a rising ending');
   await page.locator('#generateLocalAI').click();
@@ -38,6 +47,18 @@ try {
   await page.locator('#auditionLocalAI').click();
   await page.waitForTimeout(600);await page.locator('#auditionLocalAI').click();
   await page.locator('#applyLocalAI').click();
+  if(process.env.AI_TEST_PRESETS==='1'){
+    assert.equal(await page.locator('#tempo').inputValue(),'128');
+    await page.locator('#exportAsBtn').click();
+    await page.locator('.export-advanced').nth(1).locator('summary').click();
+    const downloading=page.waitForEvent('download');await page.locator('[data-export="project"]').click();
+    const download=await downloading,project=JSON.parse(await readFile(await download.path(),'utf8'));
+    const generated=project.clips.find(clip=>clip.id===project.activeClipIds.lead);
+    assert.equal(generated.instrument.cutoff,3100);assert.equal(generated.character.fx.distortion,.5);
+    assert.equal(project.tempoMap.find(point=>point.step===0).bpm,128);
+    await page.locator('#exportDialog [data-close]').click();
+    console.log('Verified exported clip sound and base tempo match the selected preset.');
+  }
   assert.equal(await page.locator('#clipSelect option').count(),count+1);
   const notes=await page.locator('.note-block').count();assert.ok(notes>4);
   await page.locator('#undoBtn').click();assert.equal(await page.locator('#clipSelect option').count(),count);

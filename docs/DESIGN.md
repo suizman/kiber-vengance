@@ -88,6 +88,22 @@ The CPU model emits a compact, constrained tuple instead of verbose JSON field n
 
 Real CPU inference passed in Firefox (36.7 s English, 35.2 s cached offline Spanish) and WebKit (6.5 s English, 4.1 s offline Spanish), including insertion, Undo/Redo, persistence, audition and unload. WebKit's cold offline startup is an external limitation: even an isolated cached Blob module worker fails to start under its offline mode. Load its worker/model online before disconnecting; offline inference with the existing worker is verified. Automated WebKit is not a claim of physical Safari 16.6/Orion 1.1.3 validation.
 
+## Melody controls and preset catalogs (2026-10-26, local preview)
+
+The shared AI dialog includes musical style (prompt, synthwave, darksynth, industrial, cinematic, electro-rock, ambient, techno, house and drum & bass), rhythm (prompt, sparse, steady, driving, syncopated), and 50–220 preview BPM. Style and tempo enrich the on-device prompt; an explicit rhythm overrides the model's category before compilation, so its note-grid effect is reliable. Changes to musical generation settings invalidate the previous proposal. A sound change stops audition but retains valid notes.
+
+Nine original recipes populate style, rhythm, BPM, bars, key, scale and prompt without changing the project. Six native patches can be staged for a matching target track or explicitly saved to Preset Vault, including drums when no melodic target is selected. Browsing, importing and saving sounds never require model loading. Search covers both types, names, styles/tracks and tags. Selected patches copy instrument and character into the new clip; current clips, arrangement and mixer remain intact. Listen creates a separate AudioEngine with a project clone and closes it on stop/cancel/end, preventing sound-preview changes from affecting the live mixer.
+
+Applying project BPM is a separate unchecked option. It updates project.tempo and the tempo-map event at step zero in the same undo transaction as clip insertion; later tempo events remain unchanged. Without that option, the selected BPM affects audition and the prompt only. No clip-specific tempo field or project schema change is introduced.
+
+The catalog accepts native v1 catalog JSON and existing v1 preset-bank JSON. It validates known fields/ranges, rejects unsupported formats, caps downloads/files at 1 MB and catalogs at 256 entries, and strips mixer fields from instrument snapshots. URL fetches require HTTPS and CORS, omit credentials/referrers, have a 12-second timeout and can be cancelled. Only the exact canonical GitHub URL and final response can replace the official factory list; imported metadata cannot declare itself official. External entries cannot override included IDs. Catalogs are session-only; saving a sound to Vault is explicit and persistent.
+
+The online canonical file is prepared locally but its URL returned HTTP 404 before publication. Show that error honestly and retain the included collection. No live online-catalog availability or site deployment is claimed. Vital/Surge XT/Serum links are official-source discovery with clearly incompatible native engine formats; there is no third-party patch conversion, cloud search backend or embedded web scraping. Original recipes are prompt/settings templates, not pre-generated melodies or third-party factory patches.
+
+Validation: 36 unit tests passed along with typecheck/build/lint. Targeted Chromium workflows cover desktop/mobile catalog search, recipe selection, sound-track compatibility, file/URL import (network fixtures), official/error provenance, Vault persistence, accessible controls and no model download/project mutation while browsing. Real WebKit CPU smoke generated in 5.1 s, inserted a preset-backed clip with optional 128 BPM, exercised audition controls, Undo/Redo/reload, and generated offline in 4.2 s. Physical sound output is not established by headless controls.
+
+An extended real smoke (5.9 s / offline 4.4 s) verified Scarlett Razor instrument/FX and the 128 BPM base event in exported project JSON. `check:full` passed its check stage and four browser workflows, but quick WAV export writes timed out; the run ended at its 180-second bound before all workflows completed. No full-suite pass is claimed.
+
 ## Validation boundaries
 
 These files define the system and component states; visual acceptance requires screenshots and real workflow checks after integration. CSS alone does not establish audio behavior, focus management, responsive overflow safety or physical iOS validation.

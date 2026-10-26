@@ -1,4 +1,9 @@
 import { requestConfirmation } from "./ui/dialogs";
+import {
+  buildPresetClip,
+  commitPresetClip,
+  validateSoundPreset,
+} from "./ai/presets";
 import * as workflow from "./features/workflow";
 import * as storage from "./features/storage";
 import * as performanceFeature from "./features/performance";
@@ -2608,7 +2613,8 @@ const commands: CommandAction[] = [
     groupEs: "CLIP",
     shortcut: "",
     icon: "✦",
-    keywords: "ai ia local prompt melody melodia melodía generar generador inteligencia artificial cpu gpu qwen smollm",
+    keywords:
+      "ai ia local prompt melody melodia melodía generar generador inteligencia artificial cpu gpu qwen smollm",
     run: () => studioBridge.openLocalAI(),
   },
   {
@@ -3531,10 +3537,10 @@ document.addEventListener("keydown", (e) => {
     !e.altKey &&
     !recording.has(source)
   ) {
-    const keyboardId = activeView === "perform" ? "performanceKeyboard" : "keyboard",
+    const keyboardId =
+        activeView === "perform" ? "performanceKeyboard" : "keyboard",
       key = $(`#${keyboardId} .key[data-source="${source}"]`);
-    if (key)
-      startPerformance(source, +key.dataset.pitch, 0.82, key);
+    if (key) startPerformance(source, +key.dataset.pitch, 0.82, key);
   }
 });
 document.addEventListener("keyup", (e) => {
@@ -3637,47 +3643,129 @@ setupConsistentControls();
 syncTransportButtons();
 
 studioBridge.navigate = (view) => activateView(view);
-studioBridge.melodyTarget = () => selectedTrack === "drums" ? null : ({
-  projectId: project.id, clipId: clip().id, track: selectedTrack,
-  key: project.key, scale: project.scale, stepsPerBar: meterSteps(project.meter), tempo: project.tempo,
-});
-studioBridge.applyMelody = (target, name, bars, notes) => {
-  const source = project.clips.find((item: Clip) => item.id === target.clipId && item.track === target.track);
-  if (project.id !== target.projectId || !source || source.stepsPerBar !== target.stepsPerBar)
-    throw new Error(translate("The project changed. Open the generator again.", "El proyecto ha cambiado. Abre el generador de nuevo."));
+studioBridge.melodyTarget = () =>
+  selectedTrack === "drums"
+    ? null
+    : {
+        projectId: project.id,
+        clipId: clip().id,
+        track: selectedTrack,
+        key: project.key,
+        scale: project.scale,
+        stepsPerBar: meterSteps(project.meter),
+        tempo: project.tempo,
+      };
+studioBridge.applyMelody = (target, name, bars, notes, options = {}) => {
+  const generated = buildPresetClip(
+    project,
+    target,
+    name,
+    bars,
+    notes,
+    options,
+  );
   snapshot();
-  const generated = createClip(target.track, name, bars, target.stepsPerBar);
-  generated.character = structuredClone(source.character);
-  generated.instrument = structuredClone(source.instrument);
-  generated.notes = structuredClone(notes);
-  project.clips.push(generated);
-  project.activeClipIds[target.track] = generated.id;
+  commitPresetClip(project, generated, options.tempo);
   selectedTrack = target.track;
   selectedNotes.clear();
   changed(true);
   activateView("forge");
-  toast(translate("AI melody added as a new clip", "Melodía IA añadida como clip nuevo"), true);
+  toast(
+    translate(
+      "AI melody added as a new clip",
+      "Melodía IA añadida como clip nuevo",
+    ),
+    true,
+  );
 };
-studioBridge.auditionMelody = (target, notes, onEnd) => {
+studioBridge.storeSoundPreset = (value) => {
+  const preset = validateSoundPreset(value);
+  saveUserPresets([...userPresets(), { ...preset, id: crypto.randomUUID() }]);
+};
+studioBridge.auditionMelody = (target, notes, onEnd, sound) => {
   let cancelled = false;
-  const timers: number[] = [], sources: string[] = [];
+  const previewProject = structuredClone(project);
+  const previewClip = buildPresetClip(
+    previewProject,
+    target,
+    "Preview",
+    8,
+    notes,
+    sound ? { sound } : {},
+  );
+  previewProject.clips.push(previewClip);
+  previewProject.activeClipIds[target.track] = previewClip.id;
+  for (const track of TRACKS) {
+    previewProject.tracks[track].mute = false;
+    previewProject.tracks[track].solo = false;
+  }
+  const previewEngine = new AudioEngine();
+  previewEngine.setProject(previewProject);
+  const timers: number[] = [],
+    sources: string[] = [];
   const stop = () => {
     cancelled = true;
-    timers.forEach(timer => clearTimeout(timer));
-    sources.forEach(source => engine.stopLive(source, true));
+    timers.forEach((timer) => clearTimeout(timer));
+    sources.forEach((source) => previewEngine.stopLive(source, true));
+    if (previewEngine.ctx && previewEngine.ctx.state !== "closed")
+      void previewEngine.ctx.close().catch(() => {});
   };
-  void engine.init().then(() => {
-    if (cancelled) return;
-    if (project.id !== target.projectId) { onEnd("The project changed."); return; }
-    const ms = 60000 / target.tempo / 4;
-    notes.forEach((note, index) => {
-      const source = `ai-preview-${index}`; sources.push(source);
-      timers.push(window.setTimeout(() => { if (!cancelled) void engine.startLive(source, target.track, note.pitch, note.velocity); }, note.step * ms));
-      timers.push(window.setTimeout(() => engine.stopLive(source), (note.step + note.length) * ms));
+  void previewEngine
+    .init()
+    .then(() => {
+      if (cancelled) {
+        stop();
+        return;
+      }
+      if (project.id !== target.projectId) {
+        stop();
+        onEnd("The project changed.");
+        return;
+      }
+      const ms = 60000 / target.tempo / 4;
+      notes.forEach((note, index) => {
+        const source = `ai-preview-${index}`;
+        sources.push(source);
+        timers.push(
+          window.setTimeout(() => {
+            if (!cancelled)
+              void previewEngine
+                .startLive(
+                  source,
+                  target.track,
+                  note.pitch,
+                  note.velocity,
+                  note.expression,
+                )
+                .catch((error) => {
+                  if (!cancelled) {
+                    stop();
+                    onEnd(String(error));
+                  }
+                });
+          }, note.step * ms),
+        );
+        timers.push(
+          window.setTimeout(
+            () => previewEngine.stopLive(source),
+            (note.step + note.length) * ms,
+          ),
+        );
+      });
+      const duration =
+        Math.max(0, ...notes.map((note) => note.step + note.length)) * ms;
+      timers.push(
+        window.setTimeout(() => {
+          stop();
+          onEnd();
+        }, duration + 300),
+      );
+    })
+    .catch((error) => {
+      if (cancelled) return;
+      stop();
+      onEnd(String(error));
     });
-    const duration = Math.max(0, ...notes.map(note => note.step + note.length)) * ms;
-    timers.push(window.setTimeout(() => { stop(); onEnd(); }, duration + 300));
-  }).catch(error => { stop(); onEnd(String(error)); });
   return stop;
 };
 studioBridge.toggleFocus = () => toggleFocus();

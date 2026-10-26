@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { launchBrowser, preview, goToView, setSoundInspector, setTransportSetting } from './browser-support.js';
 import axe from 'axe-core';
+import { readFileSync } from 'node:fs';
 
-const server=preview(4201),{url,ready}=server;
+const server=preview(Number(process.env.BROWSER_TEST_PORT)||4201),{url,ready}=server;
 function silentWav(){const frames=8000,buffer=Buffer.alloc(44+frames*2);buffer.write('RIFF',0);buffer.writeUInt32LE(buffer.length-8,4);buffer.write('WAVEfmt ',8);buffer.writeUInt32LE(16,16);buffer.writeUInt16LE(1,20);buffer.writeUInt16LE(1,22);buffer.writeUInt32LE(8000,24);buffer.writeUInt32LE(16000,28);buffer.writeUInt16LE(2,32);buffer.writeUInt16LE(16,34);buffer.write('data',36);buffer.writeUInt32LE(frames*2,40);return buffer}
 
 test('Chromium desktop and mobile flows are responsive and accessible',async t=>{
@@ -341,6 +342,52 @@ test('local AI is discoverable in Compose, the project menu and bilingual comman
     assert.equal(await page.locator('.note-block').count(),notes);
     assert.deepEqual(requests,[]);
     await page.close();
+  }
+});
+
+test('melody and sound catalogs support recipes, native file and URL import, Vault and mobile controls',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const factory=JSON.parse(readFileSync(new URL('../public/presets/catalog-v1.json',import.meta.url),'utf8'));
+  for(const viewport of [{width:1366,height:1000},{width:390,height:844}]){
+    const page=await browser.newPage({viewport}),errors=[],models=[];
+    page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/huggingface\.co|inference-worker-|cpu-worker-/.test(r.url()))models.push(r.url())});
+    await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+    const clips=await page.locator('#clipSelect option').count(),notes=await page.locator('.note-block').count(),tempo=await page.locator('#tempo').inputValue();
+    await page.locator('#composeAIMelodyBtn').click();await page.locator('#aiPresetCatalog > summary').click();
+    assert.equal(await page.locator('#aiPresetFile').isVisible(),true);
+    assert.equal(await page.locator('[data-ai-preset]').count(),15);
+    await page.locator('#aiPresetSearch').fill('scarlett');assert.equal(await page.locator('[data-ai-preset]').count(),2);
+    await page.locator('[data-ai-preset="scarlett-protocol"] button').click();
+    assert.equal(await page.locator('#aiStyle').inputValue(),'darksynth');assert.equal(await page.locator('#aiRhythm').inputValue(),'driving');assert.equal(await page.locator('#aiTempo').inputValue(),'128');assert.equal(await page.locator('#aiKey').inputValue(),'C');
+    assert.equal(await page.locator('#aiApplyTempo').isChecked(),false);
+    await page.locator('[data-ai-preset="sound-scarlett-lead"] button').first().click();assert.match(await page.locator('.ai-target').textContent(),/Scarlett Razor/);
+    await page.locator('#aiPresetSearch').fill('');await page.locator('#aiPresetKind').selectOption('sound');assert.equal(await page.locator('[data-ai-preset]').count(),6);
+    assert.equal(await page.locator('[data-ai-preset="sound-reactor-bass"] button').first().isDisabled(),true);
+    const custom={...factory.presets.find(p=>p.kind==='sound'),id:'import-test',name:'Imported Neon'};
+    await page.locator('#aiPresetFile').setInputFiles({name:'native-bank.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'kiber-vengance-preset-bank',version:1,presets:[{...custom,kind:undefined}]}))});
+    await page.locator('[data-ai-preset="import-test"]').waitFor();await page.locator('[data-ai-preset="import-test"] button').last().click();
+    assert.match(await page.locator('#aiPresetCatalog [role=status]').textContent(),/Saved to Preset Vault/);
+    await page.locator('#aiPresetFile').setInputFiles({name:'plugin.json',mimeType:'application/json',buffer:Buffer.from('{"plugin":"Vital"}')});
+    assert.match(await page.locator('#aiPresetCatalog [role=alert]').textContent(),/compatible/);
+    const remote={format:factory.format,version:1,presets:[{...factory.presets[0],id:'online-test',name:'Online Neon'}]};
+    await page.route('https://example.com/presets.json',r=>r.fulfill({json:remote,headers:{'access-control-allow-origin':'*'}}));
+    await page.locator('#aiPresetURL').fill('https://example.com/presets.json');await page.locator('#aiPresetFetch').click();
+    await page.waitForFunction(()=>document.querySelector('#aiPresetCatalog [role=status]')?.textContent.includes('external URL'));
+    await page.locator('#aiPresetKind').selectOption('melody');await page.locator('[data-ai-preset="online-test"]').waitFor();
+    const canonical='https://raw.githubusercontent.com/suizman/kiber-vengance/master/public/presets/catalog-v1.json';
+    await page.route(canonical,r=>r.fulfill({json:factory,headers:{'access-control-allow-origin':'*'}}));await page.locator('#aiPresetOfficial').click();
+    await page.waitForFunction(()=>document.querySelector('#aiPresetCatalog [role=status]')?.textContent.includes('official catalog'));
+    await page.route(canonical,r=>r.fulfill({status:404,body:'Not found',headers:{'access-control-allow-origin':'*'}}));await page.locator('#aiPresetOfficial').click();
+    await page.waitForFunction(()=>document.querySelector('#aiPresetCatalog [role=alert]')?.textContent.includes('HTTP 404'));
+    await page.locator('#aiTempo').fill('');assert.equal(await page.locator('#aiTempo').getAttribute('aria-invalid'),'true');
+    await page.locator('#aiTempo').fill('124');assert.equal(await page.locator('#aiTempo').getAttribute('aria-invalid'),'false');
+    await page.screenshot({path:`/private/tmp/kiber-presets-${viewport.width}.png`,fullPage:true});
+    const a11y=await page.evaluate(async source=>{eval(source);return globalThis.axe.run(document.querySelector('#localAIDialog'),{runOnly:{type:'tag',values:['wcag2a','wcag2aa']}})},axe.source);
+    assert.deepEqual(a11y.violations.filter(v=>['serious','critical'].includes(v.impact)).map(v=>v.id),[]);
+    assert.equal(await page.locator('#localAIDialog').evaluate(n=>n.scrollWidth<=n.clientWidth+1),true);
+    await page.keyboard.press('Escape');assert.equal(await page.locator('#clipSelect option').count(),clips);assert.equal(await page.locator('.note-block').count(),notes);assert.equal(await page.locator('#tempo').inputValue(),tempo);
+    await page.locator('#menuBtn').click();await page.locator('#presetLibraryBtn').click();await page.locator('#presetSearch').fill('Imported Neon');assert.equal(await page.locator('.preset-card').count(),1);
+    assert.deepEqual(models,[]);assert.deepEqual(errors,[]);await page.close();
   }
 });
 

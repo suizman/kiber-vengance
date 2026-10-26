@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test tests/core.test.js tests/ai.test.js",
+    "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js",
     "test:e2e": "node --test tests/e2e.test.js tests/browser.test.js",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint tests scripts eslint.config.js",

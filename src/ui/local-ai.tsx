@@ -17,6 +17,15 @@ import {
 import { getLanguage, subscribeLanguage } from "./i18n";
 import { studioBridge } from "./bridge";
 import type { NoteEvent } from "../model";
+import {
+  STYLES,
+  enrichMelodyPrompt,
+  enforceMelodyChoices,
+  type StyleId,
+  type RhythmChoice,
+  type SoundPreset,
+} from "../ai/presets";
+import { PresetCatalog } from "./preset-catalog";
 
 export let openLocalAI = () => {};
 const scaleLabels: Record<string, [string, string]> = {
@@ -55,6 +64,16 @@ export function setupLocalAI() {
     const [target, setTarget] = useState<MelodyTarget | null>(null);
     const [bars, setBars] = useState(4);
     const [prompt, setPrompt] = useState("");
+    const [style, setStyle] = useState<StyleId>("prompt");
+    const [rhythm, setRhythm] = useState<RhythmChoice>("auto");
+    const [tempo, setTempo] = useState("120");
+    const [applyTempo, setApplyTempo] = useState(false);
+    const [sound, setSound] = useState<SoundPreset | null>(null);
+    const validTempo =
+      tempo.trim() !== "" &&
+      Number.isFinite(+tempo) &&
+      +tempo >= 50 &&
+      +tempo <= 220;
     const [status, setStatus] = useState<
       "idle" | "loading" | "ready" | "generating" | "deleting"
     >("idle");
@@ -122,7 +141,11 @@ export function setupLocalAI() {
       studioBridge.release();
       document.querySelector<HTMLDialogElement>("#appearanceDialog")?.close();
       document.querySelector<HTMLDialogElement>("#projectMenu")?.close();
-      setTarget(studioBridge.melodyTarget());
+      const nextTarget = studioBridge.melodyTarget();
+      setTarget(nextTarget);
+      setTempo(String(nextTarget?.tempo ?? 120));
+      setApplyTempo(false);
+      setSound(null);
       setResult(null);
       setError("");
       document.querySelector<HTMLDialogElement>("#localAIDialog")?.showModal();
@@ -154,7 +177,7 @@ export function setupLocalAI() {
       }
     };
     const generate = async () => {
-      if (!target || !prompt.trim()) return;
+      if (!target || !prompt.trim() || !validTempo) return;
       stopAudition();
       setResult(null);
       setError("");
@@ -162,13 +185,16 @@ export function setupLocalAI() {
       const token = ++attempt.current,
         started = performance.now();
       try {
-        const plan = parseMelodyPlan(
-          await generateLocalPlan(
-            prompt.trim(),
-            target.key,
-            target.scale,
-            bars,
+        const plan = enforceMelodyChoices(
+          parseMelodyPlan(
+            await generateLocalPlan(
+              enrichMelodyPrompt(prompt, style, rhythm, +tempo),
+              target.key,
+              target.scale,
+              bars,
+            ),
           ),
+          rhythm,
         );
         if (token === attempt.current) {
           setResult({
@@ -348,6 +374,28 @@ export function setupLocalAI() {
           )}
           {detail && <p class="ai-detail">{detail}</p>}
         </section>
+        <PresetCatalog
+          es={es}
+          busy={busy}
+          track={target?.track}
+          onRecipe={(recipe) => {
+            stopAudition();
+            setResult(null);
+            setError("");
+            setStyle(recipe.style);
+            setRhythm(recipe.rhythm);
+            setTempo(String(recipe.tempo));
+            setBars(recipe.bars);
+            setPrompt(recipe.prompt);
+            if (target)
+              setTarget({ ...target, key: recipe.key, scale: recipe.scale });
+          }}
+          onSound={(preset) => {
+            stopAudition();
+            setSound(preset);
+            setError("");
+          }}
+        />
         {!target ? (
           <p role="status">
             {es
@@ -358,8 +406,100 @@ export function setupLocalAI() {
           <>
             <p class="ai-target">
               {es ? "Destino" : "Target"}: <b>{target.track.toUpperCase()}</b> ·{" "}
-              {es ? "clip nuevo, sonido actual" : "new clip, current sound"}
+              {es ? "clip nuevo" : "new clip"} ·{" "}
+              {sound?.name ?? (es ? "sonido actual" : "current sound")}
+              {sound && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    stopAudition();
+                    setSound(null);
+                  }}
+                >
+                  {es ? "Restaurar sonido actual" : "Restore current sound"}
+                </button>
+              )}
             </p>
+            <div class="ai-musical-settings">
+              <label>
+                {es ? "Estilo musical" : "Musical style"}
+                <select
+                  id="aiStyle"
+                  value={style}
+                  disabled={busy}
+                  onChange={(e) => {
+                    stopAudition();
+                    setResult(null);
+                    setStyle(e.currentTarget.value as StyleId);
+                  }}
+                >
+                  {STYLES.map((s) => (
+                    <option value={s[0]}>{s[es ? 2 : 1]}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {es ? "Ritmo" : "Rhythm"}
+                <select
+                  id="aiRhythm"
+                  value={rhythm}
+                  disabled={busy}
+                  onChange={(e) => {
+                    stopAudition();
+                    setResult(null);
+                    setRhythm(e.currentTarget.value as RhythmChoice);
+                  }}
+                >
+                  {[
+                    ["auto", "From prompt", "Del prompt"],
+                    ["sparse", "Sparse", "Espaciado"],
+                    ["steady", "Steady", "Regular"],
+                    ["driving", "Driving", "Intenso"],
+                    ["syncopated", "Syncopated", "Sincopado"],
+                  ].map((r) => (
+                    <option value={r[0]}>{r[es ? 2 : 1]}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {es ? "Tempo de escucha · BPM" : "Preview tempo · BPM"}
+                <input
+                  id="aiTempo"
+                  type="number"
+                  min={50}
+                  max={220}
+                  step="any"
+                  value={tempo}
+                  disabled={busy}
+                  aria-invalid={!validTempo}
+                  onInput={(e) => {
+                    stopAudition();
+                    setResult(null);
+                    setTempo(e.currentTarget.value);
+                  }}
+                />
+              </label>
+            </div>
+            {!validTempo && (
+              <p role="alert">
+                {es
+                  ? "El tempo debe estar entre 50 y 220 BPM."
+                  : "Tempo must be between 50 and 220 BPM."}
+              </p>
+            )}
+            <label class="ai-tempo-apply">
+              <input
+                id="aiApplyTempo"
+                type="checkbox"
+                checked={applyTempo}
+                disabled={busy}
+                onChange={(e) => setApplyTempo(e.currentTarget.checked)}
+              />
+              {es
+                ? "Aplicar este BPM al tempo base del proyecto al añadir el clip (conserva cambios posteriores del mapa de tempo)."
+                : "Apply this BPM to the project’s base tempo when adding the clip (keeps later tempo-map changes)."}
+            </label>
             <div class="ai-musical-settings">
               <label>
                 {es ? "Tonalidad" : "Key"}
@@ -439,7 +579,7 @@ export function setupLocalAI() {
               type="button"
               id="generateLocalAI"
               class="primary"
-              disabled={status !== "ready" || !prompt.trim()}
+              disabled={status !== "ready" || !prompt.trim() || !validTempo}
               onClick={() => void generate()}
             >
               {es ? "Generar melodía" : "Generate melody"}
@@ -463,7 +603,7 @@ export function setupLocalAI() {
             <p>
               {result.notes.length} {es ? "notas" : "notes"} · {bars}{" "}
               {es ? "compases" : "bars"} · {result.seconds.toFixed(1)} s ·{" "}
-              {target.key} {target.scale}
+              {target.key} {target.scale} · {tempo} BPM
             </p>
             <div class="ai-note-preview" aria-hidden="true">
               {result.notes.map((note) => (
@@ -485,12 +625,13 @@ export function setupLocalAI() {
                   else {
                     setListening(true);
                     audition.current = studioBridge.auditionMelody(
-                      target,
+                      { ...target, tempo: +tempo },
                       result.notes,
                       (failure) => {
                         setListening(false);
                         if (failure) setError(failure);
                       },
+                      sound ?? undefined,
                     );
                   }
                 }}
@@ -515,6 +656,10 @@ export function setupLocalAI() {
                       result.plan.title,
                       bars,
                       result.notes,
+                      {
+                        sound: sound ?? undefined,
+                        tempo: applyTempo ? +tempo : undefined,
+                      },
                     );
                     setResult(null);
                     document

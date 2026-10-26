@@ -4,6 +4,16 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Musical controls and both preset types (2026-10-26, local only)
+
+- User requested presets for both melody and sound. The shared AI dialog now offers style, explicit rhythm and preview BPM (50–220), nine original recipe presets and six native sounds with search/type filtering. Recipes set prompt/settings without generating fake notes or changing project data; sound staging is track-compatible and independent of model loading.
+- Rhythm overrides the model's category before compilation; style/BPM enrich the local prompt. Preview uses the selected sound/BPM in an isolated AudioEngine clone, closed on stop/end/cancel. New clips copy the staged sound or source sound without changing existing clips/mixer/arrangement.
+- Applying BPM to the project is explicitly unchecked by default. If selected, insertion updates project.tempo and the step-zero tempo-map event together, preserving later tempo events and supporting Undo/Redo. There is no clip-specific tempo field or schema change.
+- Compatible native catalog/bank JSON can be imported from file or HTTPS URL (1 MB, 256 records, validation, 12-second timeout, cancel, CORS required). Catalogs remain session-only; explicit Save to Vault persists sounds. Native instrument imports strip mixer fields. Only the canonical URL can refresh the official list; external entries cannot replace included IDs.
+- Official JSON is authored at public/presets/catalog-v1.json. Its configured raw GitHub URL returned HTTP 404 and requires publication of that file; no live-catalog or site publication is claimed. Included presets are bundled and work without the online endpoint. Directory links/domain-restricted external search cover official Vital, Surge XT and Serum 2 sources; their native patches remain incompatible with this engine and are not imported or redistributed. See docs/PRESET_CATALOG.md.
+- Validation: typecheck/build/lint and 36 unit tests passed. Four targeted Chromium workflows passed on desktop/mobile, including imports with network fixtures, search, recipe controls, sound compatibility, Vault, accessibility, honest HTTP errors, unchanged clips and zero inference requests. Real WebKit CPU smoke passed in 5.1 s plus offline 4.2 s, including optional 128 BPM, preset-backed insertion, audition controls, Undo/Redo and reload. Audible hardware output remains unverified. `check:full` passed its check stage and four Chromium workflows, but quick audio exports timed out waiting for WAV writes; the run was bounded to 180 seconds and terminated before remaining workflows finished. No full-suite pass is claimed; see /private/tmp/kiber-presets-check-full.log for this session's output.
+- An extended real WebKit CPU smoke also passed (5.9 s / offline 4.4 s) and inspected the exported project JSON: the new clip retained Scarlett Razor's cutoff/distortion and the step-zero tempo event was 128 BPM. The smoke explicitly expands the advanced export section before downloading JSON.
+
 ## Local AI navigation integration (2026-10-26, local only)
 
 - Compose has an always-visible AI melody action in its context toolbar, independent of the collapsed generation tools. The existing generator action and Settings entry remain available.

@@ -42,11 +42,12 @@ export default defineConfig({
         core: "src/core.ts",
         audio: "src/audio.ts",
         melody: "src/ai/melody.ts",
+        presets: "src/ai/presets.ts",
         "scratch-worklet": "src/scratch-worklet.ts",
       },
       output: {
         entryFileNames: (chunk) =>
-          ["core", "audio", "melody", "scratch-worklet"].includes(chunk.name)
+          ["core", "audio", "melody", "presets", "scratch-worklet"].includes(chunk.name)
             ? "[name].js"
             : "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
