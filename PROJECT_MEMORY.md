@@ -4,6 +4,11 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Preset source push and distribution (2026-10-26)
+
+- At the user's explicit request, source commit 7cb7667 (Add musical controls and melody and sound preset catalogs) was pushed to origin/master with suizman <[redacted email]>. The distribution was then rebuilt with 7cb7667 embedded in its footer; npm run check passed, including all 36 unit tests. Existing targeted/real-inference evidence and the failed full-suite WAV-export check below remain applicable.
+- The catalog file is present in the pushed source, but anonymous raw GitHub requests still returned HTTP 404 after push, including a revision-qualified query. Pushing the file did not establish public access. The reason/hosting remains unresolved; no repository visibility change or site deployment was performed. Included presets and compatible user-supplied file/URL imports remain usable. Earlier notes that publication of the file alone would resolve the 404 are superseded by this observation.
+
 ## Musical controls and both preset types (2026-10-26, local only)
 
 - User requested presets for both melody and sound. The shared AI dialog now offers style, explicit rhythm and preview BPM (50–220), nine original recipe presets and six native sounds with search/type filtering. Recipes set prompt/settings without generating fake notes or changing project data; sound staging is track-compatible and independent of model loading.

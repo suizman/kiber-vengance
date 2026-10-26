@@ -1,0 +1,252 @@
+{
+  "format": "kiber-vengance-catalog",
+  "version": 1,
+  "title": "КИБЕР VENGANCE Factory Collection",
+  "license": "GPL-3.0-or-later",
+  "presets": [
+    {
+      "kind": "melody",
+      "id": "neon-highway",
+      "name": "Neon Highway",
+      "tags": ["synthwave", "retro", "melodic"],
+      "style": "synthwave",
+      "rhythm": "steady",
+      "tempo": 110,
+      "bars": 4,
+      "key": "D",
+      "scale": "minor",
+      "prompt": "A memorable retro synthwave hook with short notes and an ascending ending."
+    },
+    {
+      "kind": "melody",
+      "id": "scarlett-protocol",
+      "name": "Scarlett Protocol",
+      "tags": ["darksynth", "dark", "aggressive"],
+      "style": "darksynth",
+      "rhythm": "driving",
+      "tempo": 128,
+      "bars": 4,
+      "key": "C",
+      "scale": "harmonicMinor",
+      "prompt": "A dark tense electronic motif, strong accents and an ominous repeating hook."
+    },
+    {
+      "kind": "melody",
+      "id": "iron-district",
+      "name": "Iron District",
+      "tags": ["industrial", "mechanical", "syncopation"],
+      "style": "industrial",
+      "rhythm": "syncopated",
+      "tempo": 136,
+      "bars": 2,
+      "key": "F#",
+      "scale": "phrygian",
+      "prompt": "A mechanical industrial riff with short angular notes and syncopated repetition."
+    },
+    {
+      "kind": "melody",
+      "id": "titan-rise",
+      "name": "Titan Rise",
+      "tags": ["cinematic", "epic", "theme"],
+      "style": "cinematic",
+      "rhythm": "steady",
+      "tempo": 96,
+      "bars": 8,
+      "key": "D",
+      "scale": "minor",
+      "prompt": "An expressive cinematic theme that rises toward a strong melodic climax."
+    },
+    {
+      "kind": "melody",
+      "id": "chrome-assault",
+      "name": "Chrome Assault",
+      "tags": ["electro-rock", "riff", "energy"],
+      "style": "electro-rock",
+      "rhythm": "driving",
+      "tempo": 145,
+      "bars": 4,
+      "key": "E",
+      "scale": "minor",
+      "prompt": "An aggressive electronic rock riff with a tight repeated motif and strong accents."
+    },
+    {
+      "kind": "melody",
+      "id": "afterlight",
+      "name": "Afterlight Drift",
+      "tags": ["ambient", "slow", "space"],
+      "style": "ambient",
+      "rhythm": "sparse",
+      "tempo": 72,
+      "bars": 8,
+      "key": "A",
+      "scale": "dorian",
+      "prompt": "A gentle spacious ambient melody, sustained notes and restrained descending movement."
+    },
+    {
+      "kind": "melody",
+      "id": "pulse-reactor",
+      "name": "Pulse Reactor",
+      "tags": ["techno", "hypnotic", "pulse"],
+      "style": "techno",
+      "rhythm": "driving",
+      "tempo": 132,
+      "bars": 2,
+      "key": "C",
+      "scale": "minor",
+      "prompt": "A hypnotic techno motif with precise repetition and small variations."
+    },
+    {
+      "kind": "melody",
+      "id": "glass-skyline",
+      "name": "Glass Skyline",
+      "tags": ["house", "uplifting", "offbeat"],
+      "style": "house",
+      "rhythm": "syncopated",
+      "tempo": 124,
+      "bars": 4,
+      "key": "G",
+      "scale": "major",
+      "prompt": "An uplifting house melody with offbeat movement and a memorable short hook."
+    },
+    {
+      "kind": "melody",
+      "id": "break-circuit",
+      "name": "Break Circuit",
+      "tags": ["drum-and-bass", "fast", "syncopation"],
+      "style": "drum-and-bass",
+      "rhythm": "syncopated",
+      "tempo": 172,
+      "bars": 4,
+      "key": "F",
+      "scale": "minor",
+      "prompt": "An energetic drum and bass lead motif, quick short notes with a descending answer."
+    },
+    {
+      "kind": "sound",
+      "id": "sound-neon-lead",
+      "name": "Neon Signal Lead",
+      "track": "lead",
+      "tags": ["synthwave", "lead", "bright"],
+      "instrument": {
+        "wave": "sawtooth",
+        "osc2Wave": "square",
+        "osc2Mix": 0.2,
+        "cutoff": 6200,
+        "resonance": 1.8,
+        "attack": 0.008,
+        "decay": 0.16,
+        "sustain": 0.7,
+        "release": 0.22,
+        "unison": 3,
+        "detune": 12
+      },
+      "character": { "fx": { "chorus": 0.2, "delay": 0.25, "reverb": 0.18 } }
+    },
+    {
+      "kind": "sound",
+      "id": "sound-scarlett-lead",
+      "name": "Scarlett Razor",
+      "track": "lead",
+      "tags": ["darksynth", "lead", "aggressive"],
+      "instrument": {
+        "wave": "sawtooth",
+        "osc2Wave": "sawtooth",
+        "osc2Mix": 0.4,
+        "cutoff": 3100,
+        "resonance": 3.5,
+        "attack": 0.004,
+        "decay": 0.12,
+        "sustain": 0.6,
+        "release": 0.16,
+        "unison": 3,
+        "detune": 18
+      },
+      "character": {
+        "fx": { "distortion": 0.5, "saturation": 0.35, "reverb": 0.12 }
+      }
+    },
+    {
+      "kind": "sound",
+      "id": "sound-chrome-guitar",
+      "name": "Chrome Pick",
+      "track": "guitar",
+      "tags": ["electro-rock", "guitar", "pluck"],
+      "instrument": {
+        "cutoff": 5200,
+        "resonance": 1.2,
+        "attack": 0.003,
+        "decay": 0.25,
+        "sustain": 0.42,
+        "release": 0.16
+      },
+      "character": { "fx": { "distortion": 0.4, "chorus": 0.1, "delay": 0.12 } }
+    },
+    {
+      "kind": "sound",
+      "id": "sound-reactor-bass",
+      "name": "Reactor Sub",
+      "track": "bass",
+      "tags": ["industrial", "bass", "sub"],
+      "instrument": {
+        "wave": "square",
+        "osc2Wave": "sine",
+        "osc2Mix": 0.45,
+        "cutoff": 1200,
+        "resonance": 1.8,
+        "attack": 0.004,
+        "decay": 0.18,
+        "sustain": 0.72,
+        "release": 0.12,
+        "unison": 1,
+        "detune": 0
+      },
+      "character": {
+        "fx": {
+          "distortion": 0.2,
+          "saturation": 0.45,
+          "chorus": 0,
+          "delay": 0,
+          "reverb": 0.02
+        }
+      }
+    },
+    {
+      "kind": "sound",
+      "id": "sound-afterlight-pad",
+      "name": "Afterlight Halo",
+      "track": "pad",
+      "tags": ["ambient", "pad", "cinematic"],
+      "instrument": {
+        "wave": "triangle",
+        "osc2Wave": "sawtooth",
+        "osc2Mix": 0.22,
+        "cutoff": 2600,
+        "resonance": 0.7,
+        "attack": 1.4,
+        "decay": 1,
+        "sustain": 0.78,
+        "release": 3.8,
+        "unison": 3,
+        "detune": 14
+      },
+      "character": { "fx": { "chorus": 0.5, "delay": 0.2, "reverb": 0.65 } }
+    },
+    {
+      "kind": "sound",
+      "id": "sound-titan-drums",
+      "name": "Titan Impact FX",
+      "track": "drums",
+      "tags": ["industrial", "drums", "impact"],
+      "instrument": {},
+      "character": {
+        "fx": {
+          "distortion": 0.28,
+          "saturation": 0.38,
+          "reverb": 0.18,
+          "delay": 0,
+          "chorus": 0
+        }
+      }
+    }
+  ]
+}
