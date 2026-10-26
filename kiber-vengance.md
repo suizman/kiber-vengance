@@ -354,7 +354,7 @@ El inspector Sound edita el preset y los parámetros del instrumento del clip ac
 El campo aditivo `clip.instrument` mantiene el formato v6 y migra los proyectos anteriores copiando su instrumento de pista a cada clip. Se conserva en historial, autoguardado, JSON y paquetes; reproducción, launcher, arreglo, captura del Scratch Deck y WAV/stems usan el instrumento de cada clip. Las voces sostenidas conservan los parámetros con los que nacieron. Los buses de efectos en directo siguen siendo compartidos por pista: no se reinician sus colas, aunque los nuevos efectos pueden modificar su color. MIDI no incorpora estos patches de síntesis; se requiere WAV o proyecto/paquete para conservar el sonido completo. Versiones antiguas de la aplicación no interpretan instrumentos distintos por clip.
 
 
-## Composición IA contextual (2026-10-27, local)
+## Composición IA contextual (2026-10-27, Sites versión 30)
 
 El generador compartido de Compose, menú Project, Settings y comandos añade seis mejoras: contexto de clips activos, continuación/respuesta/variación del clip seleccionado, estructura de frase y cierre, límites musicales explícitos, comparación A/B/C y regeneración por compás, y recetas personales guardadas. Una inferencia produce el plan; el motor musical genera hasta tres arreglos distintos y permite afinar sus notas al instante. El contexto se mantiene acotado y local. La escucha usa el scheduler existente, un motor aislado y conmutación al final del bucle. Añadir crea un clip nuevo con Undo/Redo; nunca sustituye silenciosamente el original.
 

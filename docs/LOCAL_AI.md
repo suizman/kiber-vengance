@@ -56,10 +56,10 @@ Small text models can misunderstand complex prompts, especially on CPU. The musi
 Implementation: `src/ai/composer.ts`, `src/ai/recipes.ts`, `src/ui/ai-composition.tsx`, `src/ui/ai-recipes.tsx`, the shared `local-ai.tsx` dialog and the application bridge. No project schema or keyboard shortcut changed.
 
 
-## Validation of this local delivery (2026-10-27)
+## Validation and publication (2026-10-27)
 
 Typecheck, production build, lint and all 44 unit tests passed. Eight focused Chromium workflows cover desktop/mobile and Spanish at 320 px, context/shaping, looped A/B with one AudioContext, partial-bar preservation, saved recipes, Undo/Redo, storage failure, preview-start cancellation, menu/preset regressions and accessibility. Screenshots were reviewed.
 
 Real CPU inference passed in WebKit (4.7 s initial / 4.1 s offline) and Firefox (40.9 s initial / 34.2 s cached cold-offline). Both exercised genuine continuation, partial regeneration, selected sound/BPM in exported JSON, insertion and persistence. Times are observations on this host, not guarantees. A separate pure-composer measurement with 2,048 context notes and three 96-note proposals measured 1.4 ms median / 2.1 ms p95.
 
-`npm run check:full` passed its check stage and seven browser workflows but encountered the existing quick WAV export write-wait timeout. The run ended at its 300-second bound; a full-suite pass is not claimed. No push or deployment was performed.
+`npm run check:full` passed its check stage and seven browser workflows but encountered the existing quick WAV export write-wait timeout. The run ended at its 300-second bound; a full-suite pass is not claimed. Source commits `9acf8bc` (CPU output reliability) and `a61784f` (contextual composer) and distribution commit `e72a5cb` were pushed to the existing repository. Sites version 30 was successfully deployed at https://kiber-vengance.starrylemur35.chatgpt.site. The footer identifies `a61784f`; Site audience and repository visibility were preserved.
