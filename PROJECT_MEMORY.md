@@ -2,11 +2,13 @@
 
 This file is the operational memory for КИБЕР VENGANCE. It must be read alongside `kiber-vengance.md` before development continues. It records the product's actual state, established decisions, and user expectations; it does not replace the code or tests as the ultimate source of truth.
 
+Keep this versioned memory focused on shared project decisions, verified behavior and known limitations. Personal details, credentials and machine-specific identity settings belong in local configuration, not in this document.
+
 Last updated: 2026-10-26.
 
 ## Preset source push and distribution (2026-10-26)
 
-- At the user's explicit request, source commit 7cb7667 (Add musical controls and melody and sound preset catalogs) was pushed to origin/master with suizman <[redacted email]>. The distribution was then rebuilt with 7cb7667 embedded in its footer; npm run check passed, including all 36 unit tests. Existing targeted/real-inference evidence and the failed full-suite WAV-export check below remain applicable.
+- At the user's explicit request, source commit 7cb7667 (Add musical controls and melody and sound preset catalogs) was pushed to origin/master using the repository's locally configured Git identity. The distribution was then rebuilt with 7cb7667 embedded in its footer; npm run check passed, including all 36 unit tests. Existing targeted/real-inference evidence and the failed full-suite WAV-export check below remain applicable.
 - The catalog file is present in the pushed source, but anonymous raw GitHub requests still returned HTTP 404 after push, including a revision-qualified query. Pushing the file did not establish public access. The reason/hosting remains unresolved; no repository visibility change or site deployment was performed. Included presets and compatible user-supplied file/URL imports remain usable. Earlier notes that publication of the file alone would resolve the 404 are superseded by this observation.
 
 ## Musical controls and both preset types (2026-10-26, local only)
@@ -257,7 +259,7 @@ Last updated: 2026-10-26.
 
 ## User collaboration preferences
 
-- Git commit identity for this repository: `suizman <[redacted email]>` (configured locally).
+- Git commit identity is configured locally for this repository; do not duplicate its name or email in versioned memory.
 - Implement autonomously and completely, avoiding partial deliveries.
 - Third-party software may be used when it clearly improves the result.
 - Fix real limitations instead of hiding them, and keep documentation honest.
