@@ -6,9 +6,16 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-26.
 
+## History privacy cleanup (2026-10-26)
+
+- At the user's explicit request, historical copies of the personal contact address were removed from tracked content and commit messages. Author, committer and tagger identity fields use the existing GitHub noreply identity; local Git configuration now uses it for future commits too. Do not copy identity addresses into shared memory.
+- A private recovery bundle is kept outside the repository and must never be added or pushed. The rewritten branch replaces the prior remote history with an explicit force-with-lease check. Repository visibility remains private; this is not a site deployment.
+- Rewriting preserved the current tracked file contents. Documentation commit references were updated to the rewritten IDs, and the distribution is rebuilt so the footer identifies the rewritten source revision. Old clones must not merge the original history back into the cleaned branch.
+- Validation checked every local Git object after filtering, including unreachable objects, and found no remaining personal address. All reachable author/committer addresses use noreply. Typecheck/build/lint and all 36 unit tests passed; no product behavior changed.
+
 ## Preset source push and distribution (2026-10-26)
 
-- At the user's explicit request, source commit 7cb7667 (Add musical controls and melody and sound preset catalogs) was pushed to origin/master using the repository's locally configured Git identity. The distribution was then rebuilt with 7cb7667 embedded in its footer; npm run check passed, including all 36 unit tests. Existing targeted/real-inference evidence and the failed full-suite WAV-export check below remain applicable.
+- At the user's explicit request, source commit 4f65d83 (Add musical controls and melody and sound preset catalogs) was pushed to origin/master using the repository's locally configured Git identity. The distribution was then rebuilt with 4f65d83 embedded in its footer; npm run check passed, including all 36 unit tests. Existing targeted/real-inference evidence and the failed full-suite WAV-export check below remain applicable.
 - The catalog file is present in the pushed source, but anonymous raw GitHub requests still returned HTTP 404 after push, including a revision-qualified query. Pushing the file did not establish public access. The reason/hosting remains unresolved; no repository visibility change or site deployment was performed. Included presets and compatible user-supplied file/URL imports remain usable. Earlier notes that publication of the file alone would resolve the 404 are superseded by this observation.
 
 ## Musical controls and both preset types (2026-10-26, local only)
