@@ -1,7 +1,7 @@
 import { waveformPeaks } from "../audio/waveform-cache";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
+import { mountKeyboard, releaseAllKeyboards, revealKeyboardKey } from "../ui/components/keyboard";
 
 import { mountDial } from "../ui/components/dial";
 
@@ -278,6 +278,7 @@ export function startSamplerPerformance(
   element?.classList.add("active", "hit");
   element?.setAttribute("aria-pressed", "true");
   if (element) {
+    revealKeyboardKey(element);
     ctx.samplerHeld.set(source, element);
     setTimeout(() => element.classList.remove("hit"), 260);
   }

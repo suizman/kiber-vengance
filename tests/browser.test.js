@@ -147,6 +147,45 @@ test('header title, language and export controls keep a clear aligned desktop ro
   }
 });
 
+test('shared controls expose hover, focus, range progress and immediate note feedback',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});
+  await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  for(const view of ['forge','perform']){
+    await goToView(page,view);
+    const id=view==='perform'?'performanceKeyboard':'keyboard';
+    for(const key of 'awsedftgyhujk'){
+      await page.keyboard.down(key);
+      const note=page.locator(`#${id} [data-source="${key}"]`);
+      assert.equal(await note.getAttribute('aria-pressed'),'true');
+      assert.equal(await note.evaluate(node=>globalThis.getComputedStyle(node).transitionDuration),'0s');
+      assert.notEqual(await note.evaluate(node=>globalThis.getComputedStyle(node).backgroundColor),'rgba(0, 0, 0, 0)');
+      await page.keyboard.up(key);
+      assert.equal(await note.getAttribute('aria-pressed'),'false');
+    }
+  }
+  await goToView(page,'audio');
+  const select=page.locator('#samplerMode');
+  const idleBorder=await select.evaluate(node=>globalThis.getComputedStyle(node).borderColor);
+  await select.hover();
+  await page.waitForFunction(idle=>globalThis.getComputedStyle(document.querySelector('#samplerMode')).borderColor!==idle,idleBorder);
+  const range=page.locator('#samplerGain');await range.fill('0.45');
+  assert.equal(await range.evaluate(node=>node.style.getPropertyValue('--range-fill')),'30%');
+  await page.keyboard.press('Tab');await range.focus();assert.equal(await range.evaluate(node=>globalThis.getComputedStyle(node).outlineStyle),'solid');
+  const disabled=page.locator('#samplerArm');assert.equal(await disabled.isDisabled(),true);
+  await disabled.hover({force:true});assert.equal(await disabled.evaluate(node=>globalThis.getComputedStyle(node).cursor),'not-allowed');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.ok(await select.evaluate(node=>parseFloat(globalThis.getComputedStyle(node).transitionDuration)<.001));
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#samplerImport').setInputFiles({name:'mobile.wav',mimeType:'audio/wav',buffer:silentWav()});
+  await page.waitForFunction(()=>document.querySelector('#samplerArm').getAttribute('aria-pressed')==='true');
+  await page.locator('.sampler-hint').click();await page.keyboard.down('w');
+  const visibleNote=page.locator('#samplerKeyboard [data-sampler-pitch="61"]');
+  assert.equal(await visibleNote.getAttribute('aria-pressed'),'true');
+  assert.equal(await visibleNote.evaluate(node=>{const key=node.getBoundingClientRect(),scroll=node.closest('.keyboard-scroll').getBoundingClientRect();return key.left>=scroll.left&&key.right<=scroll.right}),true);
+  await page.keyboard.up('w');assert.equal(await visibleNote.getAttribute('aria-pressed'),'false');
+});
+
 test('installable build exposes its Cyrillic identity, manifest and service worker',async t=>{await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage();await page.goto(url,{waitUntil:'networkidle'});assert.equal(await page.locator('.brand-word b').first().textContent(),'КИБЕР');assert.ok(await page.locator('.brand-emblem').count()>=4);assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'manifest.webmanifest');const manifest=await page.evaluate(async()=>await (await fetch('manifest.webmanifest')).json());assert.equal(manifest.name,'КИБЕР VENGANCE');await page.waitForFunction(()=>navigator.serviceWorker?.controller||navigator.serviceWorker?.ready);const registration=await page.evaluate(async()=>Boolean(await navigator.serviceWorker.getRegistration()));assert.equal(registration,true)});
 
 test.after(()=>server.close());

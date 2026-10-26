@@ -4,9 +4,17 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Shared control feedback (2026-10-26)
+
+- `src/ui/styles/interactions.css` is the final shared interaction layer: cyan hover/focus, visible keyboard outlines, slider thumb glow, adjusting knob feedback and highlighted values. Hover is limited to fine pointers; disabled controls retain their disabled cursor and no glow; reduced-motion preference suppresses transitions.
+- Musical keys have a distinct hover tint and immediate note-down fill. Track colour identifies held notes; Prism Keys uses cyan. Recording controls retain magenta semantics. Geometry does not move between interaction states.
+- `src/ui/control-feedback.ts` paints native range progress from current min/max/value on input, focus, hover, control changes and DOM updates, without replacing native keyboard/touch behaviour.
+- Typecheck/build/lint and 29 core tests pass. Chromium desktop/mobile accessibility, Prism Keys and physical QWERTY workflows pass. Full E2E remains limited by the missing default Chromium/Firefox binaries on this macOS host.
+
 ## Physical-key illumination (2026-10-26)
 
 - Note-down illumination is immediate, including short taps. Compose and Live mirror QWERTY note states, update aria-pressed, and release held states when focus is lost. Sampler note routing uses chromatic offsets and the active octave rather than the old natural-note array.
+- Externally played keys reveal themselves by scrolling only the keyboard's horizontal viewport. On mobile this makes C4 sampler QWERTY notes visible even when the initial viewport starts at C3.
 - Sampler resolves its visual key by pitch when the caller supplies none, preserves highlighting while another source holds the same key, and updates its pressed state for QWERTY/MIDI as well as pointer input.
 - Chromium checks passed for actual illuminated backgrounds and physical-key pressed/released states in Compose, Live and Prism Keys; `npm run check` passed with 29 core tests.
 
@@ -14,7 +22,7 @@ Last updated: 2026-10-26.
 
 - Audio & Sampler controls use a consistent 20 px label/value row above a 44 px control area. Sliders, selects and numeric fields share the same vertical center; trim controls no longer sit lower than their neighbours.
 - Sound Motion controls share the same row geometry, including switches. FX and Sound/Live macros reserve equal label heights so wrapped labels do not shift sliders.
-- Visual geometry was checked in Chromium at 1366 px and 390 px. The broader control hover/illumination redesign remains a proposal, not an implemented feature.
+- Visual geometry was checked in Chromium at 1366 px and 390 px. The broader control hover/illumination redesign is now implemented through the shared interaction layer described above.
 - `check:full` passed typecheck/build/lint and 29 core tests, then failed at E2E because default browser binaries are missing on this host. The sampler illumination assertion now waits for the CSS transition to paint rather than reading the first unpainted frame.
 
 ## Sound rack reopening (2026-10-26)

@@ -8,6 +8,8 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 
 ## Hitos entregados
 
+Control feedback (2026-10-26): iluminación inmediata QWERTY en Compose, Live y Prism Keys; estados compartidos de hover, foco, pulsación y desactivado; progreso visible de sliders, respuesta de knobs y valores, semántica cian/pista/magenta y movimiento reducido. Verificado en Chromium; Firefox sigue pendiente en este equipo por falta del binario.
+
 1. Fundamentos: motor Web Audio, cinco pistas, transporte, scheduler, persistencia, demo e identidad visual.
 2. Composición: clips independientes, piano roll de varias octavas y compases, edición expresiva, automatización, arreglo, grabación y versiones.
 3. Profundidad: dual oscillator, ADSR, tres filtros, unison/detune/glide/pan, LFO, arpegiador, siete voces de batería, generadores armónicos, presets y seis macros.

@@ -1,7 +1,7 @@
 import { requestConfirmation } from "../ui/dialogs";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
+import { mountKeyboard, releaseAllKeyboards, revealKeyboardKey } from "../ui/components/keyboard";
 
 import { mountDial } from "../ui/components/dial";
 
@@ -439,6 +439,7 @@ export function startPerformance(
     : el ? [el] : [];
   heldPerformanceKeys.set(source, keys);
   for (const key of keys) {
+    revealKeyboardKey(key);
     key.classList.add("active");
     key.setAttribute("aria-pressed", "true");
   }

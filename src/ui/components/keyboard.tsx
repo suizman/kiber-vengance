@@ -35,6 +35,15 @@ const activeReleases = new Set<() => void>();
 export function releaseAllKeyboards() {
   for (const release of activeReleases) release();
 }
+/** Reveal an externally played note without moving the page or inspector. */
+export function revealKeyboardKey(element: HTMLElement) {
+  const scroll = element.closest<HTMLElement>(".keyboard-scroll");
+  if (!scroll || !scroll.clientWidth) return;
+  const left = element.getBoundingClientRect().left - scroll.getBoundingClientRect().left + scroll.scrollLeft;
+  const right = left + element.offsetWidth;
+  if (left < scroll.scrollLeft) scroll.scrollLeft = Math.max(0, left - 12);
+  else if (right > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = right - scroll.clientWidth + 12;
+}
 const blackPitches = new Set([1, 3, 6, 8, 10]);
 const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 const noteName = (pitch: number) =>

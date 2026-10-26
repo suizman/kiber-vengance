@@ -4,9 +4,13 @@
 
 A musical instrument with a clear workspace hierarchy and a visible cyberpunk pulse. The base is deep blue-black rather than neutral graphite. Cyan identifies primary actions, magenta marks recording and the live position, amber/lime/violet add selective warmth and energy, and every instrument retains its own color. The header carries a narrow spectrum line; navigation, track cards and musical surfaces use restrained gradients and glows. Spacing, alignment and typography still establish the hierarchy, so color does not compete with editing values.
 
-The design is implemented by `src/ui/styles/tokens.css`, `shell.css` and `components.css`. Import in this order after retained instrument-coordinate geometry. The geometry stylesheet must be in a lower-priority CSS cascade layer; the studio system is deliberately unlayered. Components use the shared tokens rather than introducing per-screen palettes.
+The design is implemented by `src/ui/styles/tokens.css`, `shell.css`, `components.css` and `interactions.css`. Import in this order after retained instrument-coordinate geometry. The geometry stylesheet must be in a lower-priority CSS cascade layer; the studio system is deliberately unlayered. Components use the shared tokens rather than introducing per-screen palettes.
 
 ## Type and interaction scale
+
+The final `interactions.css` layer applies one state vocabulary across Compose, Arrange, Live, Mix, Sound and dialogs. Cyan borders and a restrained glow identify hover; focus-visible adds an explicit outline. Range inputs colour their used portion and brighten the thumb during interaction; knobs brighten while adjusting and nearby values use the interaction colour. Recording controls keep magenta. Disabled controls have no interactive glow, hover is enabled only for fine pointers, and reduced-motion preferences suppress animation. State changes never shift the control geometry.
+
+`control-feedback.ts` updates the range-fill percentage from native input values on events and DOM changes. Native range keyboard and touch behaviour is retained. Musical hover uses a softer tint than note-down; note-down illumination is immediate and overrides hover in all shared keyboards.
 
 Body and action text: 14 px; prominent text and touch form values: 16 px; supporting labels: 12–13 px. Musical values use a system monospace and tabular numerals. Uppercase is limited to short category labels and the brand. Action buttons have a 44 px minimum target. The navigation and dense non-touch secondary indicators have separately documented geometry; the keyboard and piano roll preserve their instrument coordinates.
 
@@ -29,6 +33,8 @@ The computer-keyboard performance map is chromatic and follows the visible QWERT
 Active keys inherit the selected track color where one exists; independent keyboards such as Prism Keys use the cyan interaction color as a visible fallback.
 
 Note-down illumination has no entry transition: even a short physical-key tap must paint the active fill immediately. QWERTY state is mirrored between Compose and Live; sampler state is resolved by pitch and octave. Losing window focus releases held notes and their illumination.
+
+Externally played notes are brought into the shared keyboard's horizontal viewport without scrolling the surrounding document. This is essential for mobile Prism Keys, where C4 QWERTY mapping initially lies to the right of the C3 visible keys.
 
 ## Parameter rows
 

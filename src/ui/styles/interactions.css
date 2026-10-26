@@ -1,0 +1,148 @@
+/* Last in the cascade: one interaction vocabulary across every workspace. */
+:root {
+  --interaction: var(--cyan);
+  --interaction-glow: color-mix(in srgb, var(--interaction) 32%, transparent);
+  --interaction-soft: color-mix(in srgb, var(--interaction) 12%, var(--panel2));
+  --interaction-time: 120ms;
+}
+#app :is(button, select, .file-button, summary, .knob),
+dialog :is(button, select, .file-button, summary) {
+  cursor: pointer;
+  transition: background-color var(--interaction-time), border-color var(--interaction-time), box-shadow var(--interaction-time), color var(--interaction-time);
+}
+#app :is(select, input[type="number"], input[type="text"]),
+dialog :is(select, input[type="number"], input[type="text"]) {
+  transition: border-color var(--interaction-time), box-shadow var(--interaction-time);
+}
+#app :is(button, select, input, summary, .file-button, .knob):focus-visible,
+dialog :is(button, select, input, summary, .file-button):focus-visible {
+  outline: 2px solid var(--interaction);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px #0a0e19, 0 0 16px var(--interaction-glow);
+}
+#app :is(input[type="range"], .knob):not(:disabled):not([aria-disabled="true"]) {
+  cursor: ew-resize;
+}
+#app .knob:not([aria-disabled="true"]) {
+  cursor: ns-resize;
+}
+#app input[type="range"], dialog input[type="range"] {
+  --range-fill: 0%;
+}
+#app input[type="range"]::-webkit-slider-runnable-track,
+dialog input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--interaction) 0 var(--range-fill), #424e60 var(--range-fill) 100%);
+}
+#app input[type="range"]::-moz-range-track,
+dialog input[type="range"]::-moz-range-track {
+  background: #424e60;
+}
+#app input[type="range"]::-moz-range-progress,
+dialog input[type="range"]::-moz-range-progress {
+  height: 4px;
+  background: var(--interaction);
+}
+#app input[type="range"]::-webkit-slider-thumb,
+dialog input[type="range"]::-webkit-slider-thumb {
+  background: var(--interaction);
+  border-color: #defbff;
+  transition: box-shadow var(--interaction-time), border-color var(--interaction-time);
+}
+#app input[type="range"]::-moz-range-thumb,
+dialog input[type="range"]::-moz-range-thumb {
+  background: var(--interaction);
+  border-color: #defbff;
+  transition: box-shadow var(--interaction-time), border-color var(--interaction-time);
+}
+#app input[type="range"]:is(:active, :focus-visible)::-webkit-slider-thumb,
+dialog input[type="range"]:is(:active, :focus-visible)::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--interaction-glow), 0 0 18px var(--interaction);
+}
+#app input[type="range"]:is(:active, :focus-visible)::-moz-range-thumb,
+dialog input[type="range"]:is(:active, :focus-visible)::-moz-range-thumb {
+  box-shadow: 0 0 0 4px var(--interaction-glow), 0 0 18px var(--interaction);
+}
+#app .knob.adjusting {
+  border-color: var(--interaction);
+  box-shadow: 0 0 0 3px var(--interaction-glow), 0 0 20px var(--interaction-glow);
+}
+#app :is(label, .knob-control, .macro):is(:focus-within, :has(input:active), :has(.adjusting)) > output {
+  color: var(--interaction);
+  text-shadow: 0 0 10px var(--interaction-glow);
+}
+#app :is(button, .file-button):active:not(:disabled):not(.keyboard-key):not(.note-block),
+dialog :is(button, .file-button):active:not(:disabled) {
+  border-color: var(--interaction);
+  box-shadow: inset 0 0 0 1px var(--interaction), 0 0 15px var(--interaction-glow);
+}
+#app :is(button, input, select, .knob):is(:disabled, [aria-disabled="true"]),
+dialog :is(button, input, select):disabled {
+  cursor: not-allowed;
+  opacity: .45;
+  box-shadow: none;
+}
+#app .file-button:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: .45;
+}
+@media (hover: hover) and (pointer: fine) {
+  #app :is(button, select, .file-button, summary):hover:not(:disabled):not([aria-disabled="true"]):not(.keyboard-key):not(.note-block),
+  dialog :is(button, select, .file-button, summary):hover:not(:disabled) {
+    border-color: var(--interaction);
+    box-shadow: 0 0 0 1px var(--interaction-glow), 0 0 14px var(--interaction-glow);
+  }
+  #app :is(select, input[type="number"], input[type="text"]):hover:not(:disabled),
+  dialog :is(select, input[type="number"], input[type="text"]):hover:not(:disabled) {
+    border-color: var(--interaction);
+    box-shadow: 0 0 12px var(--interaction-glow);
+  }
+  #app .instrument-keyboard .keyboard-key:hover:not(:disabled):not(.active):not([aria-pressed="true"]) {
+    background: color-mix(in srgb, var(--track, var(--interaction)) 25%, #dce5f7);
+    border-color: var(--interaction);
+    box-shadow: inset 0 -3px #0003, 0 0 12px var(--interaction-glow);
+    color: #102627;
+  }
+  #app .instrument-keyboard .keyboard-key.accidental:hover:not(:disabled):not(.active):not([aria-pressed="true"]) {
+    background: color-mix(in srgb, var(--interaction) 25%, #26303e);
+    color: #fff;
+  }
+  #app .knob:hover:not([aria-disabled="true"]) {
+    border-color: var(--interaction);
+    box-shadow: 0 0 15px var(--interaction-glow);
+  }
+  #app input[type="range"]:hover:not(:disabled)::-webkit-slider-thumb,
+  dialog input[type="range"]:hover:not(:disabled)::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--interaction-glow), 0 0 12px var(--interaction-glow);
+  }
+  #app input[type="range"]:hover:not(:disabled)::-moz-range-thumb,
+  dialog input[type="range"]:hover:not(:disabled)::-moz-range-thumb {
+    box-shadow: 0 0 0 3px var(--interaction-glow), 0 0 12px var(--interaction-glow);
+  }
+}
+/* Sounding notes paint immediately; hover must never obscure note-down state. */
+#app .instrument-keyboard .keyboard-key:is(.active, [aria-pressed="true"]) {
+  background: var(--track, var(--interaction));
+  border-color: #e7fdff;
+  color: #081d29;
+  box-shadow: inset 0 -3px #0004, 0 0 18px var(--track, var(--interaction));
+  transition: none;
+}
+#app #samplerKeyboard .keyboard-key:is(.active, [aria-pressed="true"]) {
+  background: var(--interaction) !important;
+  box-shadow: inset 0 -3px #0004, 0 0 18px var(--interaction);
+}
+#app :is(#recordBtn, #performanceRecordBtn, #audioRecordBtn) {
+  --interaction: var(--magenta);
+}
+#app :is(#recordBtn, #performanceRecordBtn, #audioRecordBtn):is(.active, [aria-pressed="true"]) {
+  background: var(--magenta);
+  color: #251020;
+  border-color: var(--magenta);
+}
+@media (prefers-reduced-motion: reduce) {
+  #app :is(button, input, select, .knob, .file-button, summary),
+  dialog :is(button, input, select, .file-button, summary) {
+    transition: none;
+    animation: none;
+  }
+}
