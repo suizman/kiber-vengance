@@ -617,7 +617,7 @@ dialog :is(button, select, input, label) {
   z-index: 2;
 }
 #app .instrument-keyboard .keyboard-key.active {
-  background: var(--track);
+  background: var(--track, var(--cyan));
   color: #102627;
   box-shadow: inset 0 -2px #0003;
 }
@@ -1304,11 +1304,11 @@ dialog .dialog-close {
   border-color: #594e81;
 }
 #app .instrument-keyboard .keyboard-key.active {
-  background: var(--track);
+  background: var(--track, var(--cyan));
   color: #081d29;
   box-shadow:
     inset 0 -3px #0004,
-    0 0 14px var(--track);
+    0 0 14px var(--track, var(--cyan));
 }
 #app .scene.playing {
   border-color: var(--lime);
@@ -1861,6 +1861,13 @@ dialog {
   border: 0;
   font: 11px var(--mono-font);
   color: var(--muted);
+}
+#app #samplerKeyboard .keyboard-key.active {
+  background: var(--cyan) !important;
+  color: #081d29;
+  box-shadow:
+    inset 0 -3px #0004,
+    0 0 14px var(--cyan);
 }
 #app
   .view

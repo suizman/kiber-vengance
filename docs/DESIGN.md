@@ -26,6 +26,8 @@ The component defines note geometry; CSS must not infer black keys using `nth-ch
 
 The computer-keyboard performance map is chromatic and follows the visible QWERTY row `A W S E D F T G Y H U J K` for the current octave. Drum pads retain the simpler `A S D F G H J` map; octave controls move the chromatic range without changing the key assignments.
 
+Active keys inherit the selected track color where one exists; independent keyboards such as Prism Keys use the cyan interaction color as a visible fallback.
+
 ## Header controls
 
 The project title, language selector, and export actions share a 40 px control line on desktop. The local-save indicator sits below the title field, while a fixed action gap keeps the language selector visually and physically separate from export controls. The selector reserves space for its disclosure arrow at every supported interface scale.
