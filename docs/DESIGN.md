@@ -20,6 +20,8 @@ Cyan identifies primary actions and focus. Magenta identifies recording and the 
 
 Four persistent destinations: Compose, Arrange, Live, Mix. The desktop rail is 88 px wide. On mobile, the same destinations become a four-button bottom bar; there is no second competing primary navigation. A context bar establishes the current task; subtabs contain views inside that task. Instrument tracks are a horizontal strip. Sound editing lives in a contextual inspector, a right-hand sheet on desktop and a full-width bottom sheet on mobile.
 
+Render subtabs only when a workspace has multiple views: Arrange/Audio & sampler and Performance deck/Clip launcher. Compose and Mix render no redundant single-view tab. Their layout uses explicit state rather than hiding a generated button with a single-child CSS selector, keeping navigation stable across workspace and language changes. Shared workspace actions retain stable component identity as the tab group mounts/unmounts.
+
 The header keeps project identity, save status and transport together. At smaller widths transport has its own row rather than clipping. Overflow is owned by the musical surface that needs it: piano roll, keyboard, arranger, launcher or mixer. The document itself remains vertically scrollable on mobile. Inspector visibility must be controlled by state with an explicit close action and focus restoration.
 
 ## Shared keyboards

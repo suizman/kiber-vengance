@@ -259,21 +259,25 @@ export function mountStudioShell() {
               </label>
             </div>
           </div>
-          <div class="studio-subnav">
-            <nav
-              aria-label={es ? "Herramientas del espacio" : "Workspace tools"}
-            >
-              {tabs.map((view) => (
-                <button
-                  data-view={view}
-                  aria-current={view === state.view ? "page" : undefined}
-                  onClick={() => navigate(view)}
-                >
-                  {titles[view][es ? 1 : 0]}
-                </button>
-              ))}
-            </nav>
-            <Slot nodes={modeActions} />
+          <div class={`studio-subnav${tabs.length > 1 ? " has-view-tabs" : ""}`}>
+            {tabs.length > 1 && (
+              <nav
+                key="workspace-tabs"
+                aria-label={es ? "Herramientas del espacio" : "Workspace tools"}
+              >
+                {tabs.map((view) => (
+                  <button
+                    key={view}
+                    data-view={view}
+                    aria-current={view === state.view ? "page" : undefined}
+                    onClick={() => navigate(view)}
+                  >
+                    {titles[view][es ? 1 : 0]}
+                  </button>
+                ))}
+              </nav>
+            )}
+            <Slot key="workspace-actions" nodes={modeActions} />
           </div>
           <div class="studio-transport-context">
             <span id="transportScope">

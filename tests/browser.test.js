@@ -303,6 +303,44 @@ test('automatic local AI chooses CPU when a page GPU cannot run in its worker',a
   assert.equal(await page.locator('#generateLocalAI').isDisabled(),true);
 });
 
+test('workspace tabs stay consistent when returning to Compose and shared actions retain their handlers',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  for(const viewport of [{width:1366,height:1000},{width:390,height:844}]){
+    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+    await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+    for(const language of ['en','es']){
+      await page.locator('#menuBtn').click();await page.locator('#menuLanguageSelect').selectOption(language);await page.keyboard.press('Escape');
+      for(const destination of ['arrange','audio','perform','launch','mix']){
+        await goToView(page,destination);
+        const expected=destination==='mix'?0:2;
+        assert.equal(await page.locator('.studio-subnav > nav button').count(),expected);
+        if(expected){
+          assert.equal(await page.locator('.studio-subnav > nav').isVisible(),true);
+          assert.equal(await page.locator(`.studio-subnav [data-view="${destination}"]`).getAttribute('aria-current'),'page');
+        }
+        await goToView(page,'forge');
+        assert.equal(await page.locator('.studio-subnav > nav').count(),0);
+        assert.equal(await page.locator('.studio-subnav [data-view="forge"]').count(),0);
+        assert.equal(await page.locator('#composeAIMelodyBtn').isVisible(),true);
+        assert.equal(await page.locator('#commandBtn').count(),1);
+        assert.equal(await page.locator('#tutorialBtn').isVisible(),true);
+        await page.locator('#commandBtn').click();assert.equal(await page.locator('#commandDialog').evaluate(n=>n.open),true);await page.keyboard.press('Escape');
+      }
+    }
+    for(const expanded of [true,false]){
+      await page.locator('.studio-context-actions button[aria-pressed]').click();
+      assert.equal(await page.locator('#app').evaluate(n=>n.classList.contains('instrument-expanded')),expanded);
+      await goToView(page,'arrange');assert.equal(await page.locator('.studio-subnav > nav button').count(),2);
+      await goToView(page,'forge');assert.equal(await page.locator('.studio-subnav > nav').count(),0);
+    }
+    await page.locator('#soundInspectorBtn').click();assert.equal(await page.locator('#soundInspectorBtn').getAttribute('aria-expanded'),'true');await setSoundInspector(page,false);
+    await page.locator('#composeAIMelodyBtn').click();assert.equal(await page.locator('#localAIDialog').evaluate(n=>n.open),true);await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=globalThis.innerWidth),true);
+    await page.screenshot({path:`/private/tmp/kiber-compose-tabs-fixed-${viewport.width}.png`});
+    assert.deepEqual(errors,[]);await page.close();
+  }
+});
+
 test('local AI is discoverable in Compose, the project menu and bilingual commands without loading a model',async t=>{
   await ready();const browser=await launchBrowser();t.after(()=>browser.close());
   for(const viewport of [{width:1366,height:1000},{width:390,height:844}]){

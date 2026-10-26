@@ -6,6 +6,12 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-26.
 
+## Stable workspace subtabs (2026-10-26, local fix)
+
+- Compose and Mix have one view each and no secondary navigation action. Their previously rendered single tab was hidden with CSS, leaving a redundant Compose button in the DOM that could appear during navigation/style changes without performing a different action.
+- The shell now renders subtabs only for multi-view workspaces (Arrange/Audio & sampler and Performance deck/Clip launcher). Explicit layout state replaces the single-child CSS selector. Stable keys preserve shared Guide/Commands/Undo/Redo/Help controls when the tab group mounts or disappears.
+- Verified English/Spanish desktop/mobile navigation through all views, repeated returns to Compose, expanded/normal mode, retained Commands/Sound/AI handlers and no horizontal overflow. Typecheck/build/lint and 36 unit tests passed. The initial bounded full-suite run passed 12 Chromium workflows before its 60-second bound; a complete-suite result is recorded separately after release checks.
+
 ## Sites release 28 (2026-10-26)
 
 - Explicitly requested push and production deployment completed. Sites version 28 succeeded at https://kiber-vengance.starrylemur35.chatgpt.site with the existing Site audience preserved; GitHub repository visibility was not changed.

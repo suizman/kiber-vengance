@@ -1032,10 +1032,7 @@ html[data-density="compact"] #app .composition-tools {
   .studio-song-position {
   display: none;
 }
-#app .studio-subnav > nav:has(> button:only-child) {
-  display: none;
-}
-#app .studio-subnav:has(> nav > button:only-child) {
+#app .studio-subnav:not(.has-view-tabs) {
   justify-content: flex-end;
 }
 #app .studio-trackbar #tracks {
@@ -1128,7 +1125,7 @@ html[data-density="compact"] #app .composition-tools {
   #app .studio-contextbar h1 {
     margin-bottom: 4px;
   }
-  #app .studio-subnav:has(> nav > button:only-child) {
+  #app .studio-subnav:not(.has-view-tabs) {
     justify-content: flex-start;
   }
   #app .studio-trackbar .track,
