@@ -8,6 +8,8 @@ El flujo progresa de lo inmediato a lo profundo: la demo suena al pulsar Play; l
 
 ## Hitos entregados
 
+Composición IA contextual (2026-10-27, local): contexto armónico de clips activos; continuar, responder, variar o cambiar el ritmo del motivo seleccionado; forma de frase/bucle/libre; densidad, registro, saltos, repetición y variación; propuestas A/B/C con una inferencia, escucha en bucle y regeneración parcial que conserva otros compases; recetas personales persistentes con favoritos y búsqueda. Los ajustes de composición se recalculan sin inferencia. No cambia el formato v6. Detalles y límites en `docs/LOCAL_AI.md`; la validación de cierre se registra en PROJECT_MEMORY.
+
 IA local y presets (2026-10-26, vista previa local): estilos musicales, ritmo explícito y BPM de escucha; nueve recetas de melodía y seis sonidos originales con búsqueda conjunta, importación de catálogos/bancos JSON desde archivo o HTTPS y guardado en Preset Vault. Los cambios de tempo global requieren una opción explícita y conservan eventos posteriores. Fuentes oficiales externas permiten búsqueda con compatibilidad indicada; los patches de otros motores no son intercambiables. Catálogo subido al repositorio, pero su URL anónima sigue devolviendo HTTP 404: alojamiento público pendiente de resolver; ver `docs/PRESET_CATALOG.md`. Inferencia CPU real, inserción, Undo/Redo y persistencia verificados en WebKit.
 
 Control feedback (2026-10-26): iluminación inmediata QWERTY en Compose, Live y Prism Keys; estados compartidos de hover, foco, pulsación y desactivado; progreso visible de sliders, respuesta de knobs y valores, semántica cian/pista/magenta y movimiento reducido. Verificado en Chromium; Firefox sigue pendiente en este equipo por falta del binario.

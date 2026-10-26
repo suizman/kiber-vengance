@@ -9,6 +9,7 @@ export interface MelodyTarget {
   scale: string;
   stepsPerBar: number;
   tempo: number;
+  context?: import("./composer").MusicalContext;
 }
 export interface MelodyPlan {
   title: string;
@@ -59,7 +60,10 @@ export function parseMelodyPlan(text: string): MelodyPlan {
     plan.energy > 1
   )
     throw new Error("Invalid musical plan returned by the local model.");
-  return { ...plan, title: plan.title.trim().slice(0, 48) };
+  return {
+    ...plan,
+    title: plan.title.trim().replace(/\s+/g, " ").slice(0, 48),
+  };
 }
 /** Compact CPU output avoids spending time generating JSON field names. */
 export function expandCompactMelodyPlan(
@@ -75,7 +79,7 @@ export function expandCompactMelodyPlan(
     throw new Error("Invalid musical plan returned by the CPU model.");
   return parseMelodyPlan(
     JSON.stringify({
-      title: `AI · ${prompt.trim().slice(0, 42)}`,
+      title: `AI · ${prompt.trim().split("\n")[0]!.slice(0, 42)}`,
       motif: values[0],
       rhythm: ["sparse", "steady", "driving", "syncopated"][values[1]],
       contour: ["repeat", "rise", "fall", "arch"][values[2]],

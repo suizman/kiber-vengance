@@ -37,12 +37,30 @@ try {
     assert.equal(await page.locator('#aiRhythm').inputValue(),'driving');
   }
   await page.locator('#aiKey').selectOption('D');
+  if(process.env.AI_TEST_COMPOSER==='1'){
+    await page.locator('#aiMode').selectOption('continue');
+    await page.locator('#aiCompositionControls > summary').click();
+    await page.locator('#aiDensity').selectOption('8');
+    await page.locator('#aiCompositionControls > summary').click();
+  }
   await page.locator('#aiPrompt').fill('A dark synthwave melody with short notes and a rising ending');
   await page.locator('#generateLocalAI').click();
   await page.locator('.ai-result,.ai-error').first().waitFor({timeout:300000});
   assert.equal(await page.locator('.ai-error').count(),0,await page.locator('.ai-error').allTextContents());
   console.log('Real inference:',await page.locator('.ai-result').textContent());
   assert.ok(await page.locator('.ai-note-preview i').count()>4);
+  if(process.env.AI_TEST_COMPOSER==='1'){
+    assert.equal(await page.locator('[data-ai-proposal]').count(),3);
+    await page.locator('[data-ai-proposal="1"]').click();
+    const readNotes=()=>page.locator('.ai-note-preview i').evaluateAll(nodes=>nodes.map(n=>({onset:+n.dataset.aiOnset,pitch:+n.dataset.aiPitch,length:+n.dataset.aiLength})));
+    const before=await readNotes();
+    await page.locator('[data-ai-bar="1"]').click();await page.locator('#regenerateAIBars').click();
+    await page.waitForFunction(()=>document.querySelector('#localAIStatus')?.textContent.startsWith('Ready')||document.querySelector('.ai-error'),null,{timeout:300000});
+    assert.equal(await page.locator('.ai-error').count(),0,await page.locator('.ai-error').allTextContents());
+    const after=await readNotes();
+    assert.deepEqual(after.filter(n=>n.onset<16||n.onset>=32),before.filter(n=>n.onset<16||n.onset>=32));
+    console.log('Verified real continuation, three proposals and partial regeneration preserving other bars.');
+  }
   await page.screenshot({path:join(tmpdir(),'kiber-local-ai-real.png')});
   await page.locator('#auditionLocalAI').click();
   await page.waitForTimeout(600);await page.locator('#auditionLocalAI').click();

@@ -1,3 +1,4 @@
+import { captureMusicalContext } from "./ai/composer";
 import { requestConfirmation } from "./ui/dialogs";
 import {
   buildPresetClip,
@@ -3654,6 +3655,7 @@ studioBridge.melodyTarget = () =>
         scale: project.scale,
         stepsPerBar: meterSteps(project.meter),
         tempo: project.tempo,
+        context: captureMusicalContext(project, selectedTrack),
       };
 studioBridge.applyMelody = (target, name, bars, notes, options = {}) => {
   const generated = buildPresetClip(
@@ -3682,91 +3684,94 @@ studioBridge.storeSoundPreset = (value) => {
   const preset = validateSoundPreset(value);
   saveUserPresets([...userPresets(), { ...preset, id: crypto.randomUUID() }]);
 };
-studioBridge.auditionMelody = (target, notes, onEnd, sound) => {
+studioBridge.auditionMelody = (
+  target,
+  notes,
+  onEnd,
+  sound,
+  options = { bars: 4, loop: false },
+) => {
   let cancelled = false;
+  let pending: typeof notes | null = null;
+  let ending: ReturnType<typeof setTimeout> | undefined;
   const previewProject = structuredClone(project);
   const previewClip = buildPresetClip(
     previewProject,
     target,
     "Preview",
-    8,
+    options.bars,
     notes,
     sound ? { sound } : {},
   );
   previewProject.clips.push(previewClip);
   previewProject.activeClipIds[target.track] = previewClip.id;
+  previewProject.tempo = target.tempo;
+  previewProject.tempoMap = [
+    { id: "preview-tempo", step: 0, bpm: target.tempo, curve: "jump" },
+  ];
+  previewProject.automationLanes = [];
+  previewProject.modulationRoutes = [];
   for (const track of TRACKS) {
-    previewProject.tracks[track].mute = false;
+    previewProject.tracks[track].mute = track !== target.track;
     previewProject.tracks[track].solo = false;
+    const active = activeClip(previewProject, track);
+    if (active !== previewClip) {
+      active.bars = options.bars;
+      active.stepsPerBar = target.stepsPerBar;
+    }
   }
   const previewEngine = new AudioEngine();
-  previewEngine.setProject(previewProject);
-  const timers: number[] = [],
-    sources: string[] = [];
+  const total = options.bars * target.stepsPerBar;
   const stop = () => {
     cancelled = true;
-    timers.forEach((timer) => clearTimeout(timer));
-    sources.forEach((source) => previewEngine.stopLive(source, true));
+    clearTimeout(ending);
+    previewEngine.stop();
     if (previewEngine.ctx && previewEngine.ctx.state !== "closed")
       void previewEngine.ctx.close().catch(() => {});
   };
+  previewEngine.onStep = (step, time) => {
+    if (cancelled || step < 0 || step % total !== total - 1) return;
+    if (options.loop) {
+      if (pending) {
+        previewClip.notes = pending;
+        pending = null;
+      }
+    } else if (!ending) {
+      ending = setTimeout(
+        () => {
+          stop();
+          onEnd();
+        },
+        Math.max(
+          0,
+          (time - previewEngine.ctx.currentTime + 60 / target.tempo / 4) * 1000,
+        ),
+      );
+    }
+  };
   void previewEngine
     .init()
-    .then(() => {
+    .then(async () => {
       if (cancelled) {
         stop();
         return;
       }
-      if (project.id !== target.projectId) {
-        stop();
-        onEnd("The project changed.");
-        return;
-      }
-      const ms = 60000 / target.tempo / 4;
-      notes.forEach((note, index) => {
-        const source = `ai-preview-${index}`;
-        sources.push(source);
-        timers.push(
-          window.setTimeout(() => {
-            if (!cancelled)
-              void previewEngine
-                .startLive(
-                  source,
-                  target.track,
-                  note.pitch,
-                  note.velocity,
-                  note.expression,
-                )
-                .catch((error) => {
-                  if (!cancelled) {
-                    stop();
-                    onEnd(String(error));
-                  }
-                });
-          }, note.step * ms),
-        );
-        timers.push(
-          window.setTimeout(
-            () => previewEngine.stopLive(source),
-            (note.step + note.length) * ms,
-          ),
-        );
-      });
-      const duration =
-        Math.max(0, ...notes.map((note) => note.step + note.length)) * ms;
-      timers.push(
-        window.setTimeout(() => {
-          stop();
-          onEnd();
-        }, duration + 300),
-      );
+      if (project.id !== target.projectId)
+        throw new Error("The project changed.");
+      await previewEngine.start(previewProject);
+      if (cancelled) stop();
     })
     .catch((error) => {
       if (cancelled) return;
       stop();
       onEnd(String(error));
     });
-  return stop;
+  return {
+    stop,
+    replace: (next) => {
+      pending = structuredClone(next);
+    },
+  };
 };
 studioBridge.toggleFocus = () => toggleFocus();
 studioBridge.toggleInspector = () => {

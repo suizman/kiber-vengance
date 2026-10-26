@@ -57,16 +57,22 @@ export const studioBridge = {
     _notes: NoteEvent[],
     _options?: MelodyApplyOptions,
   ) => {},
-  auditionMelody:
-    (
-      _target: MelodyTarget,
-      _notes: NoteEvent[],
-      _onEnd: (error?: string) => void,
-      _sound?: SoundPreset,
-    ): (() => void) =>
-    () => {},
+  auditionMelody: (
+    _target: MelodyTarget,
+    _notes: NoteEvent[],
+    _onEnd: (error?: string) => void,
+    _sound?: SoundPreset,
+    _options?: { bars: number; loop: boolean },
+  ): MelodyAudition => ({
+    stop: () => {},
+    replace: (_notes: NoteEvent[]) => {},
+  }),
   storeSoundPreset: (_preset: SoundPreset) => {},
 };
 import type { MelodyTarget } from "../ai/melody";
 import type { NoteEvent } from "../model";
 import type { MelodyApplyOptions, SoundPreset } from "../ai/presets";
+export interface MelodyAudition {
+  stop(): void;
+  replace(notes: NoteEvent[]): void;
+}

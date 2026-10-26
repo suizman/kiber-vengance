@@ -14,6 +14,7 @@ let pending: {
 } | null = null;
 let progress: ((fraction: number, text: string) => void) | null = null;
 let ready = false;
+export const isLocalModelReady = () => ready;
 let generation = 0;
 let backend: "gpu" | "cpu" = "gpu";
 const WORKER_CACHE = "kv-local-ai-workers-v1";
@@ -120,8 +121,14 @@ async function openWorker(kind: "gpu" | "cpu" = "gpu") {
     const location = event.filename
       ? ` (${event.filename.split("/").pop()}:${event.lineno})`
       : "";
-    const explanation = !navigator.onLine ? "browser blocked offline worker startup; reconnect to load the model, then generate offline while it remains loaded" : backend === "cpu" ? "could not start; check browser compatibility and script/content blocking" : "could not start; select CPU compatibility mode";
-    const error = new Error(`${backend.toUpperCase()} worker: ${event.message || explanation}${location}`);
+    const explanation = !navigator.onLine
+      ? "browser blocked offline worker startup; reconnect to load the model, then generate offline while it remains loaded"
+      : backend === "cpu"
+        ? "could not start; check browser compatibility and script/content blocking"
+        : "could not start; select CPU compatibility mode";
+    const error = new Error(
+      `${backend.toUpperCase()} worker: ${event.message || explanation}${location}`,
+    );
     const current = pending;
     pending = null;
     clearTimeout(deadline);
@@ -199,8 +206,10 @@ export async function generateLocalPlan(
   key: string,
   scale: string,
   bars: number,
+  onProgress?: (fraction: number, text: string) => void,
 ) {
   if (!ready) throw new Error("Load the local model first.");
+  progress = onProgress ?? null;
   return request(
     { kind: "generate", prompt, key, scale, bars },
     backend === "cpu" ? 300000 : 120000,

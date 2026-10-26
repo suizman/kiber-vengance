@@ -1,8 +1,7 @@
 import { render } from "preact";
-import { useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { KEYS, SCALES } from "../core";
 import {
-  compileMelody,
   parseMelodyPlan,
   type MelodyPlan,
   type MelodyTarget,
@@ -12,10 +11,11 @@ import {
   generateLocalPlan,
   stopLocalModel,
   deleteLocalModelCache,
+  isLocalModelReady,
   type LocalBackend,
 } from "../ai/local-model";
 import { getLanguage, subscribeLanguage } from "./i18n";
-import { studioBridge } from "./bridge";
+import { studioBridge, type MelodyAudition } from "./bridge";
 import type { NoteEvent } from "../model";
 import {
   STYLES,
@@ -26,6 +26,24 @@ import {
   type SoundPreset,
 } from "../ai/presets";
 import { PresetCatalog } from "./preset-catalog";
+import { CompositionControls } from "./ai-composition";
+import { RecipeLibrary } from "./ai-recipes";
+import {
+  DEFAULT_COMPOSITION,
+  composeMelody,
+  composeAlternatives,
+  compositionPrompt,
+  replaceMelodyBars,
+  type CompositionOptions,
+} from "../ai/composer";
+import type { SavedRecipe } from "../ai/recipes";
+
+interface Proposal {
+  plan: MelodyPlan;
+  notes: NoteEvent[];
+  seconds: number;
+  seed: number;
+}
 
 export let openLocalAI = () => {};
 const scaleLabels: Record<string, [string, string]> = {
@@ -51,6 +69,14 @@ function describeFailure(failure: unknown, es: boolean): string {
     return "El modelo no devolvió un plan musical válido. Prueba con un prompt más sencillo.";
   if (message.includes("did not finish"))
     return "El modelo no terminó el plan. Prueba con un prompt más corto.";
+  if (message.includes("Cannot connect these bars"))
+    return "Estos compases no se pueden conectar dentro del salto máximo. Selecciona más compases para regenerar.";
+  if (message.includes("A protected note crosses"))
+    return "Una nota que quieres conservar cruza estos compases. Selecciona también el compás donde empieza.";
+  if (message.includes("selected clip has no notes"))
+    return "El clip seleccionado no tiene notas. Selecciona otro clip o crea una idea nueva.";
+  if (message.includes("project changed"))
+    return "El proyecto ha cambiado. Abre de nuevo el generador.";
   return message;
 }
 export function setupLocalAI() {
@@ -69,6 +95,24 @@ export function setupLocalAI() {
     const [tempo, setTempo] = useState("120");
     const [applyTempo, setApplyTempo] = useState(false);
     const [sound, setSound] = useState<SoundPreset | null>(null);
+    const [composition, setComposition] = useState<CompositionOptions>({
+      ...DEFAULT_COMPOSITION,
+    });
+    const sourceRhythm =
+      composition.mode === "variation" && composition.density === 0;
+    const [proposals, setProposals] = useState<Proposal[]>([]);
+    const [selected, setSelected] = useState(0);
+    const [selectedBars, setSelectedBars] = useState<number[]>([]);
+    const [loop, setLoop] = useState(true);
+    const [elapsed, setElapsed] = useState(0);
+    const runSeed = useRef(1);
+    const idea =
+      prompt.trim() ||
+      (composition.mode !== "new"
+        ? "Develop the selected clip into a musical phrase."
+        : style !== "prompt"
+          ? "Create a melodic motif."
+          : "");
     const validTempo =
       tempo.trim() !== "" &&
       Number.isFinite(+tempo) &&
@@ -91,28 +135,41 @@ export function setupLocalAI() {
     const [error, setError] = useState("");
     const [detail, setDetail] = useState("");
     const [progress, setProgress] = useState(0);
-    const [result, setResult] = useState<{
-      plan: MelodyPlan;
-      notes: NoteEvent[];
-      seconds: number;
-    } | null>(null);
+    const result = proposals[selected] ?? null;
+    const clearResults = () => {
+      setProposals([]);
+      setSelected(0);
+      setSelectedBars([]);
+    };
     const [listening, setListening] = useState(false);
-    const audition = useRef<(() => void) | null>(null);
+    const audition = useRef<MelodyAudition | null>(null);
     const returnFocus = useRef<HTMLElement | null>(null);
     const attempt = useRef(0);
     const busy =
       status === "loading" || status === "generating" || status === "deleting";
+    useEffect(() => {
+      if (!busy) return;
+      const started = performance.now();
+      setElapsed(0);
+      const timer = setInterval(
+        () => setElapsed(Math.floor((performance.now() - started) / 1000)),
+        1000,
+      );
+      return () => clearInterval(timer);
+    }, [status]);
     const lowPitch = result
-      ? Math.min(...result.notes.map((note) => note.pitch))
+      ? Math.min(...proposals.flatMap((p) => p.notes.map((note) => note.pitch)))
       : 0;
     const pitchSpan = result
       ? Math.max(
           1,
-          Math.max(...result.notes.map((note) => note.pitch)) - lowPitch,
+          Math.max(
+            ...proposals.flatMap((p) => p.notes.map((note) => note.pitch)),
+          ) - lowPitch,
         )
       : 1;
     const stopAudition = () => {
-      audition.current?.();
+      audition.current?.stop();
       audition.current = null;
       setListening(false);
     };
@@ -143,10 +200,12 @@ export function setupLocalAI() {
       document.querySelector<HTMLDialogElement>("#projectMenu")?.close();
       const nextTarget = studioBridge.melodyTarget();
       setTarget(nextTarget);
+      if (!nextTarget?.context?.source.notes.length)
+        setComposition({ ...composition, mode: "new" });
       setTempo(String(nextTarget?.tempo ?? 120));
       setApplyTempo(false);
       setSound(null);
-      setResult(null);
+      clearResults();
       setError("");
       document.querySelector<HTMLDialogElement>("#localAIDialog")?.showModal();
     };
@@ -176,11 +235,11 @@ export function setupLocalAI() {
         }
       }
     };
-    const generate = async () => {
-      if (!target || !prompt.trim() || !validTempo) return;
+    const generate = async (partial = false) => {
+      if (!target || !idea || !validTempo) return;
       stopAudition();
-      setResult(null);
       setError("");
+      setDetail("");
       setStatus("generating");
       const token = ++attempt.current,
         started = performance.now();
@@ -188,28 +247,110 @@ export function setupLocalAI() {
         const plan = enforceMelodyChoices(
           parseMelodyPlan(
             await generateLocalPlan(
-              enrichMelodyPrompt(prompt, style, rhythm, +tempo),
+              `${enrichMelodyPrompt(idea, style, rhythm, +tempo)}\n${compositionPrompt(target, composition)}`,
               target.key,
               target.scale,
               bars,
+              (_fraction, text) => {
+                if (token === attempt.current) setDetail(text);
+              },
             ),
           ),
           rhythm,
         );
         if (token === attempt.current) {
-          setResult({
-            plan,
-            notes: compileMelody(plan, target, bars),
-            seconds: (performance.now() - started) / 1000,
-          });
+          const seconds = (performance.now() - started) / 1000;
+          const seed = (runSeed.current += 3);
+          if (partial && result && selectedBars.length) {
+            const notes = replaceMelodyBars(
+              result.notes,
+              composeMelody(plan, target, bars, composition, seed),
+              selectedBars,
+              target,
+              composition,
+            );
+            setProposals(
+              proposals.map((proposal, i) =>
+                i === selected ? { ...proposal, notes, seconds } : proposal,
+              ),
+            );
+          } else {
+            setProposals(
+              composeAlternatives(plan, target, bars, composition, seed).map(
+                (candidate) => ({ ...candidate, plan, seconds }),
+              ),
+            );
+            setSelected(0);
+            setSelectedBars([]);
+          }
+          setDetail("");
           setStatus("ready");
+          requestAnimationFrame(() => {
+            if (
+              token !== attempt.current ||
+              !document.querySelector<HTMLDialogElement>("#localAIDialog")?.open
+            )
+              return;
+            const preview = document.querySelector<HTMLElement>(".ai-result");
+            preview?.focus({ preventScroll: true });
+            preview?.scrollIntoView({ block: "start" });
+          });
         }
       } catch (failure) {
         if (token === attempt.current) {
-          cancel();
+          setStatus(isLocalModelReady() ? "ready" : "idle");
+          setDetail("");
           setError(describeFailure(failure, es));
         }
       }
+    };
+    const shape = (next: CompositionOptions) => {
+      stopAudition();
+      setError("");
+      try {
+        if (target && proposals.length) {
+          const first = proposals[0]!;
+          const nextProposals = composeAlternatives(
+            first.plan,
+            target,
+            bars,
+            next,
+            first.seed,
+          ).map((candidate) => ({
+            ...candidate,
+            plan: first.plan,
+            seconds: first.seconds,
+          }));
+          setProposals(nextProposals);
+          setSelected(Math.min(selected, nextProposals.length - 1));
+        }
+        setComposition(next);
+        setSelectedBars([]);
+      } catch (failure) {
+        setError(describeFailure(failure, es));
+      }
+    };
+    const useRecipe = (saved: SavedRecipe) => {
+      stopAudition();
+      clearResults();
+      setError("");
+      const recipe = saved.recipe;
+      setStyle(recipe.style);
+      setRhythm(recipe.rhythm);
+      setTempo(String(recipe.tempo));
+      setBars(recipe.bars);
+      setPrompt(recipe.prompt);
+      setComposition({
+        ...saved.composition,
+        mode: target?.context?.source.notes.length
+          ? saved.composition.mode
+          : "new",
+      });
+      setSound(
+        saved.sound?.track === target?.track ? (saved.sound ?? null) : null,
+      );
+      if (target)
+        setTarget({ ...target, key: recipe.key, scale: recipe.scale });
     };
     const remove = async () => {
       cancel();
@@ -268,12 +409,19 @@ export function setupLocalAI() {
           class="ai-model"
           aria-label={es ? "Modelo local" : "Local model"}
         >
-          <b>GPU · Qwen3 0.6B / CPU · SmolLM2 135M</b>
-          <p>
-            {es
-              ? "GPU usa Qwen3 0.6B y WebGPU (~1,4–2 GB de memoria GPU). CPU usa SmolLM2 135M (~136 MB de pesos), funciona sin WebGPU y puede tardar minutos. CPU interpreta mejor prompts sencillos en inglés. Cada modo necesita su propia descarga. Los prompts se procesan en tu equipo."
-              : "GPU uses Qwen3 0.6B and WebGPU (~1.4–2 GB GPU memory). CPU uses SmolLM2 135M (~136 MB of weights), works without WebGPU and may take minutes. CPU works best with simple English prompts. Each mode needs its own download. Prompts are processed on your device."}
-          </p>
+          <details class="ai-model-info">
+            <summary>
+              {es
+                ? "Sobre los modelos y la descarga"
+                : "About the models and download"}
+            </summary>
+            <b>GPU · Qwen3 0.6B / CPU · SmolLM2 135M</b>
+            <p>
+              {es
+                ? "GPU usa Qwen3 0.6B y WebGPU (~1,4–2 GB de memoria GPU). CPU usa SmolLM2 135M (~136 MB de pesos), funciona sin WebGPU y puede tardar minutos. CPU interpreta mejor prompts sencillos en inglés. Cada modo necesita su propia descarga. Los prompts se procesan en tu equipo."
+                : "GPU uses Qwen3 0.6B and WebGPU (~1.4–2 GB GPU memory). CPU uses SmolLM2 135M (~136 MB of weights), works without WebGPU and may take minutes. CPU works best with simple English prompts. Each mode needs its own download. Prompts are processed on your device."}
+            </p>
+          </details>
           <label class="ai-backend">
             {es ? "Motor local" : "Local engine"}
             <select
@@ -346,13 +494,17 @@ export function setupLocalAI() {
               {es ? "Eliminar descarga" : "Delete download"}
             </button>
           </div>
-          <p id="localAIStatus" role="status">
+          <p
+            id="localAIStatus"
+            role="status"
+            aria-live={status === "generating" ? "off" : "polite"}
+          >
             {status === "loading"
-              ? `${es ? "Cargando" : "Loading"} ${Math.round(progress * 100)}%`
+              ? `${es ? "Cargando" : "Loading"} ${Math.round(progress * 100)}% · ${elapsed} s`
               : status === "generating"
                 ? es
-                  ? "Interpretando el prompt en tu equipo…"
-                  : "Interpreting the prompt on your device…"
+                  ? `Interpretando el prompt en tu equipo… ${elapsed} s`
+                  : `Interpreting the prompt on your device… ${elapsed} s`
                 : status === "ready"
                   ? es
                     ? `Listo · ${loadedBackend === "cpu" ? "CPU / WASM" : "GPU / WebGPU"} · inferencia local`
@@ -380,7 +532,8 @@ export function setupLocalAI() {
           track={target?.track}
           onRecipe={(recipe) => {
             stopAudition();
-            setResult(null);
+            clearResults();
+            setComposition({ ...DEFAULT_COMPOSITION });
             setError("");
             setStyle(recipe.style);
             setRhythm(recipe.rhythm);
@@ -421,6 +574,13 @@ export function setupLocalAI() {
                 </button>
               )}
             </p>
+            <CompositionControls
+              es={es}
+              options={composition}
+              context={target.context}
+              busy={busy}
+              onChange={shape}
+            />
             <div class="ai-musical-settings">
               <label>
                 {es ? "Estilo musical" : "Musical style"}
@@ -430,7 +590,7 @@ export function setupLocalAI() {
                   disabled={busy}
                   onChange={(e) => {
                     stopAudition();
-                    setResult(null);
+                    clearResults();
                     setStyle(e.currentTarget.value as StyleId);
                   }}
                 >
@@ -443,14 +603,19 @@ export function setupLocalAI() {
                 {es ? "Ritmo" : "Rhythm"}
                 <select
                   id="aiRhythm"
-                  value={rhythm}
-                  disabled={busy}
+                  value={sourceRhythm ? "source" : rhythm}
+                  disabled={busy || sourceRhythm}
                   onChange={(e) => {
                     stopAudition();
-                    setResult(null);
+                    clearResults();
                     setRhythm(e.currentTarget.value as RhythmChoice);
                   }}
                 >
+                  {sourceRhythm && (
+                    <option value="source">
+                      {es ? "Del clip original" : "From source clip"}
+                    </option>
+                  )}
                   {[
                     ["auto", "From prompt", "Del prompt"],
                     ["sparse", "Sparse", "Espaciado"],
@@ -475,7 +640,6 @@ export function setupLocalAI() {
                   aria-invalid={!validTempo}
                   onInput={(e) => {
                     stopAudition();
-                    setResult(null);
                     setTempo(e.currentTarget.value);
                   }}
                 />
@@ -509,7 +673,7 @@ export function setupLocalAI() {
                   disabled={busy}
                   onChange={(event) => {
                     stopAudition();
-                    setResult(null);
+                    clearResults();
                     setTarget({ ...target, key: event.currentTarget.value });
                   }}
                 >
@@ -526,7 +690,7 @@ export function setupLocalAI() {
                   disabled={busy}
                   onChange={(event) => {
                     stopAudition();
-                    setResult(null);
+                    clearResults();
                     setTarget({ ...target, scale: event.currentTarget.value });
                   }}
                 >
@@ -545,7 +709,7 @@ export function setupLocalAI() {
                   disabled={busy}
                   onChange={(event) => {
                     stopAudition();
-                    setResult(null);
+                    clearResults();
                     setBars(+event.currentTarget.value);
                   }}
                 >
@@ -570,20 +734,64 @@ export function setupLocalAI() {
                 }
                 onInput={(event) => {
                   setPrompt(event.currentTarget.value);
-                  setResult(null);
+                  clearResults();
                   stopAudition();
                 }}
               />
             </label>
+            <RecipeLibrary
+              es={es}
+              busy={busy}
+              onUse={useRecipe}
+              current={
+                idea && validTempo
+                  ? {
+                      recipe: {
+                        kind: "melody",
+                        id: "draft",
+                        name: "Draft",
+                        tags: [],
+                        style,
+                        rhythm,
+                        tempo: +tempo,
+                        bars,
+                        key: target.key,
+                        scale: target.scale,
+                        prompt: idea,
+                      },
+                      composition,
+                      ...(sound ? { sound } : {}),
+                    }
+                  : null
+              }
+            />
             <button
               type="button"
               id="generateLocalAI"
               class="primary"
-              disabled={status !== "ready" || !prompt.trim() || !validTempo}
+              disabled={status !== "ready" || !idea || !validTempo}
               onClick={() => void generate()}
             >
-              {es ? "Generar melodía" : "Generate melody"}
+              {es ? "Generar propuestas" : "Generate proposals"}
             </button>
+            {status === "generating" && (
+              <div class="ai-generation-progress">
+                <p role="status">
+                  {es
+                    ? "Generando en tu equipo…"
+                    : "Generating on your device…"}{" "}
+                  <span aria-hidden="true">{elapsed} s</span>
+                </p>
+                <button id="cancelAIGeneration" type="button" onClick={cancel}>
+                  {es ? "Cancelar generación" : "Cancel generation"}
+                </button>
+              </div>
+            )}
+            <p class="ai-context">
+              {es
+                ? "Una inferencia crea el motivo; el motor musical prepara hasta tres variantes distintas. Ajustar y comparar no requiere otra descarga ni inferencia."
+                : "One inference creates the motif; the music engine arranges up to three distinct variants. Shaping and comparing require no further download or inference."}
+            </p>
           </>
         )}
         {error && (
@@ -597,43 +805,142 @@ export function setupLocalAI() {
         {result && target && (
           <section
             class="ai-result"
+            tabIndex={-1}
             aria-label={es ? "Melodía generada" : "Generated melody"}
           >
+            <div
+              class="ai-proposals"
+              role="group"
+              aria-label={es ? "Comparar propuestas" : "Compare proposals"}
+            >
+              {proposals.map((proposal, i) => (
+                <button
+                  type="button"
+                  data-ai-proposal={i}
+                  aria-pressed={selected === i}
+                  disabled={busy}
+                  onClick={() => {
+                    setSelected(i);
+                    setSelectedBars([]);
+                    if (listening) {
+                      if (loop) audition.current?.replace(proposal.notes);
+                      else stopAudition();
+                    }
+                  }}
+                >
+                  {["A", "B", "C"][i]} · {proposal.notes.length}{" "}
+                  {es ? "notas" : "notes"}
+                </button>
+              ))}
+            </div>
             <h3>{result.plan.title}</h3>
+            {proposals.length < 3 && (
+              <p>
+                {es
+                  ? "Los límites actuales producen menos variantes distintas."
+                  : "The current limits produce fewer distinct variants."}
+              </p>
+            )}
             <p>
               {result.notes.length} {es ? "notas" : "notes"} · {bars}{" "}
               {es ? "compases" : "bars"} · {result.seconds.toFixed(1)} s ·{" "}
               {target.key} {target.scale} · {tempo} BPM
             </p>
-            <div class="ai-note-preview" aria-hidden="true">
+            <div
+              class="ai-note-preview"
+              aria-hidden="true"
+              style={{ backgroundSize: `${100 / bars}% 100%` }}
+            >
               {result.notes.map((note) => (
                 <i
+                  data-ai-onset={note.step + note.offset}
+                  data-ai-pitch={note.pitch}
+                  data-ai-length={note.length}
                   style={{
-                    left: `${(note.step / (bars * target.stepsPerBar)) * 100}%`,
+                    left: `${((note.step + note.offset) / (bars * target.stepsPerBar)) * 100}%`,
                     width: `${Math.max(0.4, (note.length / (bars * target.stepsPerBar)) * 100)}%`,
                     bottom: `${8 + ((note.pitch - lowPitch) / pitchSpan) * 76}%`,
                   }}
                 />
               ))}
             </div>
+            <div
+              class="ai-bar-selection"
+              role="group"
+              aria-label={es ? "Compases a regenerar" : "Bars to regenerate"}
+            >
+              {Array.from({ length: bars }, (_, bar) => (
+                <button
+                  type="button"
+                  data-ai-bar={bar}
+                  aria-pressed={selectedBars.includes(bar)}
+                  disabled={busy}
+                  onClick={() =>
+                    setSelectedBars(
+                      selectedBars.includes(bar)
+                        ? selectedBars.filter((v) => v !== bar)
+                        : [...selectedBars, bar],
+                    )
+                  }
+                >
+                  {es ? "Compás" : "Bar"} {bar + 1}
+                </button>
+              ))}
+            </div>
+            <p class="ai-context">
+              {es
+                ? "Selecciona compases y regenera solo esa parte de la propuesta actual. Los demás se conservan. Cambiar los ajustes recompone la frase completa."
+                : "Select bars to regenerate just that part of the current proposal. Other bars are kept. Changing shaping controls rebuilds the whole phrase."}
+            </p>
+            <button
+              id="regenerateAIBars"
+              type="button"
+              disabled={status !== "ready" || !selectedBars.length}
+              onClick={() => void generate(true)}
+            >
+              {es
+                ? "Regenerar compases seleccionados"
+                : "Regenerate selected bars"}
+            </button>
+            <label class="ai-tempo-apply ai-loop">
+              <input
+                id="aiLoop"
+                type="checkbox"
+                checked={loop}
+                disabled={busy}
+                onChange={(e) => {
+                  stopAudition();
+                  setLoop(e.currentTarget.checked);
+                }}
+              />
+              {es
+                ? "Escuchar en bucle · A/B/C cambia en la siguiente vuelta"
+                : "Loop preview · A/B/C switches on the next loop"}
+            </label>
             <div class="ai-actions">
               <button
                 type="button"
                 id="auditionLocalAI"
+                disabled={busy || !validTempo}
                 onClick={() => {
                   if (listening) stopAudition();
-                  else {
-                    setListening(true);
-                    audition.current = studioBridge.auditionMelody(
-                      { ...target, tempo: +tempo },
-                      result.notes,
-                      (failure) => {
-                        setListening(false);
-                        if (failure) setError(failure);
-                      },
-                      sound ?? undefined,
-                    );
-                  }
+                  else
+                    try {
+                      setListening(true);
+                      audition.current = studioBridge.auditionMelody(
+                        { ...target, tempo: +tempo },
+                        result.notes,
+                        (failure) => {
+                          setListening(false);
+                          if (failure) setError(failure);
+                        },
+                        sound ?? undefined,
+                        { bars, loop },
+                      );
+                    } catch (failure) {
+                      setListening(false);
+                      setError(describeFailure(failure, es));
+                    }
                 }}
               >
                 {listening
@@ -648,6 +955,7 @@ export function setupLocalAI() {
                 type="button"
                 id="applyLocalAI"
                 class="primary"
+                disabled={busy || !validTempo}
                 onClick={() => {
                   try {
                     stopAudition();
@@ -661,7 +969,7 @@ export function setupLocalAI() {
                         tempo: applyTempo ? +tempo : undefined,
                       },
                     );
-                    setResult(null);
+                    clearResults();
                     document
                       .querySelector<HTMLDialogElement>("#localAIDialog")
                       ?.close();
