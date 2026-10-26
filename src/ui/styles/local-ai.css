@@ -1,0 +1,135 @@
+.local-ai-dialog .ai-model {
+  border: 1px solid var(--line);
+  background: #0b1728;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.ai-model > b {
+  color: var(--cyan);
+  font: 600 14px var(--mono-font);
+}
+.ai-backend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0;
+  color: var(--ink);
+  font-size: 13px;
+}
+.ai-backend select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+}
+.ai-model p,
+.ai-settings-entry p,
+.ai-footnote,
+.ai-result p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.ai-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.ai-actions button {
+  flex: 1 1 140px;
+}
+#localAIStatus {
+  color: var(--ink);
+  margin-bottom: 0;
+}
+.ai-model progress {
+  width: 100%;
+  accent-color: var(--interaction);
+  height: 10px;
+  margin-top: 12px;
+}
+.ai-detail {
+  overflow-wrap: anywhere;
+  max-height: 65px;
+  overflow-y: auto;
+}
+.ai-musical-settings {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 12px;
+  margin: 14px 0;
+}
+.ai-musical-settings label,
+.ai-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.ai-musical-settings select {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px;
+}
+.ai-prompt textarea {
+  resize: vertical;
+  min-height: 100px;
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+#generateLocalAI {
+  margin: 12px 0;
+}
+.ai-error {
+  color: #ffb5be;
+  border-left: 3px solid var(--red);
+  padding: 12px;
+  background: #351a2a;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.ai-result {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 12px;
+}
+.ai-result h3 {
+  margin: 8px 0;
+}
+.ai-note-preview {
+  position: relative;
+  height: 104px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0 calc(25% - 1px),
+      #303d56 25%
+    ),
+    #0a1322;
+  border-radius: 6px;
+}
+.ai-note-preview i {
+  position: absolute;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--cyan);
+}
+.ai-footnote {
+  margin: 20px 0 0;
+  border-top: 1px solid var(--line2);
+  padding-top: 14px;
+}
+@media (max-width: 480px) {
+  .ai-actions button {
+    flex-basis: 100%;
+  }
+  .ai-musical-settings {
+    gap: 8px;
+  }
+}

@@ -70,6 +70,22 @@ Skin cards show decorative miniatures and pressed selection state. Changes apply
 
 The footer shows `PROJECT <short Git hash>` to identify the compiled source revision. Vite embeds the last commit touching build inputs (src/public/scripts, HTML, Vite/TypeScript configuration and package manifests) in development and production HTML; distribution-only and documentation commits do not change it. This identifier does not change the v6 project file format. Release builds follow the source commit, with generated distribution files committed separately. Source archives without Git metadata can set `KV_BUILD_COMMIT`; unavailable revisions display `unknown` rather than a fabricated version.
 
+## Local prompt-to-melody (local experiment, 2026-10-26)
+
+Settings → Local AI and Compose's generator actions open one bilingual native dialog. Model loading is explicit and reports size/memory expectations, progress, missing WebGPU, cancellation, timeouts and errors. Worker termination releases inference resources. Free memory keeps model cache; Delete download removes only Qwen model artifacts. No background model download, cloud inference or silent procedural fallback is allowed.
+
+Qwen3 0.6B proposes a short motif of scale degrees plus rhythm/contour/articulation/energy. A strict validator and deterministic compiler fit that plan to the selected key/scale, track range, clip length and current meter. Generated notes are monophonic and bounded. Results show a pitch/time preview and measured generation time; Listen auditions using the current instrument, Add as new clip preserves source character/instrument and supports Undo/Redo. User clips remain unchanged until that action. Prompt and model artifacts remain outside project serialization.
+
+The implementation is a local preview, not published. Real headless WebGPU tests generated English/Spanish plans (18.6/18.7 seconds), applied/undid/restored clips, persisted through reload and reloaded/inferred offline from cache. The headless test used an explicit unsafe-WebGPU flag; a separate check also found an adapter under default Chromium settings. Physical Safari/iOS and audible device output remain unverified. Default browser compatibility must be detected, not assumed. Normal tests exercise unsupported GPU and cancellation without downloading weights; the opt-in smoke test uses the genuine model.
+
+## Local AI browser compatibility (2026-10-26)
+
+Local engine selection offers Automatic, GPU and CPU compatible. The selected mode persists outside project files. GPU runs Qwen3 0.6B and requires a usable adapter inside the model worker, not just navigator.gpu in the page. Automatic falls back to SmolLM2 135M Instruct q8 (~136 MB weights) if GPU bootstrap/load fails. CPU is an explicit alternative after any failure and uses standard single-threaded WASM with its own download/cache. The smaller CPU model works best with simple English prompts and can misinterpret complex instructions. There is no cloud or fabricated-result fallback.
+
+The CPU model emits a compact, constrained tuple instead of verbose JSON field names. The adapter expands it into the shared validated musical plan; its display title is derived from the user's prompt. The sequencer and all clip/Undo/export semantics stay identical. Worker scripts are cached explicitly and bundled production workers start from same-origin-fetched module Blobs with their real base restored for WASM URLs. Development modules retain their ordinary Vite URLs. Failure details identify the active backend; deleting downloads does not need GPU initialization.
+
+Real CPU inference passed in Firefox (36.7 s English, 35.2 s cached offline Spanish) and WebKit (6.5 s English, 4.1 s offline Spanish), including insertion, Undo/Redo, persistence, audition and unload. WebKit's cold offline startup is an external limitation: even an isolated cached Blob module worker fails to start under its offline mode. Load its worker/model online before disconnecting; offline inference with the existing worker is verified. Automated WebKit is not a claim of physical Safari 16.6/Orion 1.1.3 validation.
+
 ## Validation boundaries
 
 These files define the system and component states; visual acceptance requires screenshots and real workflow checks after integration. CSS alone does not establish audio behavior, focus management, responsive overflow safety or physical iOS validation.

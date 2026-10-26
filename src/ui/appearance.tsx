@@ -2,6 +2,7 @@ import { render } from "preact";
 import { useState } from "preact/hooks";
 import { getLanguage, subscribeLanguage } from "./i18n";
 import { studioBridge } from "./bridge";
+import { openLocalAI } from "./local-ai";
 
 const STORAGE = "kiber-vengance-appearance-v1";
 const skins = [
@@ -232,6 +233,21 @@ export function setupAppearance() {
               }
             />
           </label>
+        </fieldset>
+        <fieldset class="ai-settings-entry">
+          <legend>{es ? "IA local" : "Local AI"}</legend>
+          <p>
+            {es
+              ? "Qwen3 (GPU) o SmolLM2 (CPU) · genera melodías por prompt en este equipo."
+              : "Qwen3 (GPU) or SmolLM2 (CPU) · generate melodies from prompts on this device."}
+          </p>
+          <button
+            type="button"
+            id="openLocalAISettings"
+            onClick={() => openLocalAI()}
+          >
+            {es ? "Abrir generador de melodías" : "Open melody generator"}
+          </button>
         </fieldset>
         <footer class="appearance-footer">
           <p role="status">

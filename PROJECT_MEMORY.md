@@ -4,6 +4,28 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Browser-compatible local AI (2026-10-26, local only)
+
+- The user's Safari 16.6 lacks WebGPU; Orion 1.1.3 reported an opaque worker startup failure. Safari WebGPU starts at 26; current Firefox WebGPU availability depends on platform (Apple Silicon versus Intel is material). A page API alone is not proof that a model can run in a worker.
+- Added Automatic/GPU/CPU engine selection, persisted separately from musical data. Automatic probes GPU inside its worker and falls back to genuine CPU inference when unavailable or GPU initialization fails. GPU-only mode retains an actionable error pointing to CPU mode.
+- CPU uses pinned Transformers.js 4.3.1 + its structured-output processor, SmolLM2 135M Instruct ONNX q8 (~136 MB weights) and the standard ONNX WASM factory. Single-threaded WASM requires neither WebGPU nor SharedArrayBuffer/COOP/COEP. It uses RAM, has a separate download/cache from Qwen GPU artifacts, and works best with simple English prompts. The smaller model has weaker instruction-following than Qwen.
+- CPU output is a bounded compact tuple of motif and musical categories, expanded and validated into the same musical plan. This reduces generation work; its title is derived from the prompt rather than falsely attributed to the model. Qwen CPU timed out in Firefox even after compacting output, motivating SmolLM2: real first generations passed in 6.5 s (WebKit) and 36.7 s (Firefox), including insertion/Undo/Redo/reload. WebKit's second, offline inference passed in 4.1 s.
+- Worker boot caches only the application's own bundled runtime and runs it from a module Blob with its original import.meta.url base restored. Vite development modules retain their normal URLs and require the dev server. Worker cache, WASM/model cache, cancellation and GPU fallback stay independent of musical project data. WebKit's offline mode still rejects even a standalone cached Blob module worker (isolated probe verified this): cold offline startup is not claimed on WebKit; load while online, then infer offline with the worker retained.
+- Delete download now uses targeted Cache API cleanup without requiring the failing GPU worker. Worker errors include backend and available script/line details. Optional CPU/GPU workers and ONNX assets remain excluded from initial PWA precache.
+- Safari's native automation is disabled on this host; no system settings were changed. Automated Firefox/WebKit use matching Playwright 1.55.1 binaries supported on macOS 13. `FIREFOX_PLAYWRIGHT_MODULE` selects the matching Firefox test runtime; Chromium keeps the current launcher because the legacy launcher's flags stalled even a standalone AudioWorklet probe, while the current launcher completed that same probe.
+- Final CPU smoke passed on both engines: Firefox 36.7 s English / 35.2 s cached cold-offline Spanish; WebKit 6.5 s English / 4.1 s offline Spanish with its worker loaded online. Both cover actual insertion, Undo/Redo, reload persistence and unload. Audition controls were exercised; physical audible output is not claimed. Typecheck/build/lint and 32 unit tests passed; targeted Chromium no-GPU/cancellation/automatic worker-to-CPU fallback checks passed. `check:full` was attempted with the legacy all-browser launcher and interrupted after repeated unrelated AudioWorklet timeouts; no complete-suite pass is claimed.
+
+## Local prompt-to-melody experiment (2026-10-26)
+
+- Local-only trial: Settings → Local AI or Compose's AI MELODY opens a bilingual, optional generator. No model weights or inference runtime are downloaded before an explicit load action. Model hosts are Hugging Face and GitHub; prompts are processed on-device, without a generation server.
+- Pinned WebLLM 0.2.86 runs Qwen3 0.6B q4 in a dedicated worker. Uses f16 where supported, otherwise f32; advertised runtime GPU memory is about 1.4–2 GB. Model weights require an initial download of several hundred MB and are cached per browser/origin. WebGPU/adapter failure is visible; there is no silent cloud or fake-AI fallback.
+- AI returns a bounded musical plan (motif scale degrees, rhythm, contour, articulation, energy/title). `src/ai/melody.ts` validates it and compiles monophonic, in-scale, range-limited notes for 1/2/4/8 bars in the chosen key/scale/current meter. A completed Qwen thinking envelope is stripped before strict JSON validation; malformed/truncated output fails visibly.
+- Results include a note preview, measured inference time, Listen/Stop and Add as new clip. Applying preserves the source clip's instrument/character, leaves existing clips/arrangement intact and participates in autosave, Undo/Redo, JSON/MIDI/WAV. Prompt/model weights are not embedded in the v6 project.
+- Cancel terminates worker downloads/inference, including adapter-check races. Free memory retains downloaded cache; Delete download removes only this model's artifacts. Closing during work cancels it; audition stops on close/blur/page hiding. Timeouts report failures. Context size is bounded to 2048 and output to 256 tokens.
+- Real Chromium/WebGPU smoke passed: English inference 18.6 s, Spanish cached offline inference 18.7 s, actual result insertion, audition, Undo/Redo, reload and unload. This test used headless Chromium's explicit unsafe-WebGPU test flag; it is not evidence of default GPU support on all user browsers or audible hardware output.
+- Validation: 31 unit tests plus typecheck/build/lint passed. Four targeted Chromium workflows passed: responsive/a11y, QWERTY, appearance persistence and AI opt-in/no-GPU/cancellation/Spanish mobile dialog. `check:full` reached E2E but its servers were denied listen permission in the sandbox. Full Firefox/Safari validation remains outstanding.
+- WebLLM is an optional AI runtime dependency; Preact is already bundled. `skipLibCheck` skips upstream declarations with missing bundled/internal extension types; application source remains strictly checked. The optional ~6 MB worker is excluded from initial PWA precache and cached only when requested.
+
 ## Appearance settings (2026-10-26)
 
 - Settings is available from the header gear and Project menu, including mobile. It offers instant, browser-persisted keyboard skins: Neon Circuit (default), Acid Terminal, Ember Drive, Scarlett Protocol and Studio Classic.
@@ -178,7 +200,7 @@ Last updated: 2026-10-26.
 - `src/scratch-worklet.ts`: off-main-thread bidirectional scratch buffer processor with interpolation, stutter, and live position reporting.
 - `src/app.ts`: interaction, UI rendering, persistence, accessibility, commands, and export.
 - `dist/`: distributable static application/PWA.
-- No runtime dependencies or remote services. TypeScript, ESLint, Playwright, Selenium/geckodriver, and axe-core are development tools.
+- Preact is bundled locally; optional WebLLM inference runs in a worker with an explicit first model download. No inference server or remote project storage is used. TypeScript, ESLint, Playwright, Selenium/geckodriver, and axe-core are development tools.
 
 ## Licensing
 

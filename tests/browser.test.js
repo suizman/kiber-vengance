@@ -248,6 +248,60 @@ test('appearance settings persist skins and preserve playable keyboards across w
   assert.deepEqual(errors,[]);
 });
 
+test('local AI is opt-in and handles missing GPU, cancellation and mobile settings honestly',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:390,height:844}});
+  await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true}));
+  const modelRequests=[];page.on('request',request=>{if(/huggingface\.co|raw\.githubusercontent\.com/.test(request.url()))modelRequests.push(request.url())});
+  await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  assert.deepEqual(modelRequests,[]);
+  await page.locator('#menuBtn').click();await page.locator('#menuLanguageSelect').selectOption('es');
+  await page.locator('#menuSettingsBtn').click();await page.locator('#openLocalAISettings').click();
+  assert.equal(await page.locator('#localAITitle').textContent(),'Melodía por prompt');
+  await page.locator('#localAIBackend').selectOption('gpu');
+  assert.equal(await page.locator('#generateLocalAI').isDisabled(),true);
+  await page.locator('#loadLocalAI').click();await page.locator('.ai-error').waitFor();
+  assert.match(await page.locator('.ai-error').textContent(),/WebGPU/);
+  assert.equal(await page.locator('#generateLocalAI').isDisabled(),true);
+  assert.equal(await page.locator('#applyLocalAI').count(),0);
+  assert.deepEqual(modelRequests,[]);
+  assert.equal(await page.locator('#localAIDialog').evaluate(node=>node.scrollWidth<=node.clientWidth),true);
+  await page.addScriptTag({content:axe.source});
+  const audit=await page.evaluate(async()=>globalThis.axe.run(document.querySelector('#localAIDialog')));
+  assert.deepEqual(audit.violations.filter(item=>['serious','critical'].includes(item.impact)).map(item=>item.id),[]);
+  await page.evaluate(()=>Object.defineProperty(navigator,'gpu',{value:{requestAdapter:()=>new Promise(resolve=>setTimeout(()=>resolve(null),500))},configurable:true}));
+  await page.locator('#loadLocalAI').click();await page.locator('#unloadLocalAI').click();
+  await page.waitForTimeout(650);
+  assert.equal(await page.locator('.ai-error').count(),0);
+  assert.equal(await page.locator('#localAIStatus').textContent(),'Modelo sin cargar');
+  assert.deepEqual(modelRequests,[]);
+  await page.locator('#deleteLocalAI').click();
+  await page.waitForFunction(()=>document.querySelector('.ai-detail')?.textContent.includes('eliminado')||document.querySelector('.ai-error'));
+  assert.equal(await page.locator('.ai-error').count(),0);
+  await page.keyboard.press('Escape');assert.equal(await page.locator('#localAIDialog').evaluate(node=>node.open),false);
+});
+
+test('automatic local AI chooses CPU when a page GPU cannot run in its worker',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1366,height:900}});
+  await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:{requestAdapter:async()=>({features:new Set(['shader-f16'])})},configurable:true}));
+  // Infrastructure fixture only: this worker reports no GPU. Model inference is
+  // never mocked or reported successful; real CPU model requests are blocked.
+  await page.route('**/inference-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:'self.onmessage=()=>self.postMessage({kind:"probed",supported:false});'}));
+  const heldModelRequests=[];
+  await page.route('https://huggingface.co/**',route=>{heldModelRequests.push(route)});
+  await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  await page.locator('#settingsBtn').click();await page.locator('#openLocalAISettings').click();
+  assert.equal(await page.locator('#localAIBackend').inputValue(),'auto');
+  const requestedCPU=page.waitForRequest(request=>request.url().includes('SmolLM2-135M-Instruct-ONNX'),{timeout:30000});
+  await page.locator('#loadLocalAI').click();await requestedCPU;
+  assert.equal(await page.locator('.ai-result').count(),0);
+  await page.locator('#unloadLocalAI').click();
+  for(const route of heldModelRequests)await route.abort().catch(()=>{});
+  assert.equal(await page.locator('#localAIStatus').textContent(),'Model not loaded');
+  assert.equal(await page.locator('#generateLocalAI').isDisabled(),true);
+});
+
 test.after(()=>server.close());
 
 test('releasing a touch key before audio startup completes cannot leave a stuck voice',async t=>{

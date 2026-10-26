@@ -342,6 +342,8 @@ Las limitaciones externas permanecen explícitas: Web MIDI, micrófono y File Sy
 
 ## Studio interface refactor (2026-10-25)
 
+Actualización 2026-10-26 — experimento local de IA: Settings → Local AI ofrece Qwen3 0.6B cuantizado mediante WebLLM/WebGPU en un worker. El usuario descarga explícitamente el modelo; los prompts se procesan en su equipo. La IA propone un motivo e intención musical y el motor valida/compila notas editables ajustadas a tonalidad, escala, compás y pista. Permite escuchar y añadir un clip nuevo con Undo/Redo, sin sustituir clips existentes. La carga, cancelación, liberación de memoria, borrado de caché y errores son visibles. Se verificó inferencia real y funcionamiento offline tras cachear el modelo; sigue siendo una prueba local sin publicar. Esta integración añade una dependencia opcional de ejecución y una descarga inicial desde Hugging Face/GitHub; no añade servidor de generación ni almacenamiento de proyectos remoto.
+
 The approved four-workspace interface is implemented using Vite, a Preact shell and shared keyboards/dials/dialogs. Ten feature controllers preserve the music workflows and project schema v6. Signal KV is the selected SVG identity. Common typography, focus/disabled states, inspector, bilingual catalog and pointer lifecycles replace the previous navigation/control patches. Hidden panels render on demand; inactive animations stop and waveform envelopes are cached. Native edit prompts are replaced by validated cancelable dialogs. See `docs/REFACTOR.md` for feature parity, implementation decisions, performance evidence and real-device limits. Earlier descriptions of Forge/Audio/Perform as top-level tabs describe the previous interface.
 
 

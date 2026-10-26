@@ -1,7 +1,11 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
-import { chromium, firefox } from 'playwright';
+import * as installedPlaywright from 'playwright';
+// Keep Chromium's current launch flags; legacy all-browser launchers can stall
+// AudioWorklet even with a compatible Chromium executable on older macOS.
+const chromium=installedPlaywright.chromium;
+const firefox=process.env.FIREFOX_PLAYWRIGHT_MODULE?(await import(process.env.FIREFOX_PLAYWRIGHT_MODULE)).firefox:installedPlaywright.firefox;
 
 export function browserOptions(kind='chromium') {
   const type=kind==='firefox'?firefox:chromium;

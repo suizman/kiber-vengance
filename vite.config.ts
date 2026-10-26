@@ -25,6 +25,7 @@ function sourceCommit() {
 
 export default defineConfig({
   base: "./",
+  worker: { format: "es" },
   plugins: [{
     name: "source-commit",
     transformIndexHtml: (html) => html.replaceAll("__BUILD_COMMIT__", sourceCommit()),
@@ -40,11 +41,12 @@ export default defineConfig({
         studio: "index.html",
         core: "src/core.ts",
         audio: "src/audio.ts",
+        melody: "src/ai/melody.ts",
         "scratch-worklet": "src/scratch-worklet.ts",
       },
       output: {
         entryFileNames: (chunk) =>
-          ["core", "audio", "scratch-worklet"].includes(chunk.name)
+          ["core", "audio", "melody", "scratch-worklet"].includes(chunk.name)
             ? "[name].js"
             : "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
