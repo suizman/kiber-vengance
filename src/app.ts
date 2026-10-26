@@ -1028,6 +1028,7 @@ import type {
   AudioLane,
   AudioRegion,
   AutomationLane,
+  Clip,
   MidiMapping,
   ModulationRoute,
   NoteEvent,
@@ -3626,6 +3627,49 @@ setupConsistentControls();
 syncTransportButtons();
 
 studioBridge.navigate = (view) => activateView(view);
+studioBridge.melodyTarget = () => selectedTrack === "drums" ? null : ({
+  projectId: project.id, clipId: clip().id, track: selectedTrack,
+  key: project.key, scale: project.scale, stepsPerBar: meterSteps(project.meter), tempo: project.tempo,
+});
+studioBridge.applyMelody = (target, name, bars, notes) => {
+  const source = project.clips.find((item: Clip) => item.id === target.clipId && item.track === target.track);
+  if (project.id !== target.projectId || !source || source.stepsPerBar !== target.stepsPerBar)
+    throw new Error(translate("The project changed. Open the generator again.", "El proyecto ha cambiado. Abre el generador de nuevo."));
+  snapshot();
+  const generated = createClip(target.track, name, bars, target.stepsPerBar);
+  generated.character = structuredClone(source.character);
+  generated.instrument = structuredClone(source.instrument);
+  generated.notes = structuredClone(notes);
+  project.clips.push(generated);
+  project.activeClipIds[target.track] = generated.id;
+  selectedTrack = target.track;
+  selectedNotes.clear();
+  changed(true);
+  activateView("forge");
+  toast(translate("AI melody added as a new clip", "Melodía IA añadida como clip nuevo"), true);
+};
+studioBridge.auditionMelody = (target, notes, onEnd) => {
+  let cancelled = false;
+  const timers: number[] = [], sources: string[] = [];
+  const stop = () => {
+    cancelled = true;
+    timers.forEach(timer => clearTimeout(timer));
+    sources.forEach(source => engine.stopLive(source, true));
+  };
+  void engine.init().then(() => {
+    if (cancelled) return;
+    if (project.id !== target.projectId) { onEnd("The project changed."); return; }
+    const ms = 60000 / target.tempo / 4;
+    notes.forEach((note, index) => {
+      const source = `ai-preview-${index}`; sources.push(source);
+      timers.push(window.setTimeout(() => { if (!cancelled) void engine.startLive(source, target.track, note.pitch, note.velocity); }, note.step * ms));
+      timers.push(window.setTimeout(() => engine.stopLive(source), (note.step + note.length) * ms));
+    });
+    const duration = Math.max(0, ...notes.map(note => note.step + note.length)) * ms;
+    timers.push(window.setTimeout(() => { stop(); onEnd(); }, duration + 300));
+  }).catch(error => { stop(); onEnd(String(error)); });
+  return stop;
+};
 studioBridge.toggleFocus = () => toggleFocus();
 studioBridge.toggleInspector = () => {
   soundPanel = !soundPanel;

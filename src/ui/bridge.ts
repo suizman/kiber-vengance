@@ -48,4 +48,20 @@ export const studioBridge = {
   toggleInspector: () => {},
   toggleFocus: () => {},
   release: () => {},
+  melodyTarget: (): MelodyTarget | null => null,
+  applyMelody: (
+    _target: MelodyTarget,
+    _name: string,
+    _bars: number,
+    _notes: NoteEvent[],
+  ) => {},
+  auditionMelody:
+    (
+      _target: MelodyTarget,
+      _notes: NoteEvent[],
+      _onEnd: (error?: string) => void,
+    ): (() => void) =>
+    () => {},
 };
+import type { MelodyTarget } from "../ai/melody";
+import type { NoteEvent } from "../model";
