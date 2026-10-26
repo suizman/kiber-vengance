@@ -62,9 +62,15 @@ Retain coordinate rules for `.sequencer`, `.note-block`, `.audio-region`, automa
 
 Do not reintroduce per-panel font-size patches. New actions use the shared button scale. Forms, file-import controls, disclosures, dialogs, toasts and focus rings follow one family across all views.
 
-## Validation boundaries
+## Personal appearance settings (2026-10-26)
+
+The header gear and Project menu open Settings. Neon Circuit uses obsidian surfaces, cyan signal strips and magenta edges; Acid Terminal uses graphite/acid green; Ember Drive uses copper/amber; Scarlett Protocol uses black chrome/crimson with a readable light scarlet note-down state. Studio Classic preserves the original light/dark key faces. CSS changes all shared instrument keyboards and pads without altering hit targets or key coordinates. No animations run continuously and reduced-motion preferences remain respected.
+
+Skin cards show decorative miniatures and pressed selection state. Changes apply immediately; key glow (including zero), shortcut labels and control accent are independent preferences. Key colour/fill still communicates held notes with glow disabled. Appearance persists per browser under `kiber-vengance-appearance-v1`, with validated fallback defaults and session-only feedback when storage fails. Reset affects appearance only. Settings is bilingual, uses a native modal with accessible labels and Escape, and is reachable from the mobile Project menu. Musical input is released/blocked while the dialog is open.
 
 The footer shows `PROJECT <short Git hash>` to identify the compiled source revision. Vite embeds the last commit touching build inputs (src/public/scripts, HTML, Vite/TypeScript configuration and package manifests) in development and production HTML; distribution-only and documentation commits do not change it. This identifier does not change the v6 project file format. Release builds follow the source commit, with generated distribution files committed separately. Source archives without Git metadata can set `KV_BUILD_COMMIT`; unavailable revisions display `unknown` rather than a fabricated version.
+
+## Validation boundaries
 
 These files define the system and component states; visual acceptance requires screenshots and real workflow checks after integration. CSS alone does not establish audio behavior, focus management, responsive overflow safety or physical iOS validation.
 

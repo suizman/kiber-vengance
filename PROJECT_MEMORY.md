@@ -4,6 +4,15 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Appearance settings (2026-10-26)
+
+- Settings is available from the header gear and Project menu, including mobile. It offers instant, browser-persisted keyboard skins: Neon Circuit (default), Acid Terminal, Ember Drive, Scarlett Protocol and Studio Classic.
+- Keyboard styling is shared by Compose, Live, Prism Keys and drum pads without changing key geometry, touch ownership, shortcuts or musical data. Dark skins use their own signal colour; Classic retains track-coloured held keys. Held notes remain immediate, visible even at zero glow.
+- Personalization includes key glow, shortcut-label visibility, a cyan/violet/amber interaction accent and Reset appearance. A storage failure keeps session settings usable and displays an honest status. Appearance is independent of project JSON, exports and undo.
+- The settings dialog is bilingual, supports Escape and native dialog focus management, and releases held notes when opened. Sampler QWERTY ignores open dialogs.
+- The user approved publication of these appearance settings on 2026-10-26 after the local preview.
+- Validation: typecheck/build/lint and 29 core tests pass. Five targeted Chromium workflows pass, including all five skins, held-note feedback in Compose/Live/Sampler, persistence/reload, reset, shortcut visibility, dialog input isolation, Spanish mobile settings and axe serious/critical checks. Desktop/mobile screenshots were reviewed. Full check:full reached E2E but its servers could not listen under the restricted sandbox; no full-suite or physical Safari pass is claimed.
+
 ## Footer source revision (2026-10-26)
 
 - The footer's PROJECT identifier is the short Git source commit embedded by Vite, replacing the fixed v6 label. The project file schema remains v6.

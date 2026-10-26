@@ -165,6 +165,7 @@ export function setupSamplerOctaveControls(ctx: RuntimeContext) {
       if (
         !ctx.samplerArmed ||
         ctx.activeView !== "audio" ||
+        document.querySelector("dialog[open]") ||
         event.ctrlKey ||
         event.metaKey ||
         event.altKey ||

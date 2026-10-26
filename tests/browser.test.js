@@ -188,6 +188,66 @@ test('shared controls expose hover, focus, range progress and immediate note fee
 
 test('installable build exposes its Cyrillic identity, manifest and service worker',async t=>{await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage();await page.goto(url,{waitUntil:'networkidle'});assert.equal(await page.locator('.brand-word b').first().textContent(),'КИБЕР');assert.ok(await page.locator('.brand-emblem').count()>=4);assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'manifest.webmanifest');const manifest=await page.evaluate(async()=>await (await fetch('manifest.webmanifest')).json());assert.equal(manifest.name,'КИБЕР VENGANCE');await page.waitForFunction(()=>navigator.serviceWorker?.controller||navigator.serviceWorker?.ready);const registration=await page.evaluate(async()=>Boolean(await navigator.serviceWorker.getRegistration()));assert.equal(registration,true)});
 
+test('appearance settings persist skins and preserve playable keyboards across workspaces',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1366,height:900}});
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  await page.locator('#settingsBtn').click();
+  await page.locator('[data-skin-option="scarlett"]').click();
+  await page.locator('#controlAccent').selectOption('violet');
+  await page.locator('#keyGlow').fill('80');
+  await page.locator('#keyShortcuts').uncheck();
+  assert.equal(await page.locator('html').getAttribute('data-keyboard-skin'),'scarlett');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#appearanceDialog').evaluate(node=>node.open),false);
+  assert.equal(await page.locator('#keyboard .keyboard-key > span').first().isVisible(),false);
+  await page.reload({waitUntil:'networkidle'});
+  assert.equal(await page.locator('html').getAttribute('data-keyboard-skin'),'scarlett');
+  assert.equal(await page.locator('html').getAttribute('data-control-accent'),'violet');
+  for(const skin of ['neon','terminal','ember','scarlett','classic']){
+    await page.locator('#settingsBtn').click();
+    await page.locator(`[data-skin-option="${skin}"]`).click();
+    assert.equal(await page.locator(`[data-skin-option="${skin}"]`).getAttribute('aria-pressed'),'true');
+    await page.keyboard.press('Escape');
+    for(const view of ['forge','perform']){
+      await goToView(page,view);
+      await page.locator('#settingsBtn').focus();await page.locator('#settingsBtn').blur();
+      const key=page.locator(`${view==='forge'?'#keyboard':'#performanceKeyboard'} [data-source="w"]`);
+      const idle=await key.evaluate(node=>globalThis.getComputedStyle(node).background);
+      await page.keyboard.down('w');assert.equal(await key.getAttribute('aria-pressed'),'true');
+      assert.notEqual(await key.evaluate(node=>globalThis.getComputedStyle(node).background),idle);
+      await page.keyboard.up('w');assert.equal(await key.getAttribute('aria-pressed'),'false');
+    }
+  }
+  await goToView(page,'audio');
+  await page.locator('#samplerImport').setInputFiles({name:'skins.wav',mimeType:'audio/wav',buffer:silentWav()});
+  await page.waitForFunction(()=>document.querySelector('#samplerArm').getAttribute('aria-pressed')==='true');
+  await page.locator('#settingsBtn').click();await page.keyboard.press('w');
+  assert.equal(await page.locator('#samplerKeyboard .active').count(),0);
+  await page.locator('[data-skin-option="scarlett"]').click();await page.keyboard.press('Escape');
+  await page.locator('.sampler-hint').click();await page.keyboard.down('w');
+  assert.equal(await page.locator('#samplerKeyboard [data-sampler-pitch="61"]').getAttribute('aria-pressed'),'true');
+  await page.keyboard.up('w');
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('#menuBtn').click();await page.locator('#menuLanguageSelect').selectOption('es');
+  await page.locator('#menuSettingsBtn').click();
+  assert.equal(await page.locator('#appearanceTitle').textContent(),'Configuración');
+  await page.locator('[data-skin-option="scarlett"]').scrollIntoViewIfNeeded();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=globalThis.innerWidth),true);
+  assert.equal(await page.locator('#appearanceDialog').evaluate(node=>node.scrollWidth<=node.clientWidth),true);
+  await page.addScriptTag({content:axe.source});
+  const audit=await page.evaluate(async()=>globalThis.axe.run(document.querySelector('#appearanceDialog')));
+  assert.deepEqual(audit.violations.filter(item=>['serious','critical'].includes(item.impact)).map(item=>item.id),[]);
+  await page.locator('#resetAppearance').click();
+  assert.equal(await page.locator('html').getAttribute('data-keyboard-skin'),'neon');
+  assert.equal(await page.locator('#keyGlow').inputValue(),'65');
+  assert.equal(await page.locator('#keyShortcuts').isChecked(),true);
+  await page.keyboard.press('Escape');await page.locator('#menuBtn').click();await page.locator('#menuSettingsBtn').click();
+  assert.equal(await page.locator('#appearanceDialog').evaluate(node=>node.open),true);
+  assert.deepEqual(errors,[]);
+});
+
 test.after(()=>server.close());
 
 test('releasing a touch key before audio startup completes cannot leave a stuck voice',async t=>{

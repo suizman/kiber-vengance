@@ -126,6 +126,8 @@ The Spectral Deck interface uses track color-coding, a clear panel hierarchy, an
 
 ## Languages, tutorial, and help
 
+**Settings** (header gear or Project menu) provides five keyboard skins—Neon Circuit, Acid Terminal, Ember Drive, Scarlett Protocol and Studio Classic—plus key glow, shortcut labels and a control accent. Changes appear immediately across Compose, Live and Sampler and persist in this browser independently of the musical project. Reset appearance restores the defaults.
+
 The interface starts in English and can switch to Spanish using the `EN/ES` selector; on mobile, the same selector is available in the project menu. The preference is stored locally. Translation covers navigation, editing, arrangement, macros, commands, tutorial, dialogs, and accessible descriptions.
 
 `Guide` starts a seven-step visual tutorial covering transport, tracks, synthesis, piano roll, arrangement, performance, and quick tools. The `?` button enables contextual help: focusing, touching, or hovering over any control reveals its purpose. All controls, including dynamically generated ones, also receive an accessible description.

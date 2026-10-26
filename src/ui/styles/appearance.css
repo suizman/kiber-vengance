@@ -1,0 +1,369 @@
+/* Personal appearance changes presentation only; key dimensions stay shared. */
+:root[data-control-accent="violet"] {
+  --interaction: var(--violet);
+}
+:root[data-control-accent="amber"] {
+  --interaction: var(--amber);
+}
+:root[data-control-accent="cyan"] {
+  --interaction: var(--cyan);
+}
+:root,
+[data-preview-skin="neon"] {
+  --key-signal: #69efff;
+  --key-edge: #de72ff;
+  --key-face: #14283a;
+  --key-shade: #09121f;
+  --key-border: #45617a;
+  --key-text: #deefff;
+  --key-dark: #080d18;
+}
+:root[data-keyboard-skin="terminal"],
+[data-preview-skin="terminal"] {
+  --key-signal: #c3ff73;
+  --key-edge: #64e4b0;
+  --key-face: #233328;
+  --key-shade: #0d1913;
+  --key-border: #57775c;
+  --key-text: #e2f4d6;
+  --key-dark: #09110d;
+}
+:root[data-keyboard-skin="ember"],
+[data-preview-skin="ember"] {
+  --key-signal: #ffd084;
+  --key-edge: #ff796e;
+  --key-face: #372a2b;
+  --key-shade: #1d141b;
+  --key-border: #846264;
+  --key-text: #fff0dc;
+  --key-dark: #140e14;
+}
+[data-preview-skin="classic"] {
+  --key-signal: #59eaff;
+  --key-edge: #92a1bc;
+  --key-face: #e4e9f0;
+  --key-shade: #b4bfcd;
+  --key-border: #9ba8b9;
+  --key-text: #26303e;
+  --key-dark: #26303e;
+}
+:root[data-keyboard-skin="scarlett"],
+[data-preview-skin="scarlett"] {
+  --key-signal: #ff8a91;
+  --key-edge: #ff3654;
+  --key-face: #352022;
+  --key-shade: #190f13;
+  --key-border: #8e505a;
+  --key-text: #ffe8eb;
+  --key-dark: #100b0e;
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard {
+  border-color: var(--key-border);
+  border-radius: 4px 4px 12px 4px;
+  background: var(--key-dark);
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard
+  .keyboard-toolbar {
+  background: linear-gradient(110deg, var(--key-face), var(--key-dark));
+  color: var(--key-text);
+  border-bottom: 1px solid var(--key-border);
+  box-shadow: inset 3px 0 var(--key-signal);
+  font-family: var(--mono-font);
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard
+  :is(.keyboard-scroll, .keyboard-surface) {
+  background: var(--key-dark);
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard
+  .keyboard-key {
+  border-radius: 2px 2px 9px 2px;
+  border-color: var(--key-border);
+  color: var(--key-text);
+  background:
+    linear-gradient(110deg, #ffffff09, transparent 45%),
+    linear-gradient(var(--key-face), var(--key-shade));
+  box-shadow:
+    inset 0 -5px #0005,
+    inset 1px 0 #ffffff12;
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard
+  .keyboard-key.accidental {
+  background: linear-gradient(var(--key-face), var(--key-dark) 32%);
+  border-color: var(--key-dark);
+  border-top: 2px solid var(--key-edge);
+  box-shadow:
+    inset 0 -5px #0008,
+    2px 4px 5px #0007;
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard
+  .keyboard-key::before {
+  content: "";
+  position: absolute;
+  inset: auto 9px 43px;
+  height: 2px;
+  background: var(--key-signal);
+  opacity: 0.65;
+  box-shadow: 0 0 calc(var(--key-glow-size, 19.5px) * 0.35) var(--key-signal);
+  pointer-events: none;
+}
+:root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+  #app
+  .instrument-keyboard
+  .keyboard-key.root::after {
+  background: var(--key-edge);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root[data-keyboard-skin]:not([data-keyboard-skin="classic"])
+    #app
+    .instrument-keyboard
+    .keyboard-key:hover:not(:disabled):not(.active):not([aria-pressed="true"]) {
+    background: linear-gradient(
+      var(--key-face),
+      color-mix(in srgb, var(--key-signal) 22%, var(--key-shade))
+    );
+    color: #fff;
+    border-color: var(--key-signal);
+    box-shadow:
+      inset 0 -3px var(--key-signal),
+      0 0 calc(var(--key-glow-size, 19.5px) * 0.5)
+        color-mix(in srgb, var(--key-signal) 45%, transparent);
+  }
+}
+:root[data-keyboard-skin]
+  #app
+  :is(#keyboard, #performanceKeyboard, #samplerKeyboard)
+  .keyboard-key:is(.active, [aria-pressed="true"]) {
+  background: var(--key-signal) !important;
+  color: #09151b;
+  border-color: #fff;
+  box-shadow:
+    inset 0 -4px #0004,
+    0 0 var(--key-glow-size, 19.5px) var(--key-signal);
+  transition: none;
+}
+:root[data-keyboard-skin="classic"]
+  #app
+  :is(#keyboard, #performanceKeyboard, #samplerKeyboard)
+  .keyboard-key:is(.active, [aria-pressed="true"]) {
+  background: var(--track, var(--cyan)) !important;
+  box-shadow:
+    inset 0 -4px #0004,
+    0 0 var(--key-glow-size, 19.5px) var(--track, var(--cyan));
+}
+:root[data-key-shortcuts="false"] .instrument-keyboard .keyboard-key > span {
+  display: none;
+}
+#settingsBtn {
+  min-width: 40px;
+  padding-inline: 10px;
+  font-size: 21px;
+  line-height: 1;
+}
+dialog.appearance-dialog {
+  width: min(700px, calc(100vw - 24px));
+  max-width: 700px;
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  overflow-y: auto;
+  color: var(--ink);
+  background: linear-gradient(135deg, #18243a, #101624 65%);
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--interaction);
+  border-radius: 12px;
+}
+.appearance-dialog .appearance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+.appearance-dialog h2 {
+  margin: 6px 0 0;
+  font-size: 26px;
+}
+.appearance-dialog .appearance-close {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 24px;
+}
+.appearance-dialog .appearance-intro {
+  color: var(--muted);
+  margin: 14px 0 24px;
+  font-size: 14px;
+}
+.appearance-dialog fieldset {
+  min-width: 0;
+  padding: 0;
+  margin: 0 0 24px;
+  border: 0;
+}
+.appearance-dialog legend {
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 15px;
+}
+.skin-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.appearance-dialog .skin-option {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  gap: 10px;
+  padding: 12px;
+  min-width: 0;
+  color: var(--ink);
+  background: #111b2c;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.appearance-dialog .skin-option[aria-pressed="true"] {
+  border-color: var(--interaction);
+  background: #1b3042;
+  box-shadow: inset 0 0 0 1px var(--interaction);
+}
+.skin-option-heading {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+.skin-option-heading > span {
+  color: var(--interaction);
+}
+.skin-description {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.skin-preview {
+  display: flex;
+  position: relative;
+  width: 100%;
+  height: 78px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--key-dark);
+  padding: 3px;
+  gap: 2px;
+}
+.preview-natural {
+  flex: 1;
+  background: linear-gradient(var(--key-face), var(--key-shade));
+  border: 1px solid var(--key-border);
+  border-bottom: 3px solid var(--key-signal);
+  border-radius: 1px 1px 5px 1px;
+}
+.preview-accidental {
+  position: absolute;
+  top: 3px;
+  width: 8%;
+  height: 46px;
+  background: var(--key-dark);
+  border: 1px solid var(--key-border);
+  border-top: 2px solid var(--key-edge);
+  border-radius: 0 0 4px 2px;
+}
+.preview-signal {
+  position: absolute;
+  right: 4px;
+  bottom: 6px;
+  width: 10%;
+  height: 3px;
+  background: var(--key-edge);
+}
+.appearance-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.appearance-controls > label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.appearance-controls label > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.appearance-controls output {
+  color: var(--interaction);
+  font-family: var(--mono-font);
+}
+.appearance-controls select {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px;
+}
+.appearance-controls input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+}
+.appearance-controls .appearance-toggle {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+.appearance-toggle input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--interaction);
+  cursor: pointer;
+}
+.appearance-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border-top: 1px solid var(--line2);
+  padding-top: 16px;
+}
+.appearance-footer p {
+  flex: 1 1 220px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 480px) {
+  dialog.appearance-dialog {
+    padding: 16px;
+  }
+  .skin-options {
+    gap: 8px;
+  }
+  .appearance-dialog .skin-option {
+    padding: 10px;
+  }
+  .skin-option-heading {
+    font-size: 12px;
+  }
+  .skin-description {
+    font-size: 12px;
+  }
+  .appearance-controls {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
