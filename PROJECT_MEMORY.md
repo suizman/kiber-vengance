@@ -6,6 +6,13 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-26.
 
+## Sites release 28 (2026-10-26)
+
+- Explicitly requested push and production deployment completed. Sites version 28 succeeded at https://kiber-vengance.starrylemur35.chatgpt.site with the existing Site audience preserved; GitHub repository visibility was not changed.
+- The deployed footer identifies source revision 9b2d978; GitHub distribution commit d83323d contains its build. The Sites source helper synchronized an exact tracked-file copy through an isolated checkout, with Site source commit d79826309ff146b02a909ca88b50d59bf1d3e8b0. The main repository's rewritten history was not merged with the older Site repository history.
+- Release validation: typecheck/build/lint and 36 unit tests passed. Real WebKit CPU inference passed after automatic asyncify removal (6.0 s and 5.8 s offline), including selected sound/base tempo in exported JSON, audition controls, insertion, Undo/Redo and reload. Native deployment returned succeeded. Existing full-suite WAV-export and physical-audio limitations remain documented.
+- Earlier local-preview/no-deployment notes below describe historical states; local AI navigation, CPU/GPU inference and both preset catalogs are now deployed. The JSON is shipped at /presets/catalog-v1.json on the Site; the configured raw GitHub official-refresh URL still requires anonymous repository access.
+
 ## Static hosting artifact size (2026-10-26)
 
 - Sites rejects individual static assets larger than 25 MiB; deployment 26 previously failed on Transformers' unused 26,861,777-byte asyncify WASM artifact. Deployment 27 excluded that file manually.

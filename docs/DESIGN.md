@@ -90,6 +90,8 @@ Real CPU inference passed in Firefox (36.7 s English, 35.2 s cached offline Span
 
 ## Melody controls and preset catalogs (2026-10-26, local preview)
 
+Release update: these workflows were deployed in Sites version 28 with source footer 9b2d978. The original preview/validation notes below remain historical evidence. The bundled JSON is also hosted at /presets/catalog-v1.json; the configured GitHub refresh endpoint still depends on public repository access.
+
 The shared AI dialog includes musical style (prompt, synthwave, darksynth, industrial, cinematic, electro-rock, ambient, techno, house and drum & bass), rhythm (prompt, sparse, steady, driving, syncopated), and 50–220 preview BPM. Style and tempo enrich the on-device prompt; an explicit rhythm overrides the model's category before compilation, so its note-grid effect is reliable. Changes to musical generation settings invalidate the previous proposal. A sound change stops audition but retains valid notes.
 
 Nine original recipes populate style, rhythm, BPM, bars, key, scale and prompt without changing the project. Six native patches can be staged for a matching target track or explicitly saved to Preset Vault, including drums when no melodic target is selected. Browsing, importing and saving sounds never require model loading. Search covers both types, names, styles/tracks and tags. Selected patches copy instrument and character into the new clip; current clips, arrangement and mixer remain intact. Listen creates a separate AudioEngine with a project clone and closes it on stop/cancel/end, preventing sound-preview changes from affecting the live mixer.
