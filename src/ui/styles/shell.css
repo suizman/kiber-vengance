@@ -72,6 +72,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  position: relative;
+  align-self: center;
+  justify-content: center;
+  height: 40px;
 }
 .studio-header .project-head label {
   display: none;
@@ -79,19 +83,28 @@
 .studio-header .project-head input {
   width: 100%;
   max-width: 280px;
-  min-height: 26px;
-  padding: 0;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 12px;
   border: 0;
   border-radius: 0;
+  box-sizing: border-box;
   font: 600 14px/1.4 var(--ui-font);
   background: transparent;
   letter-spacing: normal;
 }
+#app .studio-header .project-head #title {
+  min-height: 40px;
+  height: 40px;
+}
 .studio-header .project-head #saveState {
+  position: absolute;
+  top: 44px;
+  left: 12px;
   color: var(--muted);
   font-size: 11px;
   letter-spacing: normal;
-  margin: 2px 0 0;
+  margin: 0;
 }
 .studio-header .project-head #saveState::before {
   display: none;
@@ -169,8 +182,10 @@
   letter-spacing: normal;
 }
 .studio-header .top-actions {
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   padding: 0;
 }
 .studio-header .top-actions button {
@@ -189,10 +204,30 @@
   display: none;
 }
 .studio-header .language-switcher select {
+  width: 60px;
+  min-width: 60px;
   min-height: 40px;
   height: 40px;
   font-size: 12px;
-  padding: 7px;
+  padding: 0 25px 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.studio-header .language-switcher {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+}
+.studio-header .language-switcher::after {
+  content: "⌄";
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-58%);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  pointer-events: none;
 }
 .studio-nav {
   grid-column: 1;
@@ -448,6 +483,7 @@
 @media (min-width: 1500px) {
   .studio-header {
     grid-template-columns: 184px minmax(160px, 1fr) auto auto;
+    min-height: 86px;
   }
   .studio-header .transport {
     grid-column: 3;
@@ -515,8 +551,13 @@
     font-size: 16px;
     max-width: 100%;
   }
+  .studio-header .project-head {
+    height: auto;
+  }
   .studio-header .project-head #saveState {
+    position: static;
     font-size: 10px;
+    margin-top: 0;
   }
   .studio-header .top-actions {
     gap: 5px;

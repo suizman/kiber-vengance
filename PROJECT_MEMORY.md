@@ -10,6 +10,11 @@ Last updated: 2026-10-26.
 - Rack headings reserve a fixed 44 px button at the right. Collapsed racks size to their heading instead of clipping it to the legacy 42/46 px height; the cyan `+` stays fully visible and clickable.
 - Validation: targeted Chromium desktop and touch-emulation workflows expand and collapse every Sound rack through both controls.
 
+## Header control alignment (2026-10-26)
+
+- The editable project title now shares the 40 px control baseline used by the language and export actions. Its saved-state label is positioned below the field without changing that alignment.
+- Header actions use a real flex row with a deliberate 12 px gap. The language selector reserves room for its native arrow, preventing the `EN`/`ES` value from colliding with it.
+
 ## Clip duration and transport consistency (2026-10-26)
 
 - Arrange loop limits apply only to song playback. Active clips loop independently over their current Bars length, including newly added bars.

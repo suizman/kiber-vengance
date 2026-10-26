@@ -26,6 +26,10 @@ The component defines note geometry; CSS must not infer black keys using `nth-ch
 
 The computer-keyboard performance map is chromatic and follows the visible QWERTY row `A W S E D F T G Y H U J K` for the current octave. Drum pads retain the simpler `A S D F G H J` map; octave controls move the chromatic range without changing the key assignments.
 
+## Header controls
+
+The project title, language selector, and export actions share a 40 px control line on desktop. The local-save indicator sits below the title field, while a fixed action gap keeps the language selector visually and physically separate from export controls. The selector reserves space for its disclosure arrow at every supported interface scale.
+
 ## Live decks
 
 Deck A and Deck B sit side by side on wide screens and stack on mobile. The equal-power crossfader precedes them and remains accessible while scrolling. Magenta and cyan distinguish the two platters without replacing labels or transport state. Each deck keeps its own waveform, track BPM, speed, filter, stutter and source actions. Cue output selection is explicit because headphones require a separate browser-supported audio device; unavailable controls explain the limitation. The Program/Deck control balances the combined decks with the composed song.

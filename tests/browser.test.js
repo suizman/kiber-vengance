@@ -126,6 +126,21 @@ test('main performance keyboard exposes the full chromatic QWERTY row',async t=>
   await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
 });
 
+test('header title, language and export controls keep a clear aligned desktop row',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  for(const width of [1440,1600]){
+    const page=await browser.newPage({viewport:{width,height:900}});
+    await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+    const boxes=await page.evaluate(()=>Object.fromEntries(['#title','#languageSelect','#exportBtn','#exportAsBtn'].map(selector=>{const box=document.querySelector(selector).getBoundingClientRect();return [selector,{x:box.x,y:box.y,width:box.width,height:box.height}]})));
+    assert.equal(Math.abs(boxes['#title'].y-boxes['#languageSelect'].y)<.5,true);
+    assert.equal(boxes['#title'].height,40);assert.equal(boxes['#languageSelect'].width,60);
+    assert.equal(boxes['#exportBtn'].x-(boxes['#languageSelect'].x+boxes['#languageSelect'].width)>=12,true);
+    assert.equal(boxes['#exportAsBtn'].x-(boxes['#exportBtn'].x+boxes['#exportBtn'].width)>=12,true);
+    await page.locator('#languageSelect').selectOption('es');assert.equal(await page.locator('#languageSelect').inputValue(),'es');
+    await page.close();
+  }
+});
+
 test('installable build exposes its Cyrillic identity, manifest and service worker',async t=>{await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage();await page.goto(url,{waitUntil:'networkidle'});assert.equal(await page.locator('.brand-word b').first().textContent(),'КИБЕР');assert.ok(await page.locator('.brand-emblem').count()>=4);assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'manifest.webmanifest');const manifest=await page.evaluate(async()=>await (await fetch('manifest.webmanifest')).json());assert.equal(manifest.name,'КИБЕР VENGANCE');await page.waitForFunction(()=>navigator.serviceWorker?.controller||navigator.serviceWorker?.ready);const registration=await page.evaluate(async()=>Boolean(await navigator.serviceWorker.getRegistration()));assert.equal(registration,true)});
 
 test.after(()=>server.close());
