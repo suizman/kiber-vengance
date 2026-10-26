@@ -6,6 +6,11 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-26.
 
+## Static hosting artifact size (2026-10-26)
+
+- Sites rejects individual static assets larger than 25 MiB; deployment 26 previously failed on Transformers' unused 26,861,777-byte asyncify WASM artifact. Deployment 27 excluded that file manually.
+- The regular build now removes that optional variant automatically and checks all output assets against the hosting limit. CPU inference explicitly uses the standard ONNX WASM factory/binary in src/ai/cpu-worker.ts; GPU inference uses its separate WebLLM worker. Do not remove the standard WASM or switch factories without revisiting this packaging rule.
+
 ## History privacy cleanup (2026-10-26)
 
 - At the user's explicit request, historical copies of the personal contact address were removed from tracked content and commit messages. Author, committer and tagger identity fields use the existing GitHub noreply identity; local Git configuration now uses it for future commits too. Do not copy identity addresses into shared memory.

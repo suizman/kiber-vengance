@@ -106,6 +106,8 @@ An extended real smoke (5.9 s / offline 4.4 s) verified Scarlett Razor instrumen
 
 ## Validation boundaries
 
+Static publication runs the standard build, which removes ONNX's unused asyncify WASM variant and rejects any remaining asset over Sites' 25 MiB limit. The CPU worker explicitly selects the standard WASM factory/binary; these required runtime assets remain in the package. This replaces the earlier manual exclusion used for deployment 27 and prevents the deployment 26 oversized-asset failure from recurring.
+
 These files define the system and component states; visual acceptance requires screenshots and real workflow checks after integration. CSS alone does not establish audio behavior, focus management, responsive overflow safety or physical iOS validation.
 
 
