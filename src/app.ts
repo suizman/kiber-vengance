@@ -1161,7 +1161,8 @@ const presets = {
   pad: ["Afterlight", "Frozen Cathedral", "Signal Ghost"],
   drums: ["Titan Frame", "Riot Assembly", "Chrome Bones"],
 };
-const keyMap = "asdfghjk",
+const keyMap = "awsedftgyhujk",
+  drumKeyMap = "asdfghj",
   pitchNames = [
     "C",
     "C♯",
@@ -3507,20 +3508,28 @@ document.addEventListener("keydown", (e) => {
     renderPiano();
     return;
   }
-  const i = keyMap.indexOf(e.key.toLowerCase());
-  if (i >= 0 && !e.repeat && !recording.has(e.key.toLowerCase())) {
-    const key = $(`#keyboard .key[data-source="${e.key.toLowerCase()}"]`);
+  const source = e.key.toLowerCase(),
+    activeKeyMap = selectedTrack === "drums" ? drumKeyMap : keyMap,
+    i = activeKeyMap.indexOf(source);
+  if (
+    i >= 0 &&
+    !e.repeat &&
+    !e.shiftKey &&
+    !e.ctrlKey &&
+    !e.metaKey &&
+    !e.altKey &&
+    !recording.has(source)
+  ) {
+    const key = $(`#keyboard .key[data-source="${source}"]`);
     if (key)
-      startPerformance(e.key.toLowerCase(), +key.dataset.pitch, 0.82, key);
+      startPerformance(source, +key.dataset.pitch, 0.82, key);
   }
 });
 document.addEventListener("keyup", (e) => {
-  const i = keyMap.indexOf(e.key.toLowerCase());
-  if (i >= 0)
-    endPerformance(
-      e.key.toLowerCase(),
-      $(`#keyboard .key[data-source="${e.key.toLowerCase()}"]`),
-    );
+  const source = e.key.toLowerCase(),
+    activeKeyMap = selectedTrack === "drums" ? drumKeyMap : keyMap;
+  if (activeKeyMap.includes(source))
+    endPerformance(source, $(`#keyboard .key[data-source="${source}"]`));
 });
 async function initMidi(): Promise<any> {
   return performanceFeature.initMidi(runtime);

@@ -104,6 +104,21 @@ test('Prism Keys sampler is persistent, tactile, polyphonic and responsive',asyn
   assert.equal(await page.evaluate(()=>Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=document.documentElement.clientWidth),true);assert.deepEqual(errors,[]);
 });
 
+test('main performance keyboard exposes the full chromatic QWERTY row',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  const page=await browser.newPage({viewport:{width:1366,height:768}});
+  await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  const mapping=await page.locator('#keyboard .key').evaluateAll(keys=>keys.slice(0,13).map(key=>({source:key.dataset.source,pitch:key.dataset.pitch,label:key.textContent?.trim()})));
+  assert.deepEqual(mapping.map(key=>key.source),['a','w','s','e','d','f','t','g','y','h','u','j','k']);
+  assert.equal(mapping[1].label?.endsWith('W'),true);
+  const chromatic=page.locator('#keyboard .key[data-source="w"]');
+  await page.keyboard.down('w');
+  await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===1);
+  assert.equal(await chromatic.evaluate(node=>node.classList.contains('active')),true);
+  await page.keyboard.up('w');
+  await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
+});
+
 test('installable build exposes its Cyrillic identity, manifest and service worker',async t=>{await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage();await page.goto(url,{waitUntil:'networkidle'});assert.equal(await page.locator('.brand-word b').first().textContent(),'КИБЕР');assert.ok(await page.locator('.brand-emblem').count()>=4);assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'manifest.webmanifest');const manifest=await page.evaluate(async()=>await (await fetch('manifest.webmanifest')).json());assert.equal(manifest.name,'КИБЕР VENGANCE');await page.waitForFunction(()=>navigator.serviceWorker?.controller||navigator.serviceWorker?.ready);const registration=await page.evaluate(async()=>Boolean(await navigator.serviceWorker.getRegistration()));assert.equal(registration,true)});
 
 test.after(()=>server.close());

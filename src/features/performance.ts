@@ -383,11 +383,10 @@ export function releaseKeyPointers(ctx: RuntimeContext) {
 export function renderKeyboard(ctx: RuntimeContext) {
   const base = TRACK_META[ctx.selectedTrack].base + ctx.instrumentOctave * 12,
     isDrums = ctx.selectedTrack === "drums";
-  const natural = [0, 2, 4, 5, 7, 9, 11, 12];
   const notes = Array.from({ length: isDrums ? 7 : 25 }, (_, i) => ({
     pitch: isDrums ? i : base + i,
     label: isDrums ? DRUM_NAMES[i]! : ctx.pitchNames[(base + i) % 12]!,
-    shortcut: ctx.keyMap[isDrums ? i : natural.indexOf(i)] || "",
+    shortcut: isDrums ? "asdfghj"[i] || "" : ctx.keyMap[i] || "",
     root: !isDrums && i === 0,
   }));
   for (const id of ["keyboard", "performanceKeyboard"])

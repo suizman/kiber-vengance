@@ -24,6 +24,8 @@ Synth, Live and sampler use the same keyboard component and styles. Light keys a
 
 The component defines note geometry; CSS must not infer black keys using `nth-child`. The exact structure is `.instrument-keyboard > .keyboard-toolbar + .keyboard-scroll > .keyboard-surface > .keyboard-key`. A key receives `.natural`, `.accidental`, `.root` and `.active` according to musical state. Pointer ownership belongs to each musical key; horizontal browsing is available in the surrounding scroll surface.
 
+The computer-keyboard performance map is chromatic and follows the visible QWERTY row `A W S E D F T G Y H U J K` for the current octave. Drum pads retain the simpler `A S D F G H J` map; octave controls move the chromatic range without changing the key assignments.
+
 ## Live decks
 
 Deck A and Deck B sit side by side on wide screens and stack on mobile. The equal-power crossfader precedes them and remains accessible while scrolling. Magenta and cyan distinguish the two platters without replacing labels or transport state. Each deck keeps its own waveform, track BPM, speed, filter, stutter and source actions. Cue output selection is explicit because headphones require a separate browser-supported audio device; unavailable controls explain the limitation. The Program/Deck control balances the combined decks with the composed song.
