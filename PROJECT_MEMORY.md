@@ -261,3 +261,6 @@ Validation: `npm run check:full` passed with 28 core tests and 20 Chromium/Firef
 
 ## Touch note editing (2026-10-26)
 Notes own touch gestures in Draw and Select, with pointer capture on the stable roll surface while note DOM is redrawn. Dragging the body changes time and pitch; the enlarged right edge changes duration. Select still toggles on a stationary tap. Navigate permits scrolling. A Chromium CDP touch regression checks movement, edge resizing and undo; physical iPhone remains unverified.
+
+## Mobile deck slider layout (2026-10-26)
+The A/B crossfader and Program/Deck blend now occupy distinct mobile grid rows, with Cue below them. The previous shared `grid-row: 2` overlapped both labels. Chromium layout checks passed at 320, 390, 430, 768, 820 and 1440 px with separate control rectangles and no page overflow; npm run check passed.

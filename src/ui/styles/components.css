@@ -2094,9 +2094,18 @@ body[data-editor-tool="navigate"] #app .note-block {
   }
   #app .dual-deck-mixer label {
     grid-column: 1 / -1;
-    grid-row: 2;
     grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
+    gap: 8px;
+  }
+  #app .dual-deck-mixer > label:not(.crossfader) {
+    grid-row: 2;
+  }
+  #app .dual-deck-mixer > .crossfader {
+    grid-row: 3;
+    margin: 4px 0 0;
+  }
+  #app .dual-deck-mixer > .deck-cue-controls {
+    grid-row: 4;
   }
   #app .dual-deck-mixer label > span {
     display: none;
