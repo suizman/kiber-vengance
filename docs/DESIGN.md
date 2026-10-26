@@ -22,6 +22,8 @@ Four persistent destinations: Compose, Arrange, Live, Mix. The desktop rail is 8
 
 Render subtabs only when a workspace has multiple views: Arrange/Audio & sampler and Performance deck/Clip launcher. Compose and Mix render no redundant single-view tab. Their layout uses explicit state rather than hiding a generated button with a single-child CSS selector, keeping navigation stable across workspace and language changes. Shared workspace actions retain stable component identity as the tab group mounts/unmounts.
 
+This correction is deployed in Sites version 29, footer source b91166e. Chromium and WebKit desktop/mobile navigation checks include repeated returns to Compose and expanded-mode switching; Chromium also covers English/Spanish labels and retained shared action handlers. The descriptive subtitle is still intentionally hidden in expanded editor mode.
+
 The header keeps project identity, save status and transport together. At smaller widths transport has its own row rather than clipping. Overflow is owned by the musical surface that needs it: piano roll, keyboard, arranger, launcher or mixer. The document itself remains vertically scrollable on mobile. Inspector visibility must be controlled by state with an explicit close action and focus restoration.
 
 ## Shared keyboards

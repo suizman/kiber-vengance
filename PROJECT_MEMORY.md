@@ -6,11 +6,14 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-26.
 
-## Stable workspace subtabs (2026-10-26, local fix)
+## Stable workspace subtabs (2026-10-26, Sites release 29)
 
 - Compose and Mix have one view each and no secondary navigation action. Their previously rendered single tab was hidden with CSS, leaving a redundant Compose button in the DOM that could appear during navigation/style changes without performing a different action.
 - The shell now renders subtabs only for multi-view workspaces (Arrange/Audio & sampler and Performance deck/Clip launcher). Explicit layout state replaces the single-child CSS selector. Stable keys preserve shared Guide/Commands/Undo/Redo/Help controls when the tab group mounts or disappears.
 - Verified English/Spanish desktop/mobile navigation through all views, repeated returns to Compose, expanded/normal mode, retained Commands/Sound/AI handlers and no horizontal overflow. Typecheck/build/lint and 36 unit tests passed. The initial bounded full-suite run passed 12 Chromium workflows before its 60-second bound; a complete-suite result is recorded separately after release checks.
+- Sites version 29 successfully deployed this fix at https://kiber-vengance.starrylemur35.chatgpt.site with footer source b91166e (GitHub distribution commit 498bff2, isolated Sites source 92f919b7fa6f6bd85b2a8ec5f07cb3c9e911a10a). Site audience and private GitHub visibility were preserved.
+- Three targeted Chromium workflows passed, including accessibility, AI navigation and the new regression; the regression was also rerun with expanded mode. An independent WebKit desktop/mobile run passed repeated Arrange/Live/Mix returns and expanded-mode switching. Automated WebKit is not a physical Safari/Orion claim. The subtitle remains intentionally hidden in expanded editor mode; no subtitle behavior changed.
+- The final check:full rerun passed its check stage but failed the pre-existing quick-export WAV write wait with a 30-second timeout; the overall run has a 180-second bound. No full-suite pass is claimed. Session output is in /private/tmp/kiber-compose-tabs-full-final.log.
 
 ## Sites release 28 (2026-10-26)
 
