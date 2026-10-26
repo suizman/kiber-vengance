@@ -3520,16 +3520,18 @@ document.addEventListener("keydown", (e) => {
     !e.altKey &&
     !recording.has(source)
   ) {
-    const key = $(`#keyboard .key[data-source="${source}"]`);
+    const keyboardId = activeView === "perform" ? "performanceKeyboard" : "keyboard",
+      key = $(`#${keyboardId} .key[data-source="${source}"]`);
     if (key)
       startPerformance(source, +key.dataset.pitch, 0.82, key);
   }
 });
 document.addEventListener("keyup", (e) => {
   const source = e.key.toLowerCase(),
-    activeKeyMap = selectedTrack === "drums" ? drumKeyMap : keyMap;
+    activeKeyMap = selectedTrack === "drums" ? drumKeyMap : keyMap,
+    keyboardId = activeView === "perform" ? "performanceKeyboard" : "keyboard";
   if (activeKeyMap.includes(source))
-    endPerformance(source, $(`#keyboard .key[data-source="${source}"]`));
+    endPerformance(source, $(`#${keyboardId} .key[data-source="${source}"]`));
 });
 async function initMidi(): Promise<any> {
   return performanceFeature.initMidi(runtime);

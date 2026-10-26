@@ -117,6 +117,13 @@ test('main performance keyboard exposes the full chromatic QWERTY row',async t=>
   assert.equal(await chromatic.evaluate(node=>node.classList.contains('active')),true);
   await page.keyboard.up('w');
   await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
+  await goToView(page,'perform');
+  const liveChromatic=page.locator('#performanceKeyboard .key[data-source="w"]');
+  await page.keyboard.down('w');
+  await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===1);
+  assert.equal(await liveChromatic.evaluate(node=>node.classList.contains('active')),true);
+  await page.keyboard.up('w');
+  await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
 });
 
 test('installable build exposes its Cyrillic identity, manifest and service worker',async t=>{await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage();await page.goto(url,{waitUntil:'networkidle'});assert.equal(await page.locator('.brand-word b').first().textContent(),'КИБЕР');assert.ok(await page.locator('.brand-emblem').count()>=4);assert.equal(await page.locator('link[rel="manifest"]').getAttribute('href'),'manifest.webmanifest');const manifest=await page.evaluate(async()=>await (await fetch('manifest.webmanifest')).json());assert.equal(manifest.name,'КИБЕР VENGANCE');await page.waitForFunction(()=>navigator.serviceWorker?.controller||navigator.serviceWorker?.ready);const registration=await page.evaluate(async()=>Boolean(await navigator.serviceWorker.getRegistration()));assert.equal(registration,true)});

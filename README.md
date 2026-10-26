@@ -52,7 +52,7 @@ The transport supports 50–220 BPM, 4/4, 3/4, and 6/8 time signatures, swing, m
 ## Performance and editing
 
 - `Space`: play/stop.
-- `A W S E D F T G Y H U J K`: play or record a chromatic octave with the computer keyboard; the visible octave controls move its range. Drums keep `A S D F G H J`.
+- `A W S E D F T G Y H U J K`: play or record a chromatic octave with the computer keyboard in Compose and Live; the visible octave controls move its range. Drums keep `A S D F G H J`.
 - `1`–`5`: select track.
 - `Ctrl/Cmd + K`: open the command palette with keyboard search and execution.
 - `Shift + F`: toggle Focus, which hides the advanced racks and brings the editor to the foreground.
