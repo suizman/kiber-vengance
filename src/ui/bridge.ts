@@ -48,6 +48,7 @@ export const studioBridge = {
   toggleInspector: () => {},
   toggleFocus: () => {},
   release: () => {},
+  openLocalAI: () => {},
   melodyTarget: (): MelodyTarget | null => null,
   applyMelody: (
     _target: MelodyTarget,

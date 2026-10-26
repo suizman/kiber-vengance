@@ -4,6 +4,14 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Last updated: 2026-10-26.
 
+## Local AI navigation integration (2026-10-26, local only)
+
+- Compose has an always-visible AI melody action in its context toolbar, independent of the collapsed generation tools. The existing generator action and Settings entry remain available.
+- The Project menu has a direct Generate melody with local AI entry. Ctrl/Cmd+K can find the same action through English/Spanish labels and AI/IA, prompt, melody/melodia, CPU/GPU and model-name keywords. No musical shortcuts were reassigned.
+- All entry points call the same bridge action and open the existing generator for the current selected track. Project/Settings/command dialogs close before it opens; Escape restores focus to the relevant visible launcher. Navigation alone does not load weights or change clips.
+- Validation: typecheck/build/lint and 32 unit tests passed. Three targeted Chromium workflows passed, covering desktop/mobile menu access, Spanish labels, English/Spanish palette searches from Mix, modal/focus handoff, unchanged clip/note counts, zero inference/model requests and existing GPU-to-CPU fallback/cancellation.
+- `check:full` was attempted with current Chromium and a matching Firefox launcher: the check stage and first two Chromium workflows passed, then the browser phase stopped progressing in quick audio exports and was interrupted. A full-suite pass is not claimed; this menu delivery is verified by its targeted workflows.
+
 ## Browser-compatible local AI (2026-10-26, local only)
 
 - The user's Safari 16.6 lacks WebGPU; Orion 1.1.3 reported an opaque worker startup failure. Safari WebGPU starts at 26; current Firefox WebGPU availability depends on platform (Apple Silicon versus Intel is material). A page API alone is not proof that a model can run in a worker.

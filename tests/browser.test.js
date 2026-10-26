@@ -302,6 +302,48 @@ test('automatic local AI chooses CPU when a page GPU cannot run in its worker',a
   assert.equal(await page.locator('#generateLocalAI').isDisabled(),true);
 });
 
+test('local AI is discoverable in Compose, the project menu and bilingual commands without loading a model',async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  for(const viewport of [{width:1366,height:1000},{width:390,height:844}]){
+    const page=await browser.newPage({viewport});
+    const requests=[];page.on('request',request=>{if(/huggingface\.co|inference-worker-|cpu-worker-/.test(request.url()))requests.push(request.url())});
+    await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+    await page.locator('.track[data-track="guitar"]').click();
+    const clips=await page.locator('#clipSelect option').count(),notes=await page.locator('.note-block').count();
+    assert.equal(await page.locator('#composeAIMelodyBtn').isVisible(),true);
+    await page.locator('#composeAIMelodyBtn').click();
+    assert.equal(await page.locator('#localAIDialog').evaluate(node=>node.open),true);
+    assert.match(await page.locator('.ai-target').textContent(),/GUITAR/);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#composeAIMelodyBtn').evaluate(node=>document.activeElement===node),true);
+    await page.locator('#menuBtn').click();
+    await page.locator('#menuLanguageSelect').selectOption('es');
+    assert.equal(await page.locator('#menuAIMelodyBtn').textContent(),'Generar melodía con IA local');
+    await page.locator('#menuAIMelodyBtn').click();
+    assert.equal(await page.locator('#projectMenu').evaluate(node=>node.open),false);
+    assert.equal(await page.locator('#localAITitle').textContent(),'Melodía por prompt');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#menuBtn').evaluate(node=>document.activeElement===node),true);
+    assert.equal(await page.locator('#composeAIMelodyBtn').textContent(),'Melodía IA');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=globalThis.innerWidth),true);
+    await goToView(page,'mix');
+    for(const query of ['local ai','melodia']){
+      await page.keyboard.press('Control+k');await page.locator('#commandSearch').fill(query);
+      assert.match(await page.locator('.command-item').first().textContent(),/Generar melodía con IA local/);
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#commandDialog').evaluate(node=>node.open),false);
+      assert.equal(await page.locator('#localAIDialog').evaluate(node=>node.open),true);
+      assert.equal(await page.locator('#generateLocalAI').isDisabled(),true);
+      await page.keyboard.press('Escape');
+    }
+    await goToView(page,'forge');
+    assert.equal(await page.locator('#clipSelect option').count(),clips);
+    assert.equal(await page.locator('.note-block').count(),notes);
+    assert.deepEqual(requests,[]);
+    await page.close();
+  }
+});
+
 test.after(()=>server.close());
 
 test('releasing a touch key before audio startup completes cannot leave a stuck voice',async t=>{

@@ -214,6 +214,16 @@ export function mountStudioShell() {
               <p>{title[es ? 3 : 2]}</p>
             </div>
             <div class="studio-context-actions">
+              {space === "compose" && (
+                <button
+                  id="composeAIMelodyBtn"
+                  aria-haspopup="dialog"
+                  aria-controls="localAIDialog"
+                  onClick={() => studioBridge.openLocalAI()}
+                >
+                  {es ? "Melodía IA" : "AI melody"}
+                </button>
+              )}
               <button
                 id="soundInspectorBtn"
                 aria-expanded={state.inspector}

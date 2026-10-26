@@ -2602,6 +2602,16 @@ const commands: CommandAction[] = [
     run: () => $("#newClipBtn").click(),
   },
   {
+    label: "Generate melody with local AI",
+    labelEs: "Generar melodía con IA local",
+    group: "CLIP",
+    groupEs: "CLIP",
+    shortcut: "",
+    icon: "✦",
+    keywords: "ai ia local prompt melody melodia melodía generar generador inteligencia artificial cpu gpu qwen smollm",
+    run: () => studioBridge.openLocalAI(),
+  },
+  {
     label: "Duplicate active clip",
     labelEs: "Duplicar clip activo",
     group: "CLIP",

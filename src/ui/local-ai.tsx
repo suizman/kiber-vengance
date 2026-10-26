@@ -79,6 +79,7 @@ export function setupLocalAI() {
     } | null>(null);
     const [listening, setListening] = useState(false);
     const audition = useRef<(() => void) | null>(null);
+    const returnFocus = useRef<HTMLElement | null>(null);
     const attempt = useRef(0);
     const busy =
       status === "loading" || status === "generating" || status === "deleting";
@@ -109,8 +110,15 @@ export function setupLocalAI() {
     const close = () => {
       stopAudition();
       if (busy) cancel();
+      returnFocus.current?.focus({ preventScroll: true });
     };
     openLocalAI = () => {
+      const origin = document.activeElement as HTMLElement | null;
+      returnFocus.current = origin?.closest("#projectMenu")
+        ? document.querySelector<HTMLElement>("#menuBtn")
+        : origin?.closest("#appearanceDialog")
+          ? document.querySelector<HTMLElement>("#settingsBtn")
+          : origin;
       studioBridge.release();
       document.querySelector<HTMLDialogElement>("#appearanceDialog")?.close();
       document.querySelector<HTMLDialogElement>("#projectMenu")?.close();
@@ -531,14 +539,29 @@ export function setupLocalAI() {
     );
   }
   render(<LocalAI />, host);
+  studioBridge.openLocalAI = () => openLocalAI();
   subscribeLanguage(updateLanguage);
   const button = document.createElement("button");
   button.type = "button";
   button.id = "aiMelodyBtn";
+  button.setAttribute("aria-haspopup", "dialog");
+  button.setAttribute("aria-controls", "localAIDialog");
   button.onclick = () => openLocalAI();
   document.querySelector(".generators")?.append(button);
+  const menuButton = document.createElement("button");
+  menuButton.id = "menuAIMelodyBtn";
+  menuButton.type = "button";
+  menuButton.dataset.noTranslate = "";
+  menuButton.setAttribute("aria-haspopup", "dialog");
+  menuButton.setAttribute("aria-controls", "localAIDialog");
+  menuButton.onclick = () => openLocalAI();
+  document.querySelector("#menuSettingsBtn")?.after(menuButton);
   const label = () => {
     button.textContent = getLanguage() === "es" ? "MELODÍA IA" : "AI MELODY";
+    menuButton.textContent =
+      getLanguage() === "es"
+        ? "Generar melodía con IA local"
+        : "Generate melody with local AI";
   };
   label();
   subscribeLanguage(label);
