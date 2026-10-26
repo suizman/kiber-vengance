@@ -7,7 +7,7 @@ import {
 import { StructuredOutputProcessor } from "@huggingface/transformers-structured-output";
 import wasmUrl from "onnxruntime-web/ort-wasm-simd-threaded.wasm?url";
 import factoryUrl from "onnxruntime-web/ort-wasm-simd-threaded.mjs?url";
-import { CPU_MODEL, CPU_CACHE, compactMelodySchema } from "./model-config";
+import { CPU_MODEL, CPU_CACHE, compactMelodyPattern } from "./model-config";
 import { expandCompactMelodyPlan } from "./melody";
 
 const scope = globalThis as unknown as {
@@ -52,8 +52,8 @@ scope.onmessage = async (event: MessageEvent) => {
       scope.postMessage({ kind: "loaded" });
     } else if (kind === "generate" && generator) {
       const processor = new StructuredOutputProcessor(generator.tokenizer, {
-        type: "json_schema",
-        json_schema: compactMelodySchema,
+        type: "regex",
+        regex: compactMelodyPattern,
       });
       let tokens = 0;
       const output = await generator(
