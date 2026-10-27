@@ -1,0 +1,242 @@
+/* piano: instrument geometry and studio styling have one component owner. */
+
+@layer instrument-geometry {
+  .piano-shell {
+    display: grid;
+    grid-template-rows: 24px 1fr;
+    overflow: hidden;
+  }
+  .roll-corner {
+    display: grid;
+    place-items: center;
+  }
+  .roll-ruler {
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .ruler-content {
+    height: 24px;
+    position: relative;
+    will-change: transform;
+  }
+  .ruler-content span {
+    position: absolute;
+    inset-block: 0;
+    padding: 7px 4px;
+    white-space: nowrap;
+  }
+  .piano-labels {
+    overflow: hidden;
+    position: relative;
+  }
+  .piano-labels > div {
+    will-change: transform;
+  }
+  .pitch-label {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 7px;
+    border-bottom: 1px solid #292720;
+  }
+  .pitch-label:nth-child(12n + 1) {
+    border-top: 1px solid #77705f;
+  }
+  .roll-pane {
+    overflow: auto;
+  }
+  .sequencer {
+    position: relative;
+    cursor: crosshair;
+  }
+  .note-block {
+    position: absolute;
+    border: 1px solid color-mix(in srgb, var(--track) 70%, #fff);
+    z-index: 2;
+  }
+  .note-block:hover {
+    filter: brightness(1.2);
+  }
+  .note-block.selected {
+    z-index: 3;
+  }
+  .note-resize {
+    position: absolute;
+    right: -1px;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+  }
+  .roll-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--amber);
+    box-shadow: 0 0 8px #ffb43b88;
+    z-index: 5;
+    pointer-events: none;
+  }
+  @media (max-width: 760px) {
+  }
+  .note-block {
+    border-left: 3px solid #fff6;
+  }
+  .roll-playhead {
+    background: var(--pressure);
+    box-shadow: 0 0 12px #ff4b32;
+  }
+  .piano-shell {
+    margin-inline: 14px;
+  }
+  .roll-corner,
+  .roll-ruler {
+    background: #0d1222;
+    border-color: #27304d;
+  }
+  .pitch-label {
+    border-color: #1a233d;
+  }
+  .note-block {
+    border: 1px solid color-mix(in srgb, var(--track) 72%, #fff);
+    border-left: 3px solid #fff8;
+  }
+  .roll-playhead {
+    background: var(--magenta);
+    box-shadow:
+      0 0 12px var(--magenta),
+      0 0 24px #8b7cff;
+  }
+  @media (max-width: 760px) {
+    .piano-shell {
+      margin-inline: 8px;
+    }
+  }
+  @media (max-width: 820px) {
+    .piano-shell {
+      margin-inline: 8px;
+    }
+    .roll-pane {
+      min-width: 0;
+      min-height: 0;
+      touch-action: pan-x pan-y;
+    }
+  }
+}
+#app .piano-shell {
+  height: clamp(320px, 48vh, 560px);
+  grid-template-columns: 58px minmax(0, 1fr);
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #11161d;
+}
+#app .roll-corner {
+  background: #1d252f;
+  color: var(--muted);
+  font-size: 10px;
+}
+#app .roll-ruler {
+  background: #19212c;
+  border-color: var(--line);
+}
+#app .ruler-content span {
+  font: 10px/1 var(--mono-font);
+  color: var(--muted);
+  border-color: #3d4a5e;
+}
+#app .piano-labels {
+  border-color: var(--line);
+}
+#app .pitch-label {
+  color: #adb8c9;
+  font: 10px/1 var(--mono-font);
+  background: #202630;
+  border-bottom-color: #303946;
+}
+#app .pitch-label.in-scale {
+  color: #e4eaf1;
+  background: #2b3541;
+}
+#app .sequencer {
+  background-color: #121820;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      #27313e 0 1px,
+      transparent 1px var(--step)
+    ),
+    repeating-linear-gradient(
+      to right,
+      #3b4a5e 0 1px,
+      transparent 1px var(--beat)
+    ),
+    repeating-linear-gradient(
+      to right,
+      #566a7e 0 2px,
+      transparent 2px var(--bar)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      #27303d 0 1px,
+      transparent 1px var(--row)
+    );
+}
+#app .note-block {
+  min-height: 0;
+  min-width: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 0;
+  border-color: color-mix(in srgb, var(--track) 75%, white);
+  background: color-mix(
+    in srgb,
+    var(--track) calc(35% + var(--vel) * 35%),
+    #16212e
+  );
+}
+#app .note-block.selected {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+#app .piano-shell,
+#app .sequencer {
+  background-color: #101728;
+}
+#app .note-block {
+  box-shadow:
+    inset 0 1px #ffffff70,
+    0 0 12px color-mix(in srgb, var(--track) 35%, transparent);
+}
+#app .note-block.selected {
+  outline-color: #fff;
+  box-shadow:
+    0 0 0 2px var(--track),
+    0 0 18px color-mix(in srgb, var(--track) 58%, transparent);
+}
+@media (max-width: 820px) {
+  #app .piano-shell {
+    height: 360px;
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}
+#app .note-block {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body[data-editor-tool="navigate"] #app .note-block {
+  touch-action: pan-x pan-y;
+}
+@media (pointer: coarse) {
+  #app .note-resize {
+    width: 18px;
+    max-width: 45%;
+    background: #ffffff66;
+    border-left: 2px solid #fff;
+    touch-action: none;
+  }
+}

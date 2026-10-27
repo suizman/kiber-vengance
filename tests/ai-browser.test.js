@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import test from "node:test";
 import assert from "node:assert/strict";
 import axe from "axe-core";
@@ -167,7 +168,7 @@ test("AI composition integrates context, shaping, A/B loops, selected bars, reci
       before.filter((n) => n.onset < 16 || n.onset >= 32),
     );
     await page.screenshot({
-      path: `/private/tmp/kiber-ai-composer-${viewport.width}.png`,
+      path: `${tmpdir()}/kiber-ai-composer-${viewport.width}.png`,
     });
     await page.addScriptTag({ content: axe.source });
     const audit = await page.evaluate(() =>
@@ -328,7 +329,7 @@ test("Spanish compact composer explains source rhythm and keeps result actions r
     await page.locator(".appearance-close").last().isVisible(),
     true,
   );
-  await page.screenshot({ path: "/private/tmp/kiber-ai-composer-es-320.png" });
+  await page.screenshot({ path: `${tmpdir()}/kiber-ai-composer-es-320.png` });
   await page.addScriptTag({ content: axe.source });
   const audit = await page.evaluate(() =>
     globalThis.axe.run(document.querySelector("#localAIDialog")),

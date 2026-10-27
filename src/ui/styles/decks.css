@@ -1,0 +1,685 @@
+/* decks: instrument geometry and studio styling have one component owner. */
+
+@layer instrument-geometry {
+  .record-label .brand-emblem {
+    opacity: 0.48;
+  }
+  .record-label small {
+    z-index: 2;
+  }
+  .record-label::after {
+    content: "К/V";
+    position: absolute;
+    top: 17px;
+    color: #f2f6ff;
+    font: 900 7px var(--display-font);
+    letter-spacing: 0.12em;
+  }
+  .scratch-deck {
+    position: relative;
+    min-width: 0;
+  }
+  .scratch-deck::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .scratch-capture select,
+  .scratch-capture button {
+    height: 34px;
+  }
+  .scratch-capture select {
+    padding-inline: 8px;
+  }
+  .scratch-capture button {
+    padding-inline: 12px;
+  }
+  .scratch-wave-shell {
+    position: relative;
+  }
+  .scratch-wave-shell canvas {
+    display: block;
+  }
+  .scratch-wave-shell > i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-1px);
+    will-change: left;
+  }
+  .scratch-wave-shell > span {
+    position: absolute;
+  }
+  .turntable-shell {
+    position: relative;
+    place-items: center;
+    min-height: 250px;
+  }
+  .scratch-platter {
+    --rotation: 0deg;
+    position: relative;
+    border: 8px solid #161e35;
+    border-radius: 50%;
+    user-select: none;
+    cursor: grab;
+    transform: rotate(var(--rotation));
+    will-change: transform;
+  }
+  .scratch-platter.disabled {
+    opacity: 0.35;
+    filter: saturate(0.25);
+    cursor: not-allowed;
+  }
+  .vinyl-grooves {
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle,
+      transparent 0 3px,
+      #ffffff0c 4px,
+      #0000 5px 8px
+    );
+  }
+  .vinyl-mark {
+    position: absolute;
+    width: 5px;
+    height: 34px;
+    left: calc(50% - 2px);
+    top: 15px;
+    border-radius: 4px;
+    background: linear-gradient(var(--magenta), var(--cyan));
+    box-shadow: 0 0 13px var(--magenta);
+  }
+  .record-label {
+    position: absolute;
+    inset: 66px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+  .record-label svg {
+    width: 54px;
+    height: 54px;
+    fill: #ffffff14;
+  }
+  .record-label b {
+    position: absolute;
+    font: 900 20px var(--display-font);
+    letter-spacing: -0.12em;
+  }
+  .record-label small {
+    position: absolute;
+    bottom: 18px;
+    color: #b8c4dd;
+    font: 800 6px var(--ui-font);
+  }
+  .spindle {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    left: calc(50% - 5px);
+    top: calc(50% - 5px);
+    border: 2px solid #eff6ff;
+    border-radius: 50%;
+    background: #59667d;
+    box-shadow: 0 0 11px #fff8;
+  }
+  .deck-speed {
+    position: absolute;
+    right: 0;
+    bottom: 9px;
+    padding: 6px 8px;
+  }
+  .scratch-controls {
+    display: grid;
+    gap: 17px;
+  }
+  .scratch-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .scratch-actions button {
+    height: 37px;
+  }
+  .scratch-deck.scratching::after {
+    content: "MANUAL CONTROL";
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+  }
+  @media (max-width: 1100px) {
+  }
+  @media (max-width: 760px) {
+    .scratch-head {
+      flex-direction: column;
+    }
+    .scratch-capture {
+      width: 100%;
+    }
+    .scratch-capture label {
+      flex: 1;
+    }
+    .turntable-shell {
+      min-height: 238px;
+    }
+    .record-label {
+      inset: 61px;
+    }
+    .scratch-controls {
+      gap: 14px;
+    }
+    .scratch-actions {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .record-label .brand-emblem {
+    fill: none;
+  }
+  .scratch-capture .scratch-import {
+    display: grid;
+    place-items: center;
+    height: 34px;
+    padding: 0 12px;
+    cursor: pointer;
+  }
+  .scratch-capture .scratch-import input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .scratch-capture .scratch-import:focus-within {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  @media (max-width: 760px) {
+    .scratch-capture .scratch-import {
+      flex-basis: 100%;
+    }
+  }
+  .scratch-pro {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .scratch-pro label {
+    display: flex;
+    flex-direction: column;
+  }
+  .scratch-pro p {
+    grid-column: 1/-1;
+  }
+  .scratch-pro button,
+  .scratch-pro select {
+    min-height: 44px;
+  }
+  .scratch-pro input {
+    width: 100%;
+    touch-action: manipulation;
+  }
+}
+#app .scratch-deck {
+  padding: 24px;
+  margin: 0;
+  overflow: hidden;
+}
+#app .scratch-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+#app .scratch-head h2 {
+  margin: 5px 0 0;
+  font-size: 22px;
+}
+#app .scratch-capture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+#app .scratch-capture label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+}
+#app .scratch-capture select {
+  min-width: 90px;
+  width: auto;
+}
+#app .scratch-wave-shell {
+  height: 128px;
+  margin: 0 0 24px;
+  border: 1px solid #3a4c5d;
+  border-radius: 10px;
+  background: #101923;
+  box-shadow: none;
+  overflow: hidden;
+}
+#app .scratch-wave-shell canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+#app .scratch-wave-shell > i {
+  background: var(--magenta);
+  width: 2px;
+  box-shadow: none;
+  pointer-events: none;
+}
+#app .scratch-wave-shell > span {
+  bottom: 8px;
+  left: 12px;
+  color: #c7d3e3;
+  font: 10px/1.4 var(--mono-font);
+  letter-spacing: normal;
+  pointer-events: none;
+}
+#app .scratch-console {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
+  gap: 28px;
+  align-items: center;
+}
+#app .turntable-shell {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+#app .scratch-platter {
+  width: min(100%, 300px);
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0;
+  border-color: #627487;
+  background: repeating-radial-gradient(
+    circle at center,
+    #151b24 0 3px,
+    #232b36 3px 4px
+  );
+  box-shadow:
+    0 12px 30px #0005,
+    inset 0 0 0 8px #0a1019;
+  touch-action: none;
+}
+#app .record-label {
+  background: #254c4c;
+  box-shadow: none;
+  border: 1px solid #527b79;
+}
+#app .record-label .brand-emblem {
+  width: 54px;
+  height: 54px;
+  filter: none;
+}
+#app .deck-speed {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.deck-speed b {
+  font: 600 20px var(--mono-font);
+}
+.deck-speed span {
+  font-size: 10px;
+  color: var(--muted);
+}
+#app .scratch-controls {
+  min-width: 0;
+  padding: 0;
+}
+#app .scratch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+#app .scratch-actions button {
+  flex: 1;
+  min-width: 90px;
+}
+#app .scratch-actions button:first-child {
+  background: var(--cyan);
+  color: #102725;
+  border-color: var(--cyan);
+}
+#app .deck-slider {
+  margin: 18px 0;
+  display: grid;
+  gap: 10px;
+}
+#app .deck-slider span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+#app .deck-slider output {
+  color: var(--ink);
+  font: 12px var(--mono-font);
+}
+#app .scratch-pro {
+  gap: 16px;
+  padding-top: 18px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+}
+#app .scratch-pro label {
+  font-size: 12px;
+  gap: 8px;
+}
+#app .scratch-hint,
+#app .scratch-pro p {
+  font-size: 12px;
+  margin: 14px 0 0;
+  color: var(--muted);
+}
+#app .scratch-wave-shell > i {
+  box-shadow: 0 0 11px var(--magenta);
+}
+#app .scratch-deck {
+  border-color: #715491;
+  background:
+    radial-gradient(circle at 24% 44%, #823e9b25, transparent 40%),
+    linear-gradient(140deg, #231a33, #152437 65%);
+}
+#app .scratch-wave-shell {
+  border-color: #8a65b7;
+  background: linear-gradient(90deg, #261a3a, #102536);
+  box-shadow:
+    inset 0 0 26px #a04bd223,
+    0 0 17px #a04bd21f;
+}
+#app .scratch-platter {
+  border-color: var(--magenta);
+  box-shadow:
+    0 0 0 4px #613474,
+    0 0 30px #ff73d43b,
+    inset 0 0 0 8px #0a1019;
+}
+#app .record-label {
+  background: radial-gradient(circle, #365774, #472962 75%);
+  border-color: #b085dc;
+  box-shadow: inset 0 0 22px #ff73d433;
+}
+@media (max-width: 1100px) {
+  #app .scratch-console {
+    grid-template-columns: minmax(200px, 0.8fr) minmax(0, 1.2fr);
+    gap: 20px;
+  }
+}
+@media (max-width: 820px) {
+  #app .scratch-deck {
+    padding: 16px;
+  }
+  #app .scratch-head {
+    gap: 14px;
+  }
+  #app .scratch-capture {
+    width: 100%;
+  }
+  #app .scratch-capture > * {
+    flex: 1;
+  }
+  #app .scratch-capture label {
+    min-width: 90px;
+  }
+  #app .scratch-console {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  #app .scratch-platter {
+    width: min(76vw, 290px);
+  }
+  #app .scratch-wave-shell {
+    height: 112px;
+    margin-bottom: 20px;
+  }
+  #app .scratch-pro {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #app .scratch-pro label {
+    min-width: 0;
+  }
+}
+#app .scratch-hint {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  letter-spacing: normal;
+}
+#app .dual-deck-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+#app .scratch-deck-b {
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid #715491;
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 22% 44%, #2e80aa25, transparent 45%),
+    linear-gradient(140deg, #182536, #201b38 72%);
+}
+#app .dual-deck-layout .scratch-console {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+#app .dual-deck-layout .scratch-platter {
+  width: min(100%, 250px);
+}
+#app .dual-deck-layout .scratch-head > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#app .dual-deck-layout .scratch-head .eyebrow {
+  display: none;
+}
+#app .dual-deck-layout .scratch-capture {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+#app .dual-deck-layout .scratch-capture > * {
+  min-width: 0;
+}
+#app .dual-deck-layout .scratch-capture > label:first-child {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+#app .dual-deck-layout .scratch-capture .deck-bpm {
+  grid-column: 3;
+  grid-row: 1;
+  width: auto;
+  min-width: 0;
+}
+#app .dual-deck-layout .deck-bpm input {
+  width: 100%;
+  min-height: 44px;
+  font-variant-numeric: tabular-nums;
+}
+#app .dual-deck-layout .scratch-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+#app .dual-deck-layout .scratch-actions button {
+  flex: 1 1 90px;
+}
+#app .dual-deck-layout .scratch-pro {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#app .dual-deck-layout .scratch-pro > p,
+#app .dual-deck-layout .scratch-pro > #scratchKeep,
+#app .dual-deck-layout .scratch-pro > #deckBKeep {
+  grid-column: 1 / -1;
+}
+#app .dual-deck-layout .scratch-pro label {
+  min-width: 0;
+}
+#app .dual-deck-layout .scratch-pro input[type="range"] {
+  width: 100%;
+}
+#app .deck-letter {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 8px 6px 0;
+  border: 1px solid var(--magenta);
+  border-radius: 8px;
+  color: var(--magenta);
+  font: 700 18px var(--mono-font);
+  box-shadow: 0 0 14px #ff73d435;
+}
+#app .scratch-deck-b .deck-letter {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 14px #59eaff35;
+}
+#app .scratch-deck-b .scratch-wave-shell {
+  border-color: #608faf;
+}
+#app .scratch-deck-b #deckBPlay,
+#app .scratch-deck #scratchPlayBtn {
+  color: #08232d;
+  background: var(--cyan);
+  border-color: var(--cyan);
+}
+#app .dual-deck-mixer {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  margin: 0 0 16px;
+  border: 1px solid #765b9c;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #2b1b38, #182438 52%, #122d3c);
+  box-shadow: 0 8px 28px #0008;
+  color: var(--ink);
+  font: 700 13px var(--mono-font);
+}
+#app .dual-deck-mixer > span:first-child {
+  color: var(--magenta);
+}
+#app .dual-deck-mixer > span:last-child {
+  color: var(--cyan);
+}
+#app .dual-deck-mixer label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+#app .dual-deck-mixer label input {
+  display: block;
+  width: 100%;
+  min-width: 80px;
+}
+#app .dual-deck-mixer > .crossfader {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: 10px;
+  border-top: 1px solid var(--line2);
+}
+#app .dual-deck-mixer > .crossfader > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+#app .deck-cue-controls {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line2);
+}
+#app .deck-cue-controls small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+#app .dual-deck-mixer output {
+  min-width: 110px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink);
+}
+@media (max-width: 1150px) {
+  #app .dual-deck-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app .dual-deck-layout .scratch-console {
+    grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+@media (max-width: 820px) {
+  #app .dual-deck-mixer {
+    top: 128px;
+    grid-template-columns: 1fr 1fr;
+    padding: 10px;
+    gap: 7px;
+  }
+  #app .dual-deck-mixer > span:last-of-type {
+    text-align: right;
+  }
+  #app .dual-deck-mixer label {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  #app .dual-deck-mixer > .crossfader {
+    grid-row: 3;
+    margin: 4px 0 0;
+  }
+  #app .dual-deck-mixer > .deck-cue-controls {
+    grid-row: 4;
+  }
+  #app .dual-deck-mixer label > span {
+    display: none;
+  }
+  #app .dual-deck-mixer > .crossfader > span {
+    display: flex;
+  }
+  #app .dual-deck-mixer output {
+    text-align: center;
+    min-width: 0;
+  }
+  #app .dual-deck-layout .scratch-console {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app .scratch-deck-b {
+    padding: 16px;
+  }
+  #app .dual-deck-layout .scratch-capture > * {
+    flex: 1 1 105px;
+  }
+}

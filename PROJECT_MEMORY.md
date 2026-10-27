@@ -413,3 +413,19 @@ Notes own touch gestures in Draw and Select, with pointer capture on the stable 
 
 ## Mobile deck slider layout (2026-10-26)
 The A/B crossfader and Program/Deck blend now occupy distinct mobile grid rows, with Cue below them. The previous shared `grid-row: 2` overlapped both labels. Chromium layout checks passed at 320, 390, 430, 768, 820 and 1440 px with separate control rectangles and no page overflow; npm run check passed.
+
+## Focused editor/deck/state refactor (2026-10-27)
+
+Scope is limited to piano-roll rendering/gestures, the dual decks and their mixer, persistence contracts, associated CSS, tests and these notes. The AI implementation, preset catalogs, keyboards and musical schema are unchanged.
+
+- `ui/piano-roll.ts` owns keyed note DOM and cached grid geometry. `features/note-editor.ts` updates only selected note geometry, at most once per animation frame. Gesture completion refreshes metadata once and commits one typed edit transaction. Existing note and ruler nodes survive a drag.
+- `audio/deck.ts` owns one typed processor per deck, with correlated load acknowledgements and explicit replacement of a pending load. AudioWorklet startup is shared through a single initialization promise. Compatibility getters in AudioEngine delegate to these processors instead of maintaining a second state copy.
+- `features/deck-controller.ts` renders and binds the same control surface for A and B, including capture/import/microphone, seek, transport, stutter, filters, motor and Keep in project. `dual-deck.ts` owns only layout, crossfade and Cue. Existing DOM IDs and Audio Studio's Deck A entry point remain compatible.
+- `state/contracts.ts` defines narrow editor/deck interfaces independent of RuntimeContext. The app's project and history are typed as Project; `state/project-session.ts` owns checkpoint/edit commit and debounced persistence/recovery. The legacy RuntimeContext facade remains for untouched features, and AudioEngine's unrelated legacy internals are not claimed to be fully typed.
+- Piano/deck geometry and component styling now live in `styles/piano.css` and `styles/decks.css`. Legacy declarations that were unconditionally overridden were removed; shared generic control vocabulary and keyboard/appearance styles remain in their existing owners.
+
+A local Chromium CDP comparison against release 9298a7a, with a 256-note clip and the same five touch moves, observed 1,028 inserted and 1,028 removed sequencer children before versus zero after; ruler child mutations fell from eight to zero. This measures DOM work, not audible latency or field load speed. The measurement and responsive checks are in docs/refactor-metrics.json.
+
+Validation keeps the deck accessibility audit scoped to its controls. Five pre-existing `label-content-name-mismatch` findings on the Live keyboard were independently reproduced against the original compiled release; the keyboard was left untouched as requested. Test screenshot paths now use the platform temporary directory rather than /private/tmp, including AI test artifacts only. Physical iPhone, microphone/headphone hardware and audible latency remain unverified.
+
+Final gate: `node scripts/with-null-audio.mjs npm run check:full` passed outside the restricted process sandbox: 46 unit tests and 37 Chromium/Firefox browser flows, no skips. The portable Vite-based unit-test loader was checked separately after replacing Node's experimental TS stripping. The final mixer labels/sliders were also checked at 390 and 1440 px. This is functional and structural verification; the baseline keyboard accessibility findings and physical-device limits above still apply.

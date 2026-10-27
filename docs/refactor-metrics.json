@@ -1,0 +1,34 @@
+{
+  "baseline": {
+    "added": 1028,
+    "removed": 1028,
+    "ruler": 8
+  },
+  "refactor": {
+    "added": 0,
+    "removed": 0,
+    "ruler": 0
+  },
+  "layout": [
+    {
+      "width": 320,
+      "separateSliders": true,
+      "noOverflow": true
+    },
+    {
+      "width": 390,
+      "separateSliders": true,
+      "noOverflow": true
+    },
+    {
+      "width": 768,
+      "separateSliders": true,
+      "noOverflow": true
+    },
+    {
+      "width": 1440,
+      "separateSliders": true,
+      "noOverflow": true
+    }
+  ]
+}

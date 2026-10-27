@@ -45,7 +45,7 @@ export class PointerLifecycle<T> {
 
 export interface CapturedGesture {
   move(event: PointerEvent): void;
-  end(): void;
+  end(event?: PointerEvent): void;
 }
 
 /** Capture survives leaving the dial; unrelated fingers never change its value. */
@@ -61,28 +61,29 @@ export function captureGesture(
     handlers.move(event);
   };
   const up = (event: PointerEvent) => {
-    if (event.pointerId === start.pointerId) end();
+    if (event.pointerId === start.pointerId) end(event);
   };
   const visibility = () => {
     if (document.hidden) end();
   };
-  const end = () => {
+  const blur = () => end();
+  const end = (event?: PointerEvent) => {
     if (ended) return;
     ended = true;
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", up);
     window.removeEventListener("pointercancel", up);
-    window.removeEventListener("blur", end);
+    window.removeEventListener("blur", blur);
     document.removeEventListener("visibilitychange", visibility);
     element.removeEventListener("lostpointercapture", up);
     if (element.hasPointerCapture(start.pointerId))
       element.releasePointerCapture(start.pointerId);
-    handlers.end();
+    handlers.end(event);
   };
   window.addEventListener("pointermove", move, { passive: false });
   window.addEventListener("pointerup", up);
   window.addEventListener("pointercancel", up);
-  window.addEventListener("blur", end);
+  window.addEventListener("blur", blur);
   document.addEventListener("visibilitychange", visibility);
   element.addEventListener("lostpointercapture", up);
   try {

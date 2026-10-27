@@ -57,3 +57,17 @@ The compact transport includes a Transport settings disclosure at every width; q
 ## Final gate result
 
 `node scripts/with-null-audio.mjs npm run check:full` passed: strict typecheck, static build verification, lint, core model tests and **12/12 real-browser workflows** (Chromium desktop/mobile emulation and Firefox), zero skips/failures. Automated axe checks include color contrast; separate contrast scans passed across all six views. The built asset reference is in `docs/performance-reference.json`. Hardware microphone/MIDI, audible latency and physical iPhone/Safari remain outside this automated evidence.
+
+## Focused follow-up: musical editor, decks and project session (2026-10-27)
+
+`ui/piano-roll.ts` separates grid geometry from keyed notes. A pointer move changes the model immediately and batches selected-note styles into one animation frame; it does not call the full renderer. `features/note-editor.ts` owns the gesture and uses the common pointer lifecycle, including blur/cancel cleanup. One completed gesture makes one history entry and save notification through `ProjectSession`.
+
+`DeckProcessor` is the typed audio state/processor owner for each deck. A single worklet initialization promise serves concurrent callers. Each buffer load carries a request ID; replacing a pending load rejects it and late acknowledgements cannot complete its replacement. `renderDeck` and `bindDeck` provide a common A/B control surface, while `dual-deck.ts` retains crossfade and optional Cue routing. The audio engine retains compatibility accessors for existing project/recording workflows; its unrelated synthesis internals retain their current implementation.
+
+`DeckContext`, `DeckMixerContext` and `NoteEditorContext` expose narrow contracts. `ProjectSession` owns the debounce timer, save status and recovery cadence; its `ProjectEdit` pairs a single pre-edit history entry with completion. The app's project and history use the serializable Project type. Existing broad context consumers are compatibility code outside this focused change.
+
+`styles/piano.css` and `styles/decks.css` own the musical surfaces in their original legacy layer plus the studio layer. Their previously scattered rules are collected without moving shared button, keyboard or appearance rules. Overridden legacy declarations were removed, and slider rows are explicit in both desktop and mobile layouts.
+
+The dense-clip comparison in refactor-metrics.json demonstrates reduced DOM reconstruction; it is not a Core Web Vitals or audio-latency benchmark. Browser regression checks assert node/ruler identity, undo, independent decks, crossfade gains and Cue routing with simulated output. Physical Apple hardware remains a separate validation boundary. Five Live-keyboard name mismatches were reproduced in the original release and are explicitly outside this refactor; deck accessibility is audited separately. Test screenshot output uses node:os tmpdir for portability.
+
+Final validation: check:full passed with 46 unit tests and 37 Chromium/Firefox workflows. The test navigation helper now waits for Preact's active shell before clicking; the former cold-load race could click static, unbound HTML. No application navigation behavior was changed for that test fix.
