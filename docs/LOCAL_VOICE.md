@@ -39,3 +39,7 @@ The next experiment needs an explicitly permitted bank/vocoder with exact model 
 - [Kokoro JavaScript source](https://github.com/hexgrad/kokoro/tree/main/kokoro.js), [model/voice descriptions](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md) and [ONNX conversion](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX): Kokoro model identity and style-vector/token interface; weights have Apache-2.0 terms.
 - [eSpeak Emscripten package and source](https://github.com/echogarden-project/espeak-ng-emscripten), [underlying fork/build instructions](https://github.com/echogarden-project/espeak-ng/tree/fork): pinned package 0.3.5, GPL-3.0, bundled phoneme data; the project remains GPL-3.0-or-later. The dependency's COPYING/source/build information remain available there and in the installed package.
 - [Transformers.js](https://github.com/huggingface/transformers.js): existing pinned local inference runtime.
+
+## Mixing, pacing and expressive-engine extension (2026-10-28)
+
+See [Audio mixing and voice](AUDIO_MIX_AND_VOICE.md) for the additive audio-effect/provenance contracts, pinned Kokoro revision, per-line speed/pauses, original/processed WAV workflow and optional Chatterbox experiment. The numeric template correction and actual inference evidence must be kept separate from UI worker fixtures. Qwen free-form style direction remains unvalidated in this browser integration and has no product control.

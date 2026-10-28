@@ -191,3 +191,7 @@ El usuario ha solicitado actualizar memoria, instrucciones y UX review, crear co
 La integración del refactor remoto `43a2483` se conservó mediante merge `e31a2c2`; la nueva validación completa del conjunto pasó con 56 unitarias y 43 flujos Chromium/Firefox. La distribución final identifica `e31a2c2`.
 
 Publicación completada: Sites versión 32, estado nativo `succeeded`, desde fuente de Site `bce68188ccd3a8771e4fd98b706ee2b5d2806170` y distribución GitHub `51b94c6` (footer `e31a2c2`). Se mantiene la audiencia pública y la configuración de dominio existente. URL devuelta: https://kiber-vengance.starrylemur35.chatgpt.site.
+
+## Volume, audio FX and speech interpretation — 2026-10-28
+
+Implement shared dB level controls across instruments, audio lanes, sampler, groups, decks and final output; preserve legacy Program values. Add real stereo metering and an actual final deck-inclusive Master. Apply independent non-destructive audio-region and lane FX using common live/offline DSP. Keep speech original assets and add fragment pacing, treatment audition/download and an optional genuine expressive engine. Free-form Qwen direction is gated on browser feasibility; it must not become a decorative control. Delivery evidence and exact remaining limitations: `docs/AUDIO_MIX_AND_VOICE.md` and the current PROJECT_MEMORY entry.

@@ -59,3 +59,7 @@ Release integration preserves the concurrent focused piano/deck/state refactor f
 Combined release verification after that integration: `npm run check:full` passed with 56 unit tests and 43 Chromium/Firefox workflows, no failures or skips. The earlier 54-unit count describes the implementation before the remote refactor was incorporated.
 
 Publication confirmed: Sites version 32 returned native `succeeded` on 2026-10-28, with runtime footer `e31a2c2`. The public audience and existing custom-domain configuration were retained. The documented research/listening/device limitations remain open after deployment.
+
+## Volume, audio FX and voice — 2026-10-28
+
+Shared logarithmic controls distinguish silence, unity, fader dB and signal dBFS, with numeric/reset/fine controls and one history snapshot per gesture. The compact header Master, Mix output controls and Live deck levels share persisted state. Instrumental and audio tracks coexist in Mix. Audio Studio exposes Clip/Track treatment, individual on/off and Original/Processed comparison; generated voice copies treatment on insertion while retaining its source WAV. Speech pacing is separate from emotional interpretation. Optional heavy models require explicit downloads, visible progress and cancellation; unsupported free-form instructions are not exposed. Physical-device and listening acceptance remain separate from the automated release checks.

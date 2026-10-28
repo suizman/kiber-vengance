@@ -1,0 +1,20 @@
+[
+  {
+    "file": "kv-expressive-en.wav",
+    "seconds": 1.56,
+    "rms": 0.10716258132082322,
+    "sha256": "bad1a0a38d61a75b93d122603974fb59a93b1b583b445187a8e253e8a8750858"
+  },
+  {
+    "file": "kv-expressive-es-emphatic.wav",
+    "seconds": 2.28,
+    "rms": 0.11441746362522003,
+    "sha256": "2c91b91d4067b75eaf6907e392e1418663513fe7320c7c9e107d49b778de041b"
+  },
+  {
+    "file": "kv-expressive-es.wav",
+    "seconds": 2.48,
+    "rms": 0.12616451118412125,
+    "sha256": "8d8ca5e9c4650aeee98134487d924c86373e41bb93d5763880094c514a656f45"
+  }
+]
