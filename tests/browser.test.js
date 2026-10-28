@@ -715,7 +715,6 @@ test('project packages restore every binary including takes into a fresh browser
   await fresh.waitForFunction(()=>!document.querySelector('#missingAssetsDialog'));
 });
 
-
 test('offline WAV uses the tempo map, global master and audio isolation', {timeout:60000}, async t=>{
   await ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage();await page.goto(`${url}/?qa=1`);
   const result=await page.evaluate(async()=>{
@@ -730,6 +729,22 @@ test('offline WAV uses the tempo map, global master and audio isolation', {timeo
     return {full,half,silent};
   });
   assert.equal(result.full.duration,3);assert.ok(result.full.rms>.02);assert.ok(Math.abs(result.half.rms/result.full.rms-.5)<.03);assert.equal(result.silent.rms,0);
+});
+
+test('recovery preserves unreadable autosave and flushes pending edits on page hide', {timeout:30000}, async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage();
+  await page.addInitScript(()=>{if(!globalThis.sessionStorage.getItem('seeded')){globalThis.localStorage.setItem('kiber-vengance-project-v6','{broken autosave');globalThis.sessionStorage.setItem('seeded','1')}});
+  await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  assert.equal(await page.evaluate(()=>Object.keys(globalThis.localStorage).some(key=>key.startsWith('kiber-vengance-project-v6-unreadable-')&&globalThis.localStorage.getItem(key)==='{broken autosave')),true);
+  await page.locator('#title').fill('Flushed before reload');await page.locator('#title').dispatchEvent('change');
+  await page.evaluate(()=>globalThis.dispatchEvent(new globalThis.Event('pagehide')));
+  assert.equal(await page.evaluate(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).title),'Flushed before reload');
+  await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('#title').inputValue(),'Flushed before reload');
+  await page.evaluate(()=>{globalThis.Storage.prototype.setItem=()=>{throw new globalThis.DOMException('Quota full','QuotaExceededError')}});
+  await page.locator('#title').fill('Still exportable');await page.locator('#title').dispatchEvent('change');await page.locator('#saveWarning').waitFor();
+  await page.addInitScript(()=>Object.defineProperty(globalThis,'showSaveFilePicker',{value:undefined,configurable:true}));
+  await page.evaluate(()=>Object.defineProperty(globalThis,'showSaveFilePicker',{value:undefined,configurable:true}));
+  await page.locator('#exportAsBtn').click();await page.locator('.export-advanced').nth(1).locator('summary').click();const saved=page.waitForEvent('download');await page.locator('[data-export="project"]').click();assert.match((await saved).suggestedFilename(),/\.kiber.json$/);
 });
 
 

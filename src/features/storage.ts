@@ -806,7 +806,16 @@ export async function performExport(
   try {
     let data: Blob | string | Uint8Array;
     if (kind === "wav" || kind === "clip-wav") {
-      localStorage.setItem(ctx.LAST_EXPORT, kind);
+      try {
+        localStorage.setItem(ctx.LAST_EXPORT, kind);
+      } catch {
+        ctx.toast(
+          ctx.L(
+            "Export preference could not be saved",
+            "No se pudo guardar la preferencia de exportación",
+          ),
+        );
+      }
       await ctx.exportWav(kind === "wav", target);
       ctx.renderExportTargets();
       return;
@@ -817,7 +826,11 @@ export async function performExport(
     else if (kind === "bundle") data = await ctx.renderProjectBundle();
     else data = ctx.performanceTake!;
     await ctx.writeQuickExport(target, data);
-    localStorage.setItem(ctx.LAST_EXPORT, kind);
+    try {
+      localStorage.setItem(ctx.LAST_EXPORT, kind);
+    } catch {
+      /* File was saved; preferences must not turn success into an export error. */
+    }
     ctx.setExportProgress(100, msg("ui_3345522d325d"));
     ctx.toast(
       target.fallback

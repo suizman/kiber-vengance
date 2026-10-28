@@ -103,6 +103,8 @@ for (const kind of ['firefox', 'chromium']) {
       const p = JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6') || 'null');
       return p?.clips.some(c => c.instrument?.preset === 'Solar Vengeance');
     });
+    // Let the latest edit settle before injecting a storage fixture; pagehide now flushes pending saves.
+    await page.waitForFunction(() => globalThis.document.querySelector('#saveState')?.textContent === 'Saved on this device');
     await page.evaluate(() => {
       const key = 'kiber-vengance-project-v6', p = JSON.parse(globalThis.localStorage.getItem(key));
       p.midiMappings = [{ id: 'clip-cutoff', channel: 0, controller: 21, target: 'track.lead.cutoff', min: 0, max: 1 }];

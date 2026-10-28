@@ -1077,6 +1077,8 @@ const $ = (s: string): any => document.querySelector(s),
   UI_STORAGE = "kiber-vengance-ui-v1",
   LANGUAGE_STORAGE = "kiber-vengance-language-v1";
 let copyQueued = false;
+let autosaveRecoveryBlocked = false;
+let autosaveRecoveryNotice = false;
 let project: any = loadProject(),
   selectedTrack: TrackId = "lead",
   selectedNotes = new Set<string>(),
@@ -1206,7 +1208,17 @@ function loadProject() {
     try {
       const value = localStorage.getItem(key);
       if (value) return migrateProject(JSON.parse(value));
-    } catch {}
+    } catch {
+      autosaveRecoveryNotice = true;
+      // Preserve the unreadable source before a later autosave can replace it.
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) localStorage.setItem(`${key}-unreadable-${Date.now()}`, raw);
+      } catch {
+        // Keep the source key untouched when even a recovery copy cannot fit.
+        autosaveRecoveryBlocked = true;
+      }
+    }
   return createProject();
 }
 function esc(v: any) {
@@ -1231,41 +1243,46 @@ function changed(render = false) {
   project.modifiedAt = Date.now();
   $("#saveState").textContent = msg("ui_56a2285c5b11");
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE, JSON.stringify(project));
-      $("#saveState").textContent = msg("ui_87222e82bf5d");
-      $("#saveWarning")?.setAttribute("hidden", "");
-    } catch {
-      $("#saveState").textContent = msg("ui_3d56409d02fb");
-      const warning = $("#saveWarning");
-      if (warning) {
-        warning.hidden = false;
-        warning.textContent = msg("ui_008e26ff915f");
-      }
-      return;
-    }
-    if (Date.now() - lastRecovery > 60000) {
-      try {
-        const list = loadVersions();
-        list.unshift({
-          id: cryptoId(),
-          label: `AUTO RECOVERY · ${project.title}`,
-          date: Date.now(),
-          project: structuredClone(project),
-        });
-        localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
-        lastRecovery = Date.now();
-      } catch {
-        toast(msg("ui_0af7730f9e25"));
-      }
-    }
-  }, 350);
+  saveTimer = setTimeout(persistPendingProject, 350);
   engine.setProject(project);
   if (project.sampler?.assetId !== loadedSamplerAssetId)
     void loadSamplerAsset();
   if (render) renderAll();
   syncStudioUi();
+}
+function persistPendingProject() {
+  clearTimeout(saveTimer);
+  saveTimer = undefined;
+  try {
+    if (autosaveRecoveryBlocked)
+      throw new Error("Unreadable autosave could not be preserved");
+    localStorage.setItem(STORAGE, JSON.stringify(project));
+    $("#saveState").textContent = msg("ui_87222e82bf5d");
+    $("#saveWarning")?.setAttribute("hidden", "");
+  } catch {
+    $("#saveState").textContent = msg("ui_3d56409d02fb");
+    const warning = $("#saveWarning");
+    if (warning) {
+      warning.hidden = false;
+      warning.textContent = msg("ui_008e26ff915f");
+    }
+    return;
+  }
+  if (Date.now() - lastRecovery > 60000) {
+    try {
+      const list = loadVersions();
+      list.unshift({
+        id: cryptoId(),
+        label: `AUTO RECOVERY · ${project.title}`,
+        date: Date.now(),
+        project: structuredClone(project),
+      });
+      localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
+      lastRecovery = Date.now();
+    } catch {
+      toast(msg("ui_0af7730f9e25"));
+    }
+  }
 }
 function toast(message: any, undo = false) {
   clearTimeout(toastTimer);
@@ -3815,4 +3832,26 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+window.addEventListener("pagehide", () => {
+  if (saveTimer) persistPendingProject();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && saveTimer) persistPendingProject();
+});
+
 void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));
+
+
+if (autosaveRecoveryNotice) {
+  const warning = $("#saveWarning");
+  warning.hidden = false;
+  warning.textContent = autosaveRecoveryBlocked
+    ? L(
+        "Unreadable autosave preserved in its original key; automatic saving is blocked. Export JSON to keep new work.",
+        "Autoguardado ilegible conservado en su clave original; guardado automático bloqueado. Exporta JSON para conservar el trabajo nuevo.",
+      )
+    : L(
+        "An unreadable autosave was preserved before loading a recovery project.",
+        "Se conservó el autoguardado ilegible antes de cargar un proyecto de recuperación.",
+      );
+}

@@ -80,7 +80,8 @@ export function mountStudioShell() {
     tracks = take(".track-rail"),
     modeActions = take(".mode-actions"),
     global = take(".global-locator"),
-    footer = take("footer");
+    footer = take("footer"),
+    saveWarnings = take("#saveWarning");
   const inspector = ["synthRack", "motionRack", "effectsRack", "macroRack"].map(
     (id) => document.getElementById(id)!,
   );
@@ -259,7 +260,9 @@ export function mountStudioShell() {
               </label>
             </div>
           </div>
-          <div class={`studio-subnav${tabs.length > 1 ? " has-view-tabs" : ""}`}>
+          <div
+            class={`studio-subnav${tabs.length > 1 ? " has-view-tabs" : ""}`}
+          >
             {tabs.length > 1 && (
               <nav
                 key="workspace-tabs"
@@ -309,6 +312,7 @@ export function mountStudioShell() {
                 : ""}
             </span>
           </div>
+          <Slot nodes={saveWarnings} className="studio-save-warning" />
           <Slot nodes={tracks} className="studio-trackbar" />
           <Slot nodes={global} className="studio-song-position" />
           <Slot nodes={views} className="studio-content" />
