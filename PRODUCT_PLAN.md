@@ -187,3 +187,5 @@ Validación funcional local de cierre: `npm run check:full` terminó con exit 0,
 ## Publicación autorizada (2026-10-28)
 
 El usuario ha solicitado actualizar memoria, instrucciones y UX review, crear commits separados por mejora, hacer push y desplegar el Site existente. Se conserva el modelo v6, la audiencia pública y el dominio actual `https://studio.suizman.org`. La revisión UX vigente está en `UX_REVIEW.md`; canto y evaluaciones perceptivas amplias continúan pendientes. El resultado efectivo de publicación se registrará en PROJECT_MEMORY.md tras confirmar el estado terminal del despliegue.
+
+La integración del refactor remoto `43a2483` se conservó mediante merge `e31a2c2`; la nueva validación completa del conjunto pasó con 56 unitarias y 43 flujos Chromium/Firefox. La distribución final identifica `e31a2c2`.
