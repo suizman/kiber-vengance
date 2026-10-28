@@ -3280,6 +3280,9 @@ $("#importProject").onchange = async (e: any) => {
     project = await importProjectFile(e.target.files[0]);
     engine.project = project;
     await loadLocalSamples();
+    await loadSamplerAsset();
+    await loadAudioAssets();
+    await storage.showMissingAssets(runtime);
     selectedNotes.clear();
     changed(true);
     $("#projectMenu").close();
@@ -3802,3 +3805,5 @@ document.addEventListener("visibilitychange", () => {
     if (activeView === "mix") animateMixer();
   }
 });
+
+void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));

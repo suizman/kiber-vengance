@@ -317,3 +317,10 @@ dialog.appearance-dialog.local-ai-dialog {
     grid-template-columns: 1fr;
   }
 }
+
+#missingAssetsDialog label {
+  display: block;
+  overflow-wrap: anywhere;
+  margin: 16px 0;
+}
+#missingAssetsDialog input { max-width: 100%; }

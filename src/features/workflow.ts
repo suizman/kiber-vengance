@@ -8,6 +8,7 @@ import { mountDial } from "../ui/components/dial";
 import { studioBridge, type StudioView } from "../ui/bridge";
 
 import {
+  projectAssets,
   createProject,
   createEmptyProject,
   migrateProject,
@@ -1239,39 +1240,38 @@ export async function renderProjectBundle(ctx: RuntimeContext) {
       }),
     },
   ];
-  for (const asset of ctx.project.samples) {
+  const manifest: Array<{
+    id: string;
+    name: string;
+    type: string;
+    path: string;
+  }> = [];
+  const missing: string[] = [];
+  for (const asset of projectAssets(ctx.project)) {
     const blob = await ctx.getAsset(asset.id);
-    if (blob)
-      files.push({
-        name: `samples/${asset.slot}-${asset.name.replace(/[^a-z0-9._-]+/gi, "-")}`,
-        data: blob,
-      });
+    if (!blob) {
+      missing.push(`${asset.name} (${asset.id})`);
+      continue;
+    }
+    const path = `assets/${manifest.length}`;
+    files.push({ name: path, data: blob });
+    manifest.push({ ...asset, type: blob.type || asset.type, path });
   }
-  if (ctx.project.sampler.assetId) {
-    const blob = await ctx.getAsset(ctx.project.sampler.assetId);
-    if (blob)
-      files.push({
-        name: `sampler/${ctx.project.sampler.assetId}-${ctx.project.sampler.name.replace(/[^a-z0-9._-]+/gi, "-")}`,
-        data: blob,
-      });
-  }
-  const regionAssets = new Map<string, string>();
-  for (const lane of ctx.project.audioLanes)
-    for (const region of lane.regions)
-      regionAssets.set(region.assetId, region.name);
-  for (const [id, name] of regionAssets) {
-    const blob = await ctx.getAsset(id);
-    if (blob)
-      files.push({
-        name: `audio/${id}-${name.replace(/[^a-z0-9._-]+/gi, "-")}`,
-        data: blob,
-      });
-  }
+  if (missing.length)
+    throw new Error(
+      `Missing audio assets: ${missing.join(", ")}. Save project JSON to preserve references.`,
+    );
+  files.push({
+    name: "assets.json",
+    data: new Blob([JSON.stringify({ version: 1, assets: manifest })], {
+      type: "application/json",
+    }),
+  });
   files.push({
     name: "PACKAGE-README.txt",
     data: new Blob(
       [
-        "КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores sampler, audio-region and drum-sample assets into local browser storage.\n",
+        "КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores takes, sampler, audio-region and drum-sample assets into local browser storage.\n",
       ],
       { type: "text/plain" },
     ),

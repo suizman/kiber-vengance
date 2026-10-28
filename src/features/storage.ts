@@ -13,6 +13,7 @@ import { mountDial } from "../ui/components/dial";
 import { studioBridge, type StudioView } from "../ui/bridge";
 
 import {
+  projectAssets,
   createProject,
   createEmptyProject,
   migrateProject,
@@ -151,12 +152,12 @@ export function assetDb(ctx: RuntimeContext) {
 export async function putAsset(ctx: RuntimeContext, id: string, blob: Blob) {
   const db = await ctx.assetDb();
   await new Promise<void>((resolve, reject) => {
-    const request = db
-      .transaction("assets", "readwrite")
-      .objectStore("assets")
-      .put(blob, id);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
+    const tx = db.transaction("assets", "readwrite");
+    tx.objectStore("assets").put(blob, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () =>
+      reject(tx.error || new Error("Asset storage transaction aborted"));
   });
 }
 
@@ -362,15 +363,82 @@ export async function saveVersion(ctx: RuntimeContext) {
   ctx.toast(msg("ui_ea697be09cd5"));
 }
 
+export async function missingProjectAssets(
+  ctx: RuntimeContext,
+  assets = projectAssets(ctx.project),
+) {
+  const missing = [];
+  for (const asset of assets)
+    if (!(await ctx.getAsset(asset.id))) missing.push(asset);
+  return missing;
+}
+
+export async function showMissingAssets(ctx: RuntimeContext) {
+  const missing = await missingProjectAssets(ctx);
+  document.querySelector("#missingAssetsDialog")?.remove();
+  if (!missing.length) return;
+  const dialog = document.createElement("dialog");
+  dialog.id = "missingAssetsDialog";
+  dialog.className = "dialog";
+  const title = document.createElement("h2");
+  title.textContent = ctx.L(
+    "Missing audio files",
+    "Archivos de audio ausentes",
+  );
+  const description = document.createElement("p");
+  description.textContent = ctx.L(
+    "Relink the original files. JSON can still be saved; complete packages and audio exports require their sources.",
+    "Revincula los archivos originales. Puedes guardar JSON; los paquetes completos y el audio necesitan sus fuentes.",
+  );
+  dialog.append(title, description);
+  for (const asset of missing) {
+    const label = document.createElement("label"),
+      input = document.createElement("input");
+    label.textContent = `${asset.name} (${asset.id}) `;
+    input.type = "file";
+    input.accept = "audio/*";
+    input.onchange = async () => {
+      if (!input.files?.[0]) return;
+      try {
+        const file = input.files[0];
+        await ctx.putAsset(asset.id, file);
+        await ctx.loadLocalSamples();
+        await ctx.loadSamplerAsset();
+        await ctx.loadAudioAssets();
+        label.remove();
+        if (!dialog.querySelector("input")) {
+          dialog.close();
+          dialog.remove();
+        }
+      } catch (error) {
+        ctx.toast(String(error));
+      }
+    };
+    label.append(input);
+    dialog.append(label);
+  }
+  const close = document.createElement("button");
+  close.textContent = ctx.L("Close", "Cerrar");
+  close.onclick = () => dialog.close();
+  dialog.append(close);
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
 export async function loadAudioAssets(ctx: RuntimeContext) {
   const ids = new Set<string>();
   for (const lane of ctx.project.audioLanes || [])
     for (const region of lane.regions) ids.add(region.assetId);
+  for (const id of ctx.engine.audioAssets.keys())
+    if (!ids.has(id)) ctx.engine.audioAssets.delete(id);
   for (const id of ids)
     try {
       const blob = await ctx.getAsset(id);
       if (blob) await ctx.engine.setAudioAsset(id, await blob.arrayBuffer());
-    } catch {}
+      else ctx.engine.audioAssets.delete(id);
+    } catch (error) {
+      ctx.toast(`Audio ${id}: ${String(error)}`);
+    }
   ctx.renderAudioStudio();
 }
 
@@ -542,7 +610,12 @@ export async function readStoreZip(ctx: RuntimeContext, blob: Blob) {
     const nameStart = offset + 30,
       dataStart = nameStart + nameLength + extraLength,
       name = decoder.decode(bytes.slice(nameStart, nameStart + nameLength));
-    files.set(name, new Blob([bytes.slice(dataStart, dataStart + size)]));
+    if (dataStart + size > bytes.length || files.has(name))
+      throw new Error("Corrupt project package entry");
+    const data = bytes.slice(dataStart, dataStart + size);
+    if (ctx.crc32(data) !== view.getUint32(offset + 14, true))
+      throw new Error(`Corrupt project package checksum: ${name}`);
+    files.set(name, new Blob([data]));
     offset = dataStart + size;
   }
   return files;
@@ -557,6 +630,29 @@ export async function importProjectFile(ctx: RuntimeContext, file: File) {
     if (!entry)
       throw new Error("Project package does not contain a .kiber.json file");
     const next = migrateProject(JSON.parse(await entry[1].text()));
+    const manifestFile = files.get("assets.json");
+    if (manifestFile) {
+      const manifest = JSON.parse(await manifestFile.text());
+      if (manifest.version !== 1 || !Array.isArray(manifest.assets))
+        throw new Error("Unsupported asset manifest");
+      for (const asset of projectAssets(next)) {
+        const record = manifest.assets.find(
+          (entry: { id: string }) => entry.id === asset.id,
+        );
+        const packed = record && files.get(record.path);
+        if (!packed)
+          throw new Error(
+            `Missing packaged audio: ${asset.name} (${asset.id})`,
+          );
+        await ctx.putAsset(
+          asset.id,
+          new Blob([await packed.arrayBuffer()], {
+            type: record.type || asset.type,
+          }),
+        );
+      }
+      return next;
+    }
     for (const asset of next.samples) {
       const sample = [...files.entries()].find(([name]) =>
         name.startsWith(`samples/${asset.slot}-`),
@@ -638,6 +734,7 @@ export async function performExport(
     ctx.toast(msg("ui_8631a6aeb0e3"));
     return;
   }
+  if (kind === "bundle" && (await missingProjectAssets(ctx)).length) { await showMissingAssets(ctx); return; }
   const meta = ctx.exportMeta[kind],
     target = await ctx.prepareQuickExport(
       kind,

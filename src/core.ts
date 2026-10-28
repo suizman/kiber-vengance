@@ -202,6 +202,29 @@ export function meterSteps(
 export function frequency(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
 }
+/** All persistent binary references, deduplicated across project features. */
+export function projectAssets(
+  project: Project,
+): Array<{ id: string; name: string; type: string }> {
+  const assets = new Map<string, { id: string; name: string; type: string }>();
+  const add = (id: string | null | undefined, name: string, type: string) => {
+    if (id && !assets.has(id)) assets.set(id, { id, name, type });
+  };
+  for (const sample of project.samples)
+    add(sample.id, sample.name, sample.type);
+  add(
+    project.sampler.assetId,
+    project.sampler.name,
+    project.sampler.type || "audio/wav",
+  );
+  for (const lane of project.audioLanes)
+    for (const region of lane.regions)
+      add(region.assetId, region.name, "audio/wav");
+  for (const take of project.performanceTakes)
+    add(take.audioAssetId, take.name, take.mimeType || "audio/webm");
+  return [...assets.values()];
+}
+
 export function secondsPerStep(tempo: number): number {
   return 60 / tempo / 4;
 }

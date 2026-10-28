@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PROJECT_VERSION, TRACKS, createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, meterSteps, setProjectMeter,
+  PROJECT_VERSION, projectAssets, TRACKS, createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, meterSteps, setProjectMeter,
   makeNote, toggleNote, duplicateClip, deleteClip, varyClip, resizeClip, clipLengthSteps, quantizeClip, automationValue, notesAtStep,
   generateClip, generateBacking, sceneLengthSteps, playbackEvents, encodeMidi, addArrangementScene, duplicateArrangementScene,
   moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake,
@@ -225,4 +225,17 @@ test('song scheduling and clip launches use each instrument and preserve voice s
   engine.scheduleMusicStep(.4);
   assert.equal(voices.at(-1).cutoff, 3090);
   assert.equal(b.instrument.cutoff, originalCutoff);
+});
+
+test('binary inventory includes takes and deduplicates shared region/sampler sources', () => {
+  const p = createEmptyProject();
+  p.sampler.assetId = 'shared'; p.sampler.name = 'Sampler'; p.sampler.type = 'audio/ogg';
+  const lane = createAudioLane('Audio');
+  lane.regions.push(createAudioRegion('shared', 'Region', 0, 16, 2)); p.audioLanes.push(lane);
+  const take = createPerformanceTake('Live take', 16, []);
+  take.audioAssetId = 'recording'; take.mimeType = 'audio/webm;codecs=opus'; p.performanceTakes.push(take);
+  assert.deepEqual(projectAssets(p).map(({id,type}) => ({id,type})), [
+    {id:'shared',type:'audio/ogg'}, {id:'recording',type:'audio/webm;codecs=opus'}
+  ]);
+  assert.deepEqual(projectAssets(migrateProject(JSON.parse(JSON.stringify(p)))) , projectAssets(p));
 });

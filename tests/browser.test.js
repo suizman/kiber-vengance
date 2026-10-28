@@ -680,3 +680,37 @@ test('Sound inspector racks reopen after being collapsed', async t => {
     await context.close();
   }
 });
+
+test('project packages restore every binary including takes into a fresh browser and relink missing sources', {timeout:60000}, async t=>{
+  await ready(); const browser=await launchBrowser(); t.after(()=>browser.close());
+  const page=await browser.newPage(); await page.addInitScript(()=>Object.defineProperty(globalThis,'showSaveFilePicker',{value:undefined,configurable:true})); await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  const expected=await page.evaluate(async(wav)=>{
+    const core=await import('/core.js'), p=core.createEmptyProject();
+    p.sampler.assetId='shared-source'; p.sampler.name='Shared'; p.sampler.type='audio/wav';
+    p.samples.push({id:'drum-source',name:'Drum',type:'audio/wav',slot:0,size:wav.length,trimStart:0,trimEnd:1,tune:0,attack:.002,release:.08,reverse:false});
+    const lane=core.createAudioLane('Voice'); lane.regions.push(core.createAudioRegion('shared-source','Region',0,8,1)); p.audioLanes.push(lane);
+    const take=core.createPerformanceTake('Recorded performance',8,[]); take.audioAssetId='take-source'; take.mimeType='audio/webm;codecs=opus'; p.performanceTakes.push(take);
+    const request=globalThis.indexedDB.open('kiber-vengance-assets-v1',1); request.onupgradeneeded=()=>request.result.createObjectStore('assets'); const db=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+    const bytes=new Uint8Array(wav);
+    await new Promise((resolve,reject)=>{const tx=db.transaction('assets','readwrite');tx.objectStore('assets').put(new globalThis.Blob([bytes],{type:'audio/wav'}),'shared-source');tx.objectStore('assets').put(new globalThis.Blob([bytes],{type:'audio/wav'}),'drum-source');tx.objectStore('assets').put(new globalThis.Blob([bytes],{type:take.mimeType}),'take-source');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+    globalThis.localStorage.setItem('kiber-vengance-project-v6',JSON.stringify(p)); return p;
+  }, [...silentWav()]);
+  await page.reload({waitUntil:'networkidle'}); await page.locator('#exportAsBtn').click();
+  await page.locator('.export-advanced').nth(1).locator('summary').click();
+  const downloadPromise=page.waitForEvent('download'); await page.locator('[data-export="bundle"]').click(); const download=await downloadPromise;
+  const buffer=readFileSync(await download.path());
+  const fresh=await browser.newPage(); await fresh.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});
+  await fresh.locator('#menuBtn').click(); await fresh.locator('#importProject').setInputFiles({name:'portable.zip',mimeType:'application/zip',buffer});
+  await fresh.waitForFunction(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6'))?.performanceTakes.length===1);
+  const restored=await fresh.evaluate(async()=>{
+    const db=await new Promise(resolve=>{const r=globalThis.indexedDB.open('kiber-vengance-assets-v1',1);r.onsuccess=()=>resolve(r.result)});
+    const get=id=>new Promise(resolve=>{const r=db.transaction('assets').objectStore('assets').get(id);r.onsuccess=()=>resolve(r.result)});
+    const result=[];for(const id of ['shared-source','take-source','drum-source']){const blob=await get(id);result.push({id,type:blob.type,bytes:[...new Uint8Array(await blob.arrayBuffer())]})}return result;
+  });
+  assert.deepEqual(restored,[{id:'shared-source',type:'audio/wav',bytes:[...silentWav()]},{id:'take-source',type:'audio/webm;codecs=opus',bytes:[...silentWav()]},{id:'drum-source',type:'audio/wav',bytes:[...silentWav()]}]);
+  assert.equal(await fresh.evaluate(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).performanceTakes[0].audioAssetId),expected.performanceTakes[0].audioAssetId);
+  await fresh.evaluate(async()=>{const db=await new Promise(resolve=>{const r=globalThis.indexedDB.open('kiber-vengance-assets-v1',1);r.onsuccess=()=>resolve(r.result)});await new Promise(resolve=>{const tx=db.transaction('assets','readwrite');tx.objectStore('assets').delete('take-source');tx.oncomplete=resolve})});
+  await fresh.reload({waitUntil:'networkidle'}); await fresh.locator('#missingAssetsDialog').waitFor();
+  await fresh.locator('#missingAssetsDialog input').setInputFiles({name:'take.webm',mimeType:'audio/webm',buffer:silentWav()});
+  await fresh.waitForFunction(()=>!document.querySelector('#missingAssetsDialog'));
+});
