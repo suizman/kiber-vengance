@@ -114,15 +114,19 @@ function harmony(
   target: MelodyTarget,
   bar: number,
   mode: ComposeMode,
+  beat?: number,
 ): number[] {
   const scores = new Map<number, number>();
   const offset = mode === "continue" ? (target.context?.source.bars ?? 0) : 0;
   for (const voice of target.context?.voices ?? []) {
-    const start = ((bar + offset) % voice.bars) * target.stepsPerBar;
+    const start =
+      ((bar + offset) % voice.bars) * target.stepsPerBar + (beat ?? 0);
     for (const note of voice.notes) {
       const overlap =
-        Math.min(start + target.stepsPerBar, note.step + note.length) -
-        Math.max(start, note.step);
+        Math.min(
+          start + (beat === undefined ? target.stepsPerBar : 4),
+          note.step + note.length,
+        ) - Math.max(start, note.step);
       if (overlap > 0)
         scores.set(
           pc(note.pitch),
@@ -265,7 +269,10 @@ export function composeMelody(
           { length: count },
           (_, i) =>
             (i * spb) / count +
-            (plan.rhythm === "syncopated" && i % 2 ? (spb / count) * 0.45 : 0),
+            (plan.rhythm === "syncopated" && i % 2 ? (spb / count) * 0.45 : 0) +
+            (options.variation > 0 && i > 0
+              ? (spb / count) * (randomAt(seed, phraseBar, i + 201) - 0.5) * 0.4
+              : 0),
         );
     // v6 persists offsets only in [-.49, .49]; normalize before computing gates.
     const onsets = rawOnsets
@@ -281,11 +288,17 @@ export function composeMelody(
       );
     for (let i = 0; i < onsets.length; i++) {
       const onset = bar * spb + onsets[i]!;
+      const beatChord = options.context
+        ? harmony(
+            target,
+            bar,
+            options.mode,
+            Math.floor(onsets[i]! / 4) * 4,
+          ).filter((n) => scale.includes(pc(n - root)))
+        : [];
       const next = bar * spb + (onsets[i + 1] ?? spb);
       const index = i + phraseBar * onsets.length;
-      let wanted = degreePitch(
-        plan.motif[index % plan.motif.length]! % scale.length,
-      );
+      let wanted = degreePitch(plan.motif[index % plan.motif.length]!);
       if (options.mode !== "new") {
         const n =
           options.mode === "continue"
@@ -345,8 +358,8 @@ export function composeMelody(
             : (chord[0] ?? root);
         const endings = allowed.filter((n) => pc(n) === cadence);
         if (endings.length) preferred = endings;
-      } else if (i === 0 && chord.length) {
-        const chordTones = allowed.filter((n) => chord.includes(pc(n)));
+      } else if (Math.abs(onsets[i]! % 4) < 0.5 && beatChord.length) {
+        const chordTones = allowed.filter((n) => beatChord.includes(pc(n)));
         if (chordTones.length) preferred = chordTones;
       }
       const pitch = nearest(preferred, wanted);
@@ -356,9 +369,10 @@ export function composeMelody(
         (next - onset) *
           (last && options.structure === "phrase"
             ? 0.96
-            : plan.articulation === "short"
-              ? 0.5
-              : 0.9),
+            : (plan.articulation === "short" ? 0.5 : 0.9) *
+              (options.variation > 0
+                ? 0.65 + randomAt(seed, phraseBar, i + 301) * 0.35
+                : 1)),
       );
       notes.push(
         makeNote(
@@ -481,4 +495,56 @@ export function replaceMelodyBars(
     start = end;
   }
   return notes;
+}
+
+/** A transparent local heuristic, not an assertion of perceptual quality. */
+export function selectDiverseMelodies<T extends { notes: NoteEvent[] }>(
+  candidates: T[],
+  limit = 3,
+): T[] {
+  const signature = (notes: NoteEvent[]) =>
+    notes
+      .map(
+        (n) =>
+          `${n.step}:${n.offset.toFixed(2)}:${n.pitch}:${n.length.toFixed(2)}`,
+      )
+      .join("|");
+  const features = (notes: NoteEvent[]) => {
+    const intervals = notes.slice(1).map((n, i) => n.pitch - notes[i]!.pitch);
+    const rhythms = new Set(
+      notes.map((n) => `${n.offset.toFixed(1)}:${n.length.toFixed(1)}`),
+    );
+    return [
+      rhythms.size / Math.max(1, notes.length),
+      new Set(intervals).size / Math.max(1, intervals.length),
+      intervals.filter((n) => Math.abs(n) > 7).length /
+        Math.max(1, intervals.length),
+    ];
+  };
+  const unique = [
+    ...new Map(candidates.map((c) => [signature(c.notes), c])).values(),
+  ];
+  const score = (candidate: T) => {
+    const f = features(candidate.notes);
+    return f[0]! + f[1]! - f[2]!;
+  };
+  const chosen: T[] = [];
+  while (unique.length && chosen.length < limit) {
+    unique.sort((a, b) => {
+      const value = (c: T) =>
+        score(c) +
+        (chosen.length
+          ? Math.min(
+              ...chosen.map((other) => {
+                const cf = features(c.notes),
+                  of = features(other.notes);
+                return cf.reduce((sum, v, i) => sum + Math.abs(v - of[i]!), 0);
+              }),
+            )
+          : 0);
+      return value(b) - value(a);
+    });
+    chosen.push(unique.shift()!);
+  }
+  return chosen;
 }

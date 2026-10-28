@@ -440,3 +440,24 @@ test("automatic-density variations keep silent bars and exact duplicate alternat
   assert.equal(proposals.length, 1);
   assert.ok(proposals[0].notes.every((n) => Math.floor(n.step / 16) % 2 === 0));
 });
+
+
+test("composer preserves octave degrees instead of reducing the motif to pitch classes", () => {
+  const settings = {...DEFAULT_COMPOSITION, density:4, variation:0, repetition:0, maxLeap:12, context:false, structure:"free"};
+  const flat = composeMelody({...plan,motif:[0,0,0,0],contour:"flat"},target,1,settings,1);
+  const octaves = composeMelody({...plan,motif:[0,7,0,7],contour:"flat"},target,1,settings,1);
+  assert.notDeepEqual(octaves.map(n=>n.pitch),flat.map(n=>n.pitch));
+  assert.equal(Math.abs(octaves[1].pitch-octaves[0].pitch),12);
+});
+
+test('quality selection retains diverse unique proposals without changing their notes', async()=>{
+  const {selectDiverseMelodies}=await import('../dist/composer.js');
+  const settings={...DEFAULT_COMPOSITION,density:8};
+  const a={notes:composeMelody(plan,target,4,settings,1)};
+  const b={notes:composeMelody({...plan,motif:[7,6,4,2]},target,4,settings,7)};
+  const c={notes:composeMelody({...plan,rhythm:'sparse'},target,4,settings,11)};
+  const frozen=JSON.stringify([a,b,c]);
+  const result=selectDiverseMelodies([a,a,b,c],3);
+  assert.equal(result.length,3);assert.equal(new Set(result).size,3);
+  assert.equal(JSON.stringify([a,b,c]),frozen);
+});

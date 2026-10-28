@@ -32,6 +32,7 @@ import {
   DEFAULT_COMPOSITION,
   composeMelody,
   composeAlternatives,
+  selectDiverseMelodies,
   compositionPrompt,
   replaceMelodyBars,
   type CompositionOptions,
@@ -89,6 +90,7 @@ export function setupLocalAI() {
     updateLanguage = () => setEs(getLanguage() === "es");
     const [target, setTarget] = useState<MelodyTarget | null>(null);
     const [bars, setBars] = useState(4);
+    const [quality, setQuality] = useState(false);
     const [prompt, setPrompt] = useState("");
     const [style, setStyle] = useState<StyleId>("prompt");
     const [rhythm, setRhythm] = useState<RhythmChoice>("auto");
@@ -244,23 +246,42 @@ export function setupLocalAI() {
       const token = ++attempt.current,
         started = performance.now();
       try {
-        const plan = enforceMelodyChoices(
-          parseMelodyPlan(
-            await generateLocalPlan(
-              `${enrichMelodyPrompt(idea, style, rhythm, +tempo)}\n${compositionPrompt(target, composition)}`,
-              target.key,
-              target.scale,
-              bars,
-              (_fraction, text) => {
-                if (token === attempt.current) setDetail(text);
-              },
+        const candidates: Proposal[] = [];
+        const passes = quality ? 3 : 1;
+        for (let pass = 0; pass < passes; pass++) {
+          if (token !== attempt.current) return;
+          const plan = enforceMelodyChoices(
+            parseMelodyPlan(
+              await generateLocalPlan(
+                `${enrichMelodyPrompt(idea, style, rhythm, +tempo)}\n${compositionPrompt(target, composition)}`,
+                target.key,
+                target.scale,
+                bars,
+                (_fraction, text) => {
+                  if (token === attempt.current) setDetail(text);
+                },
+              ),
             ),
-          ),
-          rhythm,
-        );
+            rhythm,
+          );
+          if (token !== attempt.current) return;
+          const seed = (runSeed.current += 3);
+          candidates.push(
+            ...composeAlternatives(plan, target, bars, composition, seed).map(
+              (candidate) => ({
+                ...candidate,
+                plan,
+                seconds: (performance.now() - started) / 1000,
+              }),
+            ),
+          );
+        }
+        const ranked = quality ? selectDiverseMelodies(candidates) : candidates;
+        const best = ranked[0]!;
+        const plan = best.plan;
         if (token === attempt.current) {
           const seconds = (performance.now() - started) / 1000;
-          const seed = (runSeed.current += 3);
+          const seed = best.seed;
           if (partial && result && selectedBars.length) {
             const notes = replaceMelodyBars(
               result.notes,
@@ -276,9 +297,7 @@ export function setupLocalAI() {
             );
           } else {
             setProposals(
-              composeAlternatives(plan, target, bars, composition, seed).map(
-                (candidate) => ({ ...candidate, plan, seconds }),
-              ),
+              ranked.map((candidate) => ({ ...candidate, seconds })),
             );
             setSelected(0);
             setSelectedBars([]);
@@ -321,8 +340,22 @@ export function setupLocalAI() {
             plan: first.plan,
             seconds: first.seconds,
           }));
-          setProposals(nextProposals);
-          setSelected(Math.min(selected, nextProposals.length - 1));
+          const displayed = quality
+            ? selectDiverseMelodies(
+                proposals.map((proposal) => ({
+                  ...proposal,
+                  notes: composeMelody(
+                    proposal.plan,
+                    target,
+                    bars,
+                    next,
+                    proposal.seed,
+                  ),
+                })),
+              )
+            : nextProposals;
+          setProposals(displayed);
+          setSelected(Math.min(selected, displayed.length - 1));
         }
         setComposition(next);
         setSelectedBars([]);
@@ -765,6 +798,18 @@ export function setupLocalAI() {
                   : null
               }
             />
+            <label class="ai-tempo-apply">
+              <input
+                id="aiQuality"
+                type="checkbox"
+                checked={quality}
+                disabled={status === "generating" || status === "loading"}
+                onChange={(e) => setQuality(e.currentTarget.checked)}
+              />
+              {es
+                ? "Modo Calidad · tres inferencias y selección local"
+                : "Quality mode · three inferences and local selection"}
+            </label>
             <button
               type="button"
               id="generateLocalAI"
@@ -788,9 +833,13 @@ export function setupLocalAI() {
               </div>
             )}
             <p class="ai-context">
-              {es
-                ? "Una inferencia crea el motivo; el motor musical prepara hasta tres variantes distintas. Ajustar y comparar no requiere otra descarga ni inferencia."
-                : "One inference creates the motif; the music engine arranges up to three distinct variants. Shaping and comparing require no further download or inference."}
+              {quality
+                ? es
+                  ? "Tres inferencias secuenciales; selección heurística por ritmo y contorno. La preferencia musical requiere escucha."
+                  : "Three sequential inferences; heuristic selection by rhythm and contour. Musical preference requires listening."
+                : es
+                  ? "Una inferencia crea el motivo; el motor musical prepara hasta tres variantes distintas. Ajustar y comparar no requiere otra descarga ni inferencia."
+                  : "One inference creates the motif; the music engine arranges up to three distinct variants. Shaping and comparing require no further download or inference."}
             </p>
           </>
         )}

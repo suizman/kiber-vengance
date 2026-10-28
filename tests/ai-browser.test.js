@@ -346,3 +346,13 @@ test("Spanish compact composer explains source rhythm and keeps result actions r
     false,
   );
 });
+
+test('quality mode makes three sequential calls and preserves proposals after cancellation', {timeout:30000}, async t=>{
+  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage({serviceWorkers:"block"});
+  await page.addInitScript(()=>{globalThis.__modelCalls=0;const Native=globalThis.Worker;globalThis.Worker=class extends Native{postMessage(message,...args){if(message.kind==='generate')globalThis.__modelCalls++;return super.postMessage(message,...args)}}});
+  await page.route('**/cpu-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:fixture}));
+  await page.goto(`${server.url}/?qa=1`,{waitUntil:'networkidle'});await page.locator('#composeAIMelodyBtn').click();await page.locator('#localAIBackend').selectOption('cpu');await page.locator('#loadLocalAI').click();await ready(page);
+  await page.locator('#aiPrompt').fill('A cinematic answer');await page.locator('#aiQuality').check();await page.locator('#generateLocalAI').click();await page.waitForFunction(()=>globalThis.document.querySelector('.ai-result')||globalThis.document.querySelector('.ai-error'),null,{timeout:15000}).catch(async error=>{throw new Error(JSON.stringify(await page.evaluate(()=>({status:globalThis.document.querySelector('#localAIStatus')?.textContent,detail:globalThis.document.querySelector('.ai-detail')?.textContent,calls:globalThis.__modelCalls,quality:globalThis.document.querySelector('#aiQuality')?.checked}))),{cause:error})});assert.equal(await page.locator('.ai-error').count(),0,await page.locator('.ai-error').allTextContents());await page.locator('.ai-result').waitFor();
+  assert.equal(await page.evaluate(()=>globalThis.__modelCalls),3);assert.ok(await page.locator('[data-ai-proposal]').count()>=1);
+  const previous=await notes(page);await page.locator('#generateLocalAI').click();await page.locator('#cancelAIGeneration').click();assert.deepEqual(await notes(page),previous);
+});
