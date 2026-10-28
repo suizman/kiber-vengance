@@ -65,7 +65,7 @@ Real CPU inference passed in WebKit (4.7 s initial / 4.1 s offline) and Firefox 
 `npm run check:full` passed its check stage and seven browser workflows but encountered the existing quick WAV export write-wait timeout. The run ended at its 300-second bound; a full-suite pass is not claimed. Source commits `9acf8bc` (CPU output reliability) and `a61784f` (contextual composer) and distribution commit `e72a5cb` were pushed to the existing repository. Sites version 30 was successfully deployed at https://kiber-vengance.starrylemur35.chatgpt.site. The footer identifies `a61784f`; Site audience and repository visibility were preserved.
 
 
-## Local composer update (2026-10-28, not deployed)
+## Composer update (2026-10-28)
 
 Motif degrees now retain octave information before register/leap fitting. With variation enabled, timing and gates vary deterministically to provide anticipations and breathing space without changing explicit onset density. Accompaniment preferences are evaluated at four-step pulse windows as well as the phrase cadence, instead of using only a whole-bar summary. Existing source-rhythm behavior remains available.
 

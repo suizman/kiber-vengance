@@ -1,6 +1,6 @@
 # Local voice — implementation and research status
 
-Local source/build, 2026-10-28. No new Site deployment is claimed.
+Implementation and browser evidence, 2026-10-28. Actual publication status and the deployed version are recorded in PROJECT_MEMORY.md.
 
 ## Speech workflow
 

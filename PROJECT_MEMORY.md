@@ -11,6 +11,8 @@ Last updated: 2026-10-28.
 - User explicitly requested updated memory, agent instructions, product plan and UX review, separate feature/improvement commits, push to the existing repository and then ChatGPT Site deployment.
 - Existing Site was re-read before release: its audience is public and its current live URL is `https://studio.suizman.org`; latest server version was 31. Preserve these settings. Older release notes naming only the generated Site domain are historical.
 - Release documentation distinguishes shipped functionality from pending singing and listening acceptance. The full functional gate already passed with 54 unit tests / 43 browser workflows; the release build will be revalidated after source commits so the footer matches its source.
+- Reviewable feature commits: `ae27bc9` portable packages/takes/relinking; `b73bb06` shared clock, mixer, MIDI/stems and WAV performance; `10cca18` autosave recovery; `6d0258c` honest automation/accessibility; `ff5775d` composer rhythm/octaves/Quality; `08f3da4` browser-local speech. `2dd35e2` updates the shared documentation and UX review.
+- Release rebuild/typecheck/lint and all 54 unit tests passed again. Distribution identifies runtime source `08f3da4`; the 54-unit/43-browser full-suite evidence remains valid because runtime source is unchanged by commit separation and documentation.
 - Publication is pending while this preparation entry is written. Record the actual saved version, source revision and terminal deployment result after publishing; do not infer success from an upload.
 
 ## Reliability, composer quality mode and local speech (2026-10-28, local work)

@@ -6,7 +6,7 @@ The complete specification is in [`kiber-vengance.md`](kiber-vengance.md), the p
 
 Local reliability/voice work (2026-10-28): portable packages now include recorded takes and a typed, deduplicated asset manifest. Missing files can be relinked; JSON remains exportable. MIDI includes tempo/meter maps, WAV uses the shared tempo clock, and audio lanes have isolated stems. See [reliability details](docs/RELIABILITY.md).
 
-**Local speech preview:** Arrange → Audio & sampler → **VOICE · ES/EN**. Explicitly download Kokoro, select English/Spanish, text, voice and speed, listen, then insert a new audio region at the captured song cursor/lane. q8 and FP32 are available for listening comparison. Audio and generation settings persist with the project/package; models stay in a separate manageable browser cache. This is local source/build work, not a new Sites deployment. Perceptual preference and physical output still require listening. Singing is research pending, with no public singing control. See [voice status and evidence](docs/LOCAL_VOICE.md).
+**Local speech preview:** Arrange → Audio & sampler → **VOICE · ES/EN**. Explicitly download Kokoro, select English/Spanish, text, voice and speed, listen, then insert a new audio region at the captured song cursor/lane. q8 and FP32 are available for listening comparison. Audio and generation settings persist with the project/package; models stay in a separate manageable browser cache. Release status and the deployed version are recorded in PROJECT_MEMORY.md. Perceptual preference and physical output still require listening. Singing is research pending, with no public singing control. See [voice status and evidence](docs/LOCAL_VOICE.md).
 
 ## Studio interface
 
