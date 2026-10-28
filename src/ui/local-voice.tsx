@@ -52,7 +52,6 @@ export function setupLocalVoice(ctx: Context) {
       [speed, setSpeed] = useState(1),
       [dtype, setDtype] = useState<"fp32" | "q8">("q8");
     const [engine, setEngine] = useState<"kokoro" | "chatterbox">("kokoro"),
-      [device, setDevice] = useState<"wasm" | "webgpu">("wasm"),
       [intensity, setIntensity] = useState(0.5),
       [pauseMs] = useState(250),
       [fragments, setFragments] = useState<
@@ -77,7 +76,7 @@ export function setupLocalVoice(ctx: Context) {
     const L = (en: string, spanish: string) => (es ? spanish : en);
     const settings = (): SpeechSettings => ({
       engine,
-      device,
+      device: "wasm",
       intensity,
       pauseMs,
       segments: text
@@ -322,8 +321,8 @@ export function setupLocalVoice(ctx: Context) {
         </header>
         <p>
           {L(
-            "Speech generated entirely in your browser. Explicit model download: q8 ≈90 MB, full precision ≈330 MB, plus runtime and voices. Spanish support is experimental; audition pronunciation before inserting.",
-            "Voz hablada generada en tu navegador. Descarga explícita: q8 ≈90 MB, precisión completa ≈330 MB, más runtime y voces. Español experimental; escucha la pronunciación antes de insertar.",
+            "Speech is generated in your browser. Kokoro: q8 ≈90 MB or FP32 ≈330 MB; Chatterbox ≈570 MB, plus runtime and voices. Downloads are explicit. Audition Spanish pronunciation before inserting.",
+            "Voz generada en tu navegador. Kokoro: q8 ≈90 MB o FP32 ≈330 MB; Chatterbox ≈570 MB, más runtime y voces. Las descargas son voluntarias. Escucha la pronunciación en español antes de insertar.",
           )}
         </p>
         <label>
@@ -358,30 +357,13 @@ export function setupLocalVoice(ctx: Context) {
             >
               <option value="kokoro">Kokoro · CPU</option>
               <option value="chatterbox">
-                Chatterbox ·{" "}
+                Chatterbox · CPU ·{" "}
                 {L("Expressive · experimental", "Expresivo · experimental")}
               </option>
             </select>
           </label>
           {engine === "chatterbox" && (
             <>
-              <label>
-                {L("Processor", "Procesador")}
-                <select
-                  id="voiceDevice"
-                  value={device}
-                  disabled={busy}
-                  onChange={(e) => {
-                    setDevice(e.currentTarget.value as "wasm" | "webgpu");
-                    setReady(false);
-                  }}
-                >
-                  <option value="wasm">CPU / WASM</option>
-                  <option value="webgpu" disabled={!("gpu" in navigator)}>
-                    WebGPU
-                  </option>
-                </select>
-              </label>
               <label>
                 {L("Expression intensity", "Intensidad expresiva")}
                 <input
@@ -410,8 +392,8 @@ export function setupLocalVoice(ctx: Context) {
               </label>
               <p>
                 {L(
-                  "Optional download ≈570 MB plus runtime. No free-form style instructions. CPU can take several minutes; GPU support depends on this device.",
-                  "Descarga opcional ≈570 MB más runtime. Sin instrucciones libres de estilo. CPU puede tardar varios minutos; GPU depende del dispositivo.",
+                  "Optional download ≈570 MB plus runtime. No free-form style instructions. CPU can take several minutes.",
+                  "Descarga opcional ≈570 MB más runtime. Sin instrucciones libres de estilo. CPU puede tardar varios minutos.",
                 )}
               </p>
             </>
