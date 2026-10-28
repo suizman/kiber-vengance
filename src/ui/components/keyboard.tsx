@@ -39,10 +39,14 @@ export function releaseAllKeyboards() {
 export function revealKeyboardKey(element: HTMLElement) {
   const scroll = element.closest<HTMLElement>(".keyboard-scroll");
   if (!scroll || !scroll.clientWidth) return;
-  const left = element.getBoundingClientRect().left - scroll.getBoundingClientRect().left + scroll.scrollLeft;
+  const left =
+    element.getBoundingClientRect().left -
+    scroll.getBoundingClientRect().left +
+    scroll.scrollLeft;
   const right = left + element.offsetWidth;
   if (left < scroll.scrollLeft) scroll.scrollLeft = Math.max(0, left - 12);
-  else if (right > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = right - scroll.clientWidth + 12;
+  else if (right > scroll.scrollLeft + scroll.clientWidth)
+    scroll.scrollLeft = right - scroll.clientWidth + 12;
 }
 const blackPitches = new Set([1, 3, 6, 8, 10]);
 const names = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
@@ -210,7 +214,7 @@ export function InstrumentKeyboard(props: KeyboardProps) {
               data-pitch={note.pitch}
               data-source={note.shortcut?.toLowerCase() ?? ""}
               data-sampler-pitch={props.sampler ? note.pitch : undefined}
-              aria-label={note.label ?? noteName(note.pitch)}
+              aria-label={`${note.label ?? noteName(note.pitch)}${note.shortcut ? ` ${note.shortcut.toUpperCase()}` : ""}`}
               aria-pressed="false"
               disabled={props.disabled}
               onPointerDown={(event) => down(event, note)}
@@ -228,7 +232,7 @@ export function InstrumentKeyboard(props: KeyboardProps) {
               onKeyUp={(event) => keyUp(event, note)}
               onBlur={(event) => keyUp(event, note)}
             >
-              <b>{note.label ?? noteName(note.pitch)}</b>
+              <b>{note.label ?? noteName(note.pitch)}</b>{" "}
               {note.shortcut && <span>{note.shortcut.toUpperCase()}</span>}
             </button>
           ))}
