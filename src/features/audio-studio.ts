@@ -1,3 +1,5 @@
+import { mountLevel } from "../ui/level-control";
+import { mountAudioEffects } from "../ui/audio-effects";
 import {
   requestFields,
   requestText,
@@ -222,6 +224,22 @@ export function renderAudioStudio(ctx: RuntimeContext) {
     const lane = ctx.project.audioLanes.find(
       (item: AudioLane) => item.id === row.dataset.audioLane,
     )!;
+    const levelHost = document.createElement("div");
+    const oldVolume = row
+      .querySelector('[data-lane-value="volume"]')!
+      .closest("label")!;
+    oldVolume.replaceWith(levelHost);
+    mountLevel(levelHost, {
+      label: ctx.L("Volume", "Volumen"),
+      get: () => lane.volume,
+      set: (value) => {
+        lane.volume = value;
+        ctx.engine.setProject(ctx.project);
+      },
+      start: ctx.snapshot,
+      commit: () => ctx.changed(),
+    });
+    mountAudioEffects(row as HTMLElement, lane, ctx, ctx.L("Track", "Pista"));
     row.querySelector("[data-lane-name]").onchange = (event: any) => {
       ctx.snapshot();
       lane.name = event.target.value || lane.name;
@@ -282,6 +300,13 @@ export function renderAudioStudio(ctx: RuntimeContext) {
       const region = lane.regions.find(
         (item: AudioRegion) => item.id === card.dataset.audioRegion,
       )!;
+      mountAudioEffects(
+        card,
+        region,
+        ctx,
+        ctx.L("Clip / track", "Clip / pista"),
+        lane,
+      );
       card.querySelectorAll("[data-region-key]").forEach(
         (input: any) =>
           (input.onchange = () => {

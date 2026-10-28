@@ -57,6 +57,7 @@ export async function goToView(page,view) {
 }
 
 export async function setSoundInspector(page,open=true) {
+  await page.locator('#app.studio-shell').waitFor({state:'attached'});
   const toggle=page.locator('#soundInspectorBtn');
   if(await toggle.count()) {
     if((await toggle.getAttribute('aria-expanded')==='true')!==open){if(!open&&await page.locator('#studioInspector button[aria-label]').count())await page.locator('#studioInspector button[aria-label]').first().click();else await toggle.click()}

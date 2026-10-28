@@ -1,3 +1,4 @@
+import { normalizeEffects } from "./audio/effects-model";
 import type {
   AudioLane,
   AudioRegion,
@@ -777,6 +778,7 @@ function createProjectBase(): Omit<Project, "sampler"> {
     key: "C",
     scale: "minor",
     master: 0.78,
+    outputMix: { master: 1, deckA: 1, deckB: 1, cue: 1, preview: 0.7, muted: false },
     tracks: trackDefaults(),
     clips,
     activeClipIds: Object.fromEntries(
@@ -1060,6 +1062,8 @@ export function migrateProject(value: unknown): Project {
       ? source.audioLanes.map((lane: any) => ({
           ...createAudioLane(lane.name, lane.color),
           ...lane,
+          effects: normalizeEffects(lane.effects),
+          preGainDb: Number.isFinite(lane.preGainDb) ? Math.max(-24, Math.min(12, lane.preGainDb)) : 0,
           regions: Array.isArray(lane.regions)
             ? lane.regions.map((region: any) => ({
                 ...createAudioRegion(
@@ -1070,6 +1074,7 @@ export function migrateProject(value: unknown): Project {
                   region.durationSeconds,
                 ),
                 ...region,
+                effects: normalizeEffects(region.effects),
               }))
             : [],
         }))
@@ -1078,6 +1083,7 @@ export function migrateProject(value: unknown): Project {
     ...base,
     ...cleanSource,
     version: PROJECT_VERSION,
+    outputMix: normalizeOutputMix(source.outputMix),
     modifiedAt: Date.now(),
     meter: { ...base.meter, ...source.meter },
     tracks,
@@ -2089,4 +2095,9 @@ export class History<T = Project> {
     this.past.push(structuredClone(current));
     return this.future.pop()!;
   }
+}
+
+export function normalizeOutputMix(value: any = {}) {
+  const gain = (key: string, fallback: number) => Number.isFinite(value?.[key]) ? Math.max(0, Math.min(2, value[key])) : fallback;
+  return { master: gain("master", 1), deckA: gain("deckA", 1), deckB: gain("deckB", 1), cue: gain("cue", 1), preview: gain("preview", .7), muted: value?.muted === true };
 }

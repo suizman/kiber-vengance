@@ -1,3 +1,5 @@
+import { mountLevel } from "../ui/level-control";
+import { normalizeOutputMix } from "../core";
 import { renderDeck, bindDeck } from "./deck-controller";
 import type { DeckMixerContext } from "../state/contracts";
 
@@ -18,6 +20,37 @@ export function setupDualDeck(ctx: DeckMixerContext) {
   const mixer = document.createElement("div");
   mixer.className = "dual-deck-mixer";
   mixer.innerHTML = `<span data-en="DECK A" data-es="PLATO A">DECK A</span><label><span data-en="CROSSFADER" data-es="CROSSFADER">CROSSFADER</span><input id="scratchCrossfader" type="range" min="0" max="1" step=".01" value="0" aria-label="Deck A to Deck B crossfader"><output id="scratchCrossfadeValue">A 100% · B 0%</output></label><span data-en="DECK B" data-es="PLATO B">DECK B</span><div class="deck-cue-controls"><button id="deckCueOutput" data-en="CHOOSE HEADPHONES" data-es="ELEGIR AURICULARES">CHOOSE HEADPHONES</button><button id="deckACue" aria-pressed="false" disabled>CUE A</button><button id="deckBCue" aria-pressed="false" disabled>CUE B</button><small id="deckCueHelp" data-en="Cue needs a separate audio output supported by this browser." data-es="Cue necesita una salida de audio independiente compatible con este navegador.">Cue needs a separate audio output supported by this browser.</small></div>`;
+  const levelDetails = document.createElement("details"),
+    levelSummary = document.createElement("summary");
+  levelSummary.textContent = ctx.L(
+    "Levels · Master / A / B / Cue",
+    "Niveles · Master / A / B / Cue",
+  );
+  levelDetails.className = "output-mix";
+  levelDetails.append(levelSummary);
+  mixer.append(levelDetails);
+  for (const [key, label] of [
+    ["master", "Master"],
+    ["deckA", ctx.L("Deck A", "Plato A")],
+    ["deckB", ctx.L("Deck B", "Plato B")],
+    ["cue", "Cue"],
+  ] as const) {
+    const row = document.createElement("div");
+    levelDetails.append(row);
+    mountLevel(row, {
+      label,
+      get: () => normalizeOutputMix(ctx.project.outputMix)[key],
+      set: (value) => {
+        ctx.project.outputMix = {
+          ...normalizeOutputMix(ctx.project.outputMix),
+          [key]: value,
+        };
+        ctx.engine.setProject(ctx.project);
+      },
+      start: ctx.snapshot,
+      commit: () => ctx.changed(),
+    });
+  }
   const programBlend = primary.querySelector<HTMLElement>(".crossfader")!;
   mixer.append(programBlend);
   layout.before(mixer);

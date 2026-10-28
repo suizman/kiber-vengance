@@ -4,6 +4,7 @@ import "./ui/styles/shell.css";
 import "./ui/styles/components.css";
 import "./ui/styles/piano.css";
 import "./ui/styles/decks.css";
+import "./ui/styles/mixing.css";
 import "./ui/styles/interactions.css";
 import "./ui/styles/appearance.css";
 import "./ui/styles/local-ai.css";

@@ -5,6 +5,7 @@ export interface DeckAudio {
   ctx: AudioContext;
   init(): Promise<AudioContext>;
   deck(id: DeckId): DeckProcessor;
+  setProject(project: Project): void;
   loadScratchBuffer(buffer: AudioBuffer, id?: DeckId): Promise<void>;
   setScratchPlaying(value: boolean, id?: DeckId): void;
   setScratchSpeed(value: number, ramp?: number, id?: DeckId): void;
@@ -35,6 +36,8 @@ export interface NoteEditorContext {
 }
 
 export interface DeckMixerContext extends DeckContext {
+  snapshot(): void;
+  changed(render?: boolean): void;
   scratchBuffer: AudioBuffer | null;
   readonly engine: DeckAudio & {
     scratchCueDestination: MediaStreamAudioDestinationNode;

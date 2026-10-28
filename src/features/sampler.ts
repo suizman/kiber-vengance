@@ -1,3 +1,4 @@
+import { mountLevel } from "../ui/level-control";
 import { waveformPeaks } from "../audio/waveform-cache";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
@@ -467,5 +468,8 @@ export function setupSamplerKeyboard(ctx: RuntimeContext) {
         else ctx.renderSamplerKeyboard();
       }),
   );
+  const gainLabel=ctx.$('#samplerGain').closest('label');gainLabel.hidden=true;
+  const level=document.createElement('div');level.className='sampler-level';gainLabel.after(level);
+  mountLevel(level,{label:ctx.L('Sampler volume','Volumen del sampler'),get:()=>ctx.samplerSettings().gain,set:value=>{ctx.samplerSettings().gain=value;ctx.engine.setProject(ctx.project);},start:ctx.snapshot,commit:()=>ctx.changed()});
   ctx.loadSamplerAsset();
 }

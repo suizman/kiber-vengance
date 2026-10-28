@@ -65,7 +65,7 @@ test('clip and song locators seek accurately and the mix console controls five c
   await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});await page.locator('.note-block').first().waitFor();
   await goToView(page,'arrange');assert.ok(+await page.locator('#globalPosition').getAttribute('max')>32);await page.locator('#globalPosition').fill('32');assert.match(await page.locator('#globalPositionValue').textContent(),/BAR 3/);await page.locator('#globalStartBtn').click();await page.waitForFunction(()=>globalThis.__kvDiagnostics().songMode&&globalThis.__kvDiagnostics().position>=32);await page.locator('#playBtn').click();
   await goToView(page,'forge');await page.locator('#clipPosition').fill('8');assert.match(await page.locator('#clipPositionValue').textContent(),/STEP 9/);await page.locator('#clipStartBtn').click();await page.waitForFunction(()=>!globalThis.__kvDiagnostics().songMode&&globalThis.__kvDiagnostics().position>=8);await page.locator('#playBtn').click();
-  await goToView(page,'mix');assert.equal(await page.locator('.mixer-channel').count(),5);await page.locator('[data-mix-track="lead"] [data-mix="faderDb"]').fill('-8.6');assert.equal(await page.locator('[data-mix-track="lead"] .mix-fader output').textContent(),'-8.6 dB');await page.locator('[data-mix-track="lead"] [data-mix-solo]').click();assert.equal(await page.locator('[data-solo="lead"]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('#arrangeTimeline button').count(),4);
+  await goToView(page,'mix');assert.equal(await page.locator('.mixer-channel').count(),5);await page.locator('[data-mix-track="lead"] .level-control input[type="range"]').fill('-8.6');assert.equal(await page.locator('[data-mix-track="lead"] .level-control output').textContent(),'-8.6 dB');await page.locator('[data-mix-track="lead"] [data-mix-solo]').click();assert.equal(await page.locator('[data-solo="lead"]').getAttribute('aria-pressed'),'true');assert.equal(await page.locator('#arrangeTimeline button').count(),4);
 });
 
 test('v5 launcher, arrange tools, precision mixer and local libraries form a complete workflow',async t=>{
@@ -171,8 +171,8 @@ test('shared controls expose hover, focus, range progress and immediate note fee
   const idleBorder=await select.evaluate(node=>globalThis.getComputedStyle(node).borderColor);
   await select.hover();
   await page.waitForFunction(idle=>globalThis.getComputedStyle(document.querySelector('#samplerMode')).borderColor!==idle,idleBorder);
-  const range=page.locator('#samplerGain');await range.fill('0.45');
-  assert.equal(await range.evaluate(node=>node.style.getPropertyValue('--range-fill')),'30%');
+  const range=page.locator('.sampler-level input[type=range]');await range.fill('-6.9');
+  assert.ok(Math.abs(parseFloat(await range.evaluate(node=>node.style.getPropertyValue('--range-fill')))-80.4545)<.01);
   await page.keyboard.press('Tab');await range.focus();assert.equal(await range.evaluate(node=>globalThis.getComputedStyle(node).outlineStyle),'solid');
   const disabled=page.locator('#samplerArm');assert.equal(await disabled.isDisabled(),true);
   await disabled.hover({force:true});assert.equal(await disabled.evaluate(node=>globalThis.getComputedStyle(node).cursor),'not-allowed');
@@ -743,7 +743,7 @@ test('local voice controls are opt-in, bilingual, cancellable and preserve captu
     await page.addScriptTag({content:axe.source});const audit=await page.evaluate(async()=>await globalThis.axe.run(globalThis.document.querySelector('#localVoiceDialog')));
     assert.deepEqual(audit.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>v.id),[]);
     assert.equal(await page.locator('#localVoiceDialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),true);
-    await page.screenshot({path:`/private/tmp/kiber-voice-${viewport.width}.png`});await page.close();
+    await page.screenshot({path:`${tmpdir()}/kiber-voice-${viewport.width}.png`});await page.close();
   }
 });
 

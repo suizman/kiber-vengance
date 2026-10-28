@@ -1,3 +1,6 @@
+import { StereoMeter } from "./audio/meter";
+import { AudioFx } from "./audio/effects";
+import { normalizeOutputMix } from "./core";
 import { DeckProcessor, type DeckId } from "./audio/deck";
 import scratchWorkletUrl from "./scratch-worklet.ts?worker&url";
 import {
@@ -112,6 +115,30 @@ export class AudioEngine {
   >();
   audioAssets = new Map<string, AudioBuffer>();
   audioLaneOutputs = new Map<string, GainNode>();
+  audioLaneGraphs = new Map<
+    string,
+    {
+      fx: AudioFx;
+      pre: GainNode;
+      pan: StereoPannerNode;
+      meter: AnalyserNode;
+      stereo: StereoMeter;
+    }
+  >();
+  regionGraphs = new Map<AudioFx, string>();
+  regionCleanup = new Map<AudioFx, ReturnType<typeof setTimeout>>();
+  trackInputs = new Map<TrackId, GainNode>();
+  outputMeter: StereoMeter | null = null;
+  deckMeters = new Map<DeckId, StereoMeter>();
+  instrumentMeters = new Map<TrackId, StereoMeter>();
+  finalInput!: GainNode;
+  finalGain!: GainNode;
+  samplerOutput!: GainNode;
+  finalLimiter!: DynamicsCompressorNode;
+  previewGain!: GainNode;
+  previewSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
+  cuedDeck: DeckId | null = null;
+
   activeAudioSources = new Set<AudioBufferSourceNode>();
   audioResumeStep: number | null = null;
   lastKickTime = -Infinity;
@@ -236,6 +263,8 @@ export class AudioEngine {
         latencyHint: "interactive",
       });
       this.master = this.ctx.createGain();
+      this.samplerOutput = this.ctx.createGain();
+      this.samplerOutput.connect(this.master);
       this.masterTone = this.ctx.createBiquadFilter();
       this.compressor = this.ctx.createDynamicsCompressor();
       this.limiter = this.ctx.createDynamicsCompressor();
@@ -259,16 +288,32 @@ export class AudioEngine {
       this.analyser.fftSize = 256;
       this.scratchCrossfade = 0;
       this.scratchMix = 0;
+      this.finalInput = this.ctx.createGain();
+      this.finalGain = this.ctx.createGain();
+      this.finalLimiter = this.ctx.createDynamicsCompressor();
+      this.finalLimiter.threshold.value = -1;
+      this.finalLimiter.knee.value = 0;
+      this.finalLimiter.ratio.value = 20;
+      this.finalLimiter.attack.value = 0.001;
+      this.finalLimiter.release.value = 0.08;
+      this.previewGain = this.ctx.createGain();
       this.master
         .connect(this.masterTone)
         .connect(this.compressor)
-        .connect(this.limiter)
         .connect(this.programGain)
+        .connect(this.finalInput);
+      this.finalInput
+        .connect(this.finalGain)
+        .connect(this.finalLimiter)
         .connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
       this.analyser.connect(this.captureDestination);
-      for (const deck of Object.values(this.decks))
-        deck.connect(this.ctx, this.analyser, this.scratchCueDestination);
+      this.outputMeter = new StereoMeter(this.ctx, this.analyser);
+      this.previewGain.connect(this.ctx.destination);
+      for (const deck of Object.values(this.decks)) {
+        deck.connect(this.ctx, this.finalInput, this.scratchCueDestination);
+        this.deckMeters.set(deck.id, new StereoMeter(this.ctx, deck.gain!));
+      }
       this.createEffectBuses();
       if (this.ctx.state === "suspended") await this.ctx.resume();
     }
@@ -317,8 +362,18 @@ export class AudioEngine {
   setScratchCue(deck: "A" | "B" | null) {
     if (!this.ctx || !this.decks.A.cueGain || !this.decks.B.cueGain) return;
     const now = this.ctx.currentTime;
-    this.decks.A.cueGain.gain.setTargetAtTime(deck === "A" ? 1 : 0, now, 0.015);
-    this.decks.B.cueGain.gain.setTargetAtTime(deck === "B" ? 1 : 0, now, 0.015);
+    this.cuedDeck = deck;
+    const level = normalizeOutputMix(this.project?.outputMix).cue;
+    this.decks.A.cueGain.gain.setTargetAtTime(
+      deck === "A" ? level : 0,
+      now,
+      0.015,
+    );
+    this.decks.B.cueGain.gain.setTargetAtTime(
+      deck === "B" ? level : 0,
+      now,
+      0.015,
+    );
   }
   updateScratchGains() {
     if (
@@ -338,12 +393,16 @@ export class AudioEngine {
       0.018,
     );
     this.scratchGain.gain.setTargetAtTime(
-      deckGain * Math.cos((crossfade * Math.PI) / 2),
+      deckGain *
+        Math.cos((crossfade * Math.PI) / 2) *
+        normalizeOutputMix(this.project?.outputMix).deckA,
       now,
       0.018,
     );
     this.scratchGainB.gain.setTargetAtTime(
-      deckGain * Math.sin((crossfade * Math.PI) / 2),
+      deckGain *
+        Math.sin((crossfade * Math.PI) / 2) *
+        normalizeOutputMix(this.project?.outputMix).deckB,
       now,
       0.018,
     );
@@ -357,8 +416,76 @@ export class AudioEngine {
   syncScratch(beatFrames: number, deck: DeckId = "A", speed = 1) {
     this.decks[deck].sync(beatFrames, speed);
   }
+  updateOutputMix() {
+    if (!this.ctx || !this.finalGain) return;
+    const mix = normalizeOutputMix(this.project?.outputMix),
+      now = this.ctx.currentTime;
+    this.finalGain.gain.setTargetAtTime(mix.muted ? 0 : mix.master, now, 0.02);
+    this.previewGain.gain.setTargetAtTime(
+      mix.muted ? 0 : mix.master * mix.preview,
+      now,
+      0.02,
+    );
+    this.updateScratchGains();
+    this.setScratchCue(this.cuedDeck);
+  }
+  async routePreview(element: HTMLMediaElement) {
+    await this.init();
+    if (!this.previewSources.has(element)) {
+      const node = this.ctx.createMediaElementSource(element);
+      node.connect(this.previewGain);
+      this.previewSources.set(element, node);
+    }
+    this.updateOutputMix();
+  }
+  disposeAudioLane(id: string) {
+    const graph = this.audioLaneGraphs.get(id);
+    if (graph) {
+      graph.fx.dispose();
+      graph.pre.disconnect();
+      graph.pan.disconnect();
+      graph.meter.disconnect();
+      graph.stereo.dispose();
+      this.audioLaneGraphs.delete(id);
+    }
+  }
+  audioLaneMeter(id: string) {
+    return (
+      this.audioLaneGraphs.get(id)?.stereo.read() ?? {
+        left: 0,
+        right: 0,
+        peak: 0,
+        rms: 0,
+      }
+    );
+  }
   setProject(project: Project) {
     this.project = project;
+    if (this.samplerOutput)
+      this.samplerOutput.gain.setTargetAtTime(
+        project.sampler.gain,
+        this.ctx.currentTime,
+        0.02,
+      );
+    this.updateOutputMix();
+    for (const [fx, id] of this.regionGraphs) {
+      const region = project.audioLanes
+        .flatMap((lane) => lane.regions)
+        .find((region) => region.id === id);
+      if (region) fx.update(region.effects);
+    }
+    for (const [id, graph] of this.audioLaneGraphs) {
+      const lane = project.audioLanes.find((lane) => lane.id === id);
+      if (lane) {
+        graph.fx.update(lane.effects);
+        graph.pre.gain.setTargetAtTime(
+          dbToGain(lane.preGainDb ?? 0),
+          this.ctx.currentTime,
+          0.02,
+        );
+        graph.pan.pan.setTargetAtTime(lane.pan, this.ctx.currentTime, 0.02);
+      }
+    }
     for (const [id, output] of this.audioLaneOutputs) {
       const lane = project.audioLanes.find((item) => item.id === id);
       const group = project.mixerGroups.find(
@@ -373,6 +500,7 @@ export class AudioEngine {
       );
       if (!lane) {
         output.disconnect();
+        this.disposeAudioLane(id);
         this.audioLaneOutputs.delete(id);
       }
     }
@@ -390,14 +518,14 @@ export class AudioEngine {
         now,
         0.02,
       );
-      this.limiter.threshold.setTargetAtTime(
+      this.finalLimiter.threshold.setTargetAtTime(
         project.masterSettings?.ceilingDb ?? -1,
         now,
         0.02,
       );
-      this.limiter.ratio.setTargetAtTime(bypass ? 1 : 20, now, 0.02);
-      this.programGain.channelCount = project.masterSettings?.monoCheck ? 1 : 2;
-      this.programGain.channelCountMode = project.masterSettings?.monoCheck
+      this.finalLimiter.ratio.setTargetAtTime(bypass ? 1 : 20, now, 0.02);
+      this.finalInput.channelCount = project.masterSettings?.monoCheck ? 1 : 2;
+      this.finalInput.channelCountMode = project.masterSettings?.monoCheck
         ? "explicit"
         : "max";
       for (const id of TRACKS) {
@@ -518,7 +646,7 @@ export class AudioEngine {
       source = this.ctx.createBufferSource(),
       filter = this.ctx.createBiquadFilter(),
       gain = this.ctx.createGain(),
-      level = Math.max(0.001, Math.min(1.5, settings.gain) * velocity),
+      level = Math.max(0.001, velocity),
       attack = Math.min(
         (duration / rate) * 0.45,
         Math.max(0.001, settings.attack),
@@ -533,7 +661,7 @@ export class AudioEngine {
       160 + Math.max(0, Math.min(1, settings.filter)) ** 2 * 19840;
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(level, now + attack);
-    source.connect(filter).connect(gain).connect(this.master);
+    source.connect(filter).connect(gain).connect(this.samplerOutput);
     const voice = { source, filter, gain, settings };
     this.samplerVoices.set(id, voice);
     source.onended = () => {
@@ -597,7 +725,9 @@ export class AudioEngine {
       reverbWet.gain.value = 0;
       reverb.buffer = impulse;
       analyser.fftSize = 64;
-      input.connect(tone).connect(saturation).connect(shape);
+      const pre = this.ctx.createGain();
+      this.trackInputs.set(id, pre);
+      input.connect(pre).connect(tone).connect(saturation).connect(shape);
       shape.connect(dry).connect(output);
       shape.connect(chorus).connect(chorusWet).connect(output);
       lfo.connect(depth).connect(chorus.delayTime);
@@ -609,6 +739,7 @@ export class AudioEngine {
       sendOutput.connect(analyser);
       analyser.connect(this.master);
       lfo.start();
+      this.instrumentMeters.set(id, new StereoMeter(this.ctx, analyser));
       this.buses[id] = {
         input,
         tone,
@@ -650,9 +781,9 @@ export class AudioEngine {
       smooth = (p: AudioParam, v: number) =>
         p.setTargetAtTime(v, Math.max(this.ctx.currentTime, time), 0.025),
       fader =
-        Math.max(0, Math.min(2, cfg.volume ?? 1)) *
-        dbToGain(cfg.preGainDb ?? 0) *
+        Math.max(0, cfg.volume ?? 1) *
         sidechainFactor(this.project, cfg.groupId, time - this.lastKickTime);
+    smooth(this.trackInputs.get(id)!.gain, dbToGain(cfg.preGainDb ?? 0));
     bus.saturation.curve = this.saturationCurve(
       bypass ? 0 : (fx.saturation || 0) * energy,
     );
@@ -677,11 +808,7 @@ export class AudioEngine {
     smooth(bus.output.gain, audible ? fader : 0);
     smooth(
       bus.sendOutput.gain,
-      audible
-        ? cfg.sendMode === "pre"
-          ? dbToGain(cfg.preGainDb ?? 0)
-          : fader
-        : 0,
+      audible ? (cfg.sendMode === "pre" ? 1 : fader) : 0,
     );
   }
   async start(
@@ -720,6 +847,14 @@ export class AudioEngine {
     this.activeAudioSources.clear();
     for (const output of this.audioLaneOutputs.values()) output.disconnect();
     this.audioLaneOutputs.clear();
+    for (const id of this.audioLaneGraphs.keys()) this.disposeAudioLane(id);
+    for (const [fx, timer] of this.regionCleanup) {
+      clearTimeout(timer);
+      fx.dispose();
+    }
+    this.regionCleanup.clear();
+    for (const fx of this.regionGraphs.keys()) fx.dispose();
+    this.regionGraphs.clear();
   }
   stop() {
     this.playing = false;
@@ -919,7 +1054,26 @@ export class AudioEngine {
         created.gain.value = mixAudible(this.project, lane.id)
           ? lane.volume * (group?.volume ?? 1)
           : 0;
-        created.connect(this.master);
+        const fx = new AudioFx(this.ctx, lane.effects),
+          pre = this.ctx.createGain(),
+          pan = this.ctx.createStereoPanner(),
+          meter = this.ctx.createAnalyser();
+        pre.gain.value = dbToGain(lane.preGainDb ?? 0);
+        pan.pan.value = lane.pan;
+        meter.fftSize = 256;
+        pre.connect(fx.input);
+        fx.output
+          .connect(pan)
+          .connect(created)
+          .connect(meter)
+          .connect(this.master);
+        this.audioLaneGraphs.set(lane.id, {
+          fx,
+          pre,
+          pan,
+          meter,
+          stereo: new StereoMeter(this.ctx, meter),
+        });
         this.audioLaneOutputs.set(lane.id, created);
       }
       for (const region of lane.regions) {
@@ -963,7 +1117,7 @@ export class AudioEngine {
           pan = this.ctx.createStereoPanner();
         source.buffer = buffer;
         source.playbackRate.value = rate;
-        pan.pan.value = Math.max(-1, Math.min(1, lane.pan));
+        pan.pan.value = 0;
         const level = Math.max(0.0001, dbToGain(region.gainDb)),
           audible = Math.max(0.01, duration / rate),
           fadeInTotal = Math.min(
@@ -993,13 +1147,22 @@ export class AudioEngine {
           );
           gain.gain.linearRampToValueAtTime(0.0001, when + audible);
         }
-        source.connect(gain).connect(pan).connect(output);
+        const fx = new AudioFx(this.ctx, region.effects);
+        this.regionGraphs.set(fx, region.id);
+        source.connect(gain).connect(fx.input);
+        fx.output.connect(pan).connect(this.audioLaneGraphs.get(lane.id)!.pre);
         this.activeAudioSources.add(source);
         source.onended = () => {
           this.activeAudioSources.delete(source);
           source.disconnect();
           gain.disconnect();
-          pan.disconnect();
+          const timer = setTimeout(() => {
+            fx.dispose();
+            pan.disconnect();
+            this.regionGraphs.delete(fx);
+            this.regionCleanup.delete(fx);
+          }, 2500);
+          this.regionCleanup.set(fx, timer);
         };
         source.start(when, offset, duration);
       }
@@ -1634,31 +1797,14 @@ export class AudioEngine {
     return Math.min(1, Math.sqrt(energy / data.length) * 3.2);
   }
   trackMeter(track: TrackId) {
-    const analyser = this.buses?.[track]?.analyser;
-    if (!analyser) return { rms: 0, peak: 0, left: 0, right: 0 };
-    const data = new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(data);
-    let energy = 0,
-      peak = 0;
-    for (const value of data) {
-      const sample = (value - 128) / 128;
-      energy += sample * sample;
-      peak = Math.max(peak, Math.abs(sample));
-    }
-    const rms = Math.min(1, Math.sqrt(energy / data.length) * 3.2),
-      p = Math.min(1, peak * 1.8);
-    return {
-      rms,
-      peak: p,
-      left: Math.min(
-        1,
-        rms * (1 - Math.min(0, this.project.tracks[track].pan || 0) * 0.45),
-      ),
-      right: Math.min(
-        1,
-        rms * (1 + Math.max(0, this.project.tracks[track].pan || 0) * 0.45),
-      ),
-    };
+    return (
+      this.instrumentMeters.get(track)?.read() ?? {
+        left: 0,
+        right: 0,
+        peak: 0,
+        rms: 0,
+      }
+    );
   }
   async startPerformanceCapture() {
     await this.init();
@@ -1908,11 +2054,16 @@ export async function renderWav(
   comp.ratio.value = 3;
   limiter.threshold.value = project.masterSettings?.ceilingDb ?? -1;
   limiter.ratio.value = 20;
-  if (project.masterSettings?.bypass) master.connect(ctx.destination);
+  const finalGain = ctx.createGain(),
+    outputMix = normalizeOutputMix(project.outputMix);
+  finalGain.gain.value = outputMix.muted ? 0 : outputMix.master;
+  if (project.masterSettings?.bypass)
+    master.connect(finalGain).connect(ctx.destination);
   else
     master
       .connect(tone)
       .connect(comp)
+      .connect(finalGain)
       .connect(limiter)
       .connect(ctx.destination);
   onStage?.("schedule");
@@ -1957,9 +2108,7 @@ export async function renderWav(
         const output = ctx.createGain(),
           cfg = project.tracks[track],
           audible = mixAudible(project, track);
-        output.gain.value = audible
-          ? cfg.volume * dbToGain(cfg.preGainDb ?? 0)
-          : 0;
+        output.gain.value = audible ? cfg.volume : 0;
         output.connect(master);
         return [track, output];
       }),
@@ -1969,7 +2118,7 @@ export async function renderWav(
         const output = ctx.createGain(),
           cfg = project.tracks[track],
           audible = mixAudible(project, track);
-        output.gain.value = audible ? dbToGain(cfg.preGainDb ?? 0) : 0;
+        output.gain.value = audible ? 1 : 0;
         output.connect(master);
         return [track, output];
       }),
@@ -1990,15 +2139,9 @@ export async function renderWav(
       const cfg = clipTrackState(project, activeClip(project, track), absolute);
       const level = cfg.mute
         ? 0
-        : cfg.volume *
-          dbToGain(cfg.preGainDb ?? 0) *
-          sidechainFactor(project, cfg.groupId, time - lastKick);
+        : cfg.volume * sidechainFactor(project, cfg.groupId, time - lastKick);
       trackOutputs[track].gain.setTargetAtTime(level, time, 0.025);
-      preSendOutputs[track].gain.setTargetAtTime(
-        cfg.mute ? 0 : dbToGain(cfg.preGainDb ?? 0),
-        time,
-        0.025,
-      );
+      preSendOutputs[track].gain.setTargetAtTime(cfg.mute ? 0 : 1, time, 0.025);
     }
   }
   for (const clip of project.clips.filter((clip) =>
@@ -2050,7 +2193,9 @@ export async function renderWav(
     delayWet.gain.value = bypassed ? 0 : (fx.delay || 0) * 0.34 * space;
     reverb.buffer = getImpulse();
     reverbWet.gain.value = bypassed ? 0 : (fx.reverb || 0) * 0.42 * space;
-    input.connect(eq).connect(saturation).connect(shape);
+    const pre = ctx.createGain();
+    pre.gain.value = dbToGain(project.tracks[clip.track].preGainDb ?? 0);
+    input.connect(pre).connect(eq).connect(saturation).connect(shape);
     shape.connect(dryGain).connect(trackOutput);
     shape.connect(chorus).connect(chorusWet).connect(trackOutput);
     chorusLfo.connect(chorusDepth).connect(chorus.delayTime);
@@ -2319,6 +2464,18 @@ export async function renderWav(
 
   for (const lane of song ? project.audioLanes : []) {
     if (!mixAudible(project, lane.id)) continue;
+    const laneFx = new AudioFx(ctx, dry ? undefined : lane.effects),
+      lanePre = ctx.createGain(),
+      lanePan = ctx.createStereoPanner(),
+      laneOut = ctx.createGain();
+    lanePre.gain.value = dbToGain(lane.preGainDb ?? 0);
+    lanePan.pan.value = lane.pan;
+    laneOut.gain.value =
+      lane.volume *
+      (project.mixerGroups.find((group) => group.id === lane.groupId)?.volume ??
+        1);
+    lanePre.connect(laneFx.input);
+    laneFx.output.connect(lanePan).connect(laneOut).connect(master);
     for (const regionItem of lane.regions) {
       const buffer = audioAssets?.get(regionItem.assetId);
       if (!buffer) continue;
@@ -2354,16 +2511,10 @@ export async function renderWav(
         source = ctx.createBufferSource(),
         gain = ctx.createGain(),
         pan = ctx.createStereoPanner(),
-        level = Math.max(
-          0.0001,
-          lane.volume *
-            (project.mixerGroups.find((group) => group.id === lane.groupId)
-              ?.volume ?? 1) *
-            dbToGain(regionItem.gainDb),
-        );
+        level = Math.max(0.0001, dbToGain(regionItem.gainDb));
       source.buffer = buffer;
       source.playbackRate.value = rate;
-      pan.pan.value = Math.max(-1, Math.min(1, lane.pan));
+      pan.pan.value = 0;
       gain.gain.setValueAtTime(level, start);
       const fadeIn = Math.min(
           audible * 0.45,
@@ -2384,7 +2535,9 @@ export async function renderWav(
         );
         gain.gain.linearRampToValueAtTime(0.0001, start + audible);
       }
-      source.connect(gain).connect(pan).connect(master);
+      const regionFx = new AudioFx(ctx, dry ? undefined : regionItem.effects);
+      source.connect(gain).connect(regionFx.input);
+      regionFx.output.connect(pan).connect(lanePre);
       source.start(start, offset, sampleDuration);
     }
   }
@@ -2416,3 +2569,6 @@ export async function renderWav(
   if (signal?.aborted) throw new DOMException("Export cancelled", "AbortError");
   return wavBlob(rendered, bitDepth, normalize, dither);
 }
+
+export { AudioFx, processAudio } from "./audio/effects";
+export { normalizeEffects, AUDIO_FX_PRESETS } from "./audio/effects-model";

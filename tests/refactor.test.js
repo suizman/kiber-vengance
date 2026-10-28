@@ -30,3 +30,13 @@ test('a gesture commits one history snapshot and saves the final project, includ
  gesture.markChanged();project.title='Drag 1';gesture.markChanged();project.title='Final';gesture.commit();gesture.commit();session.flush();session.dispose();
  assert.equal(snapshots.length,1);assert.equal(snapshots[0].title,'Original');assert.equal(writes.length,1);assert.equal(writes[0][1].title,'Final');assert.deepEqual(states,['pending','saved','recovery-failed']);
 });
+
+test('audio FX and output defaults preserve legacy projects and sanitize optional parameters',async()=>{
+ const {normalizeEffects,AUDIO_FX_PRESETS}=await import('../dist/audio.js');
+ const {createEmptyProject,createAudioLane,createAudioRegion,migrateProject,normalizeOutputMix}=await import('../dist/core.js');
+ const p=createEmptyProject(),lane=createAudioLane('Voice'),region=createAudioRegion('speech','Take');lane.regions.push(region);p.audioLanes.push(lane);delete p.outputMix;
+ const migrated=migrateProject(p);assert.equal(migrated.outputMix.master,1);assert.equal(migrated.outputMix.deckA,1);assert.equal(migrated.audioLanes[0].effects.reverb,0);assert.equal(migrated.audioLanes[0].regions[0].effects.filter,1);
+ assert.equal(normalizeEffects({filter:NaN,delay:3,tone:-9}).delay,1);assert.equal(normalizeEffects({filter:NaN}).filter,1);assert.equal(normalizeOutputMix({master:-1,preview:NaN}).master,0);
+ migrated.audioLanes[0].effects={...AUDIO_FX_PRESETS.radio.settings};migrated.audioLanes[0].regions[0].effects={...AUDIO_FX_PRESETS.ambience.settings};migrated.outputMix.master=.5;
+ const restored=migrateProject(JSON.parse(JSON.stringify(migrated)));assert.deepEqual(restored.audioLanes,migrated.audioLanes);assert.equal(restored.outputMix.master,.5);
+});

@@ -197,8 +197,34 @@ export interface SamplerInstrument {
   reverse: boolean;
   polyphony: number;
 }
+export interface AudioEffects {
+  bypass: boolean;
+  filter: number;
+  tone: number;
+  compression: number;
+  saturation: number;
+  distortion: number;
+  chorus: number;
+  delay: number;
+  reverb: number;
+}
+export interface OutputMix {
+  master: number;
+  deckA: number;
+  deckB: number;
+  cue: number;
+  preview: number;
+  muted: boolean;
+}
 export interface SpeechGeneration {
   kind: "speech";
+  engine?: "kokoro" | "chatterbox";
+  device?: "wasm" | "webgpu";
+  intensity?: number;
+  pauseMs?: number;
+  segments?: { text: string; speed: number; pauseMs: number }[];
+  revision?: string;
+  precision?: string;
   model: string;
   text: string;
   language: "en" | "es";
@@ -209,6 +235,7 @@ export interface SpeechGeneration {
   createdAt: number;
 }
 export interface AudioRegion {
+  effects?: AudioEffects;
   generation?: SpeechGeneration;
   id: string;
   assetId: string;
@@ -227,6 +254,8 @@ export interface AudioRegion {
   reverse: boolean;
 }
 export interface AudioLane {
+  effects?: AudioEffects;
+  preGainDb?: number;
   id: string;
   name: string;
   color: string;
@@ -316,6 +345,7 @@ export interface Project {
   key: string;
   scale: string;
   master: number;
+  outputMix?: OutputMix;
   tracks: Record<TrackId, TrackState>;
   clips: Clip[];
   activeClipIds: Record<TrackId, string>;

@@ -709,6 +709,7 @@ export async function playPerformanceTake(
         Math.max(0, (event.step - take.trimStart) * secondsPerTakeStep * 1000),
       ),
     );
+  await ctx.engine.routePreview(audio);
   await audio.play();
   window.setTimeout(
     () => {

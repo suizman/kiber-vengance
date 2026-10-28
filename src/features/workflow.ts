@@ -1,3 +1,4 @@
+import { formatDb, levelDb } from "../ui/level-control";
 import { controlIcon } from "../ui/icons";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
@@ -722,9 +723,9 @@ export function setupStudioExtensions(ctx: RuntimeContext) {
     ctx.project.master = +ctx.$("#mixerMaster").value;
     ctx.recordPerformanceEvent("mixer", "master:volume", ctx.project.master);
     ctx.$("#mixerMasterValue").textContent =
-      `${Math.round(ctx.project.master * 100)}%`;
+      formatDb(levelDb(ctx.project.master));
     ctx.$("#masterVolume").value = ctx.project.master;
-    ctx.$("#masterValue").textContent = Math.round(ctx.project.master * 100);
+    ctx.$("#masterValue").textContent = formatDb(levelDb(ctx.project.master));
     ctx.engine.setProject(ctx.project);
   };
   ctx.$("#mixerMaster").onchange = () => ctx.changed();

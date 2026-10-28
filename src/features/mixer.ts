@@ -1,3 +1,6 @@
+import { formatDb, levelDb } from "../ui/level-control";
+import { mountLevel } from "../ui/level-control";
+import { mountAudioEffects } from "../ui/audio-effects";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
 import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
@@ -131,6 +134,19 @@ export function renderMixer(ctx: RuntimeContext) {
     const track = channel.dataset.mixTrack as TrackId,
       cfg = ctx.project.tracks[track],
       character = activeClip(ctx.project, track).character;
+    const faderHost = document.createElement("div");
+    channel.querySelector(".mix-fader")!.replaceWith(faderHost);
+    mountLevel(faderHost, {
+      label: ctx.L("Volume", "Volumen"),
+      get: () => cfg.volume,
+      set: (v) => {
+        cfg.volume = v;
+        ctx.engine.setProject(ctx.project);
+        ctx.recordPerformanceEvent("mixer", `${track}:faderDb`, levelDb(v));
+      },
+      start: ctx.snapshot,
+      commit: () => ctx.changed(),
+    });
     channel.querySelectorAll("[data-mix]").forEach((input: any) => {
       input.onpointerdown = ctx.snapshot;
       input.oninput = () => {
@@ -169,9 +185,112 @@ export function renderMixer(ctx: RuntimeContext) {
     channel.querySelector("[data-mix-mute]").onclick = () =>
       ctx.$(`[data-mute="${track}"]`)?.click();
   });
+  for (const lane of ctx.project.audioLanes) {
+    const channel = document.createElement("article");
+    channel.className = "audio-mixer-channel";
+    channel.dataset.audioMix = lane.id;
+    channel.style.setProperty("--lane", lane.color);
+    const header = document.createElement("header"),
+      title = document.createElement("b");
+    title.textContent = lane.name;
+    header.append(title);
+    for (const [key, label] of [
+      ["solo", "S"],
+      ["mute", "M"],
+    ] as const) {
+      const button = document.createElement("button");
+      button.textContent = label;
+      button.setAttribute("aria-label", `${lane.name} ${key}`);
+      button.setAttribute("aria-pressed", String(lane[key]));
+      button.onclick = () => {
+        ctx.snapshot();
+        lane[key] = !lane[key];
+        ctx.engine.setProject(ctx.project);
+        ctx.changed();
+        renderMixer(ctx);
+      };
+      header.append(button);
+    }
+    channel.append(header);
+    const meters = document.createElement("div");
+    meters.className = "audio-lane-meters";
+    for (const side of ["left", "right"]) {
+      const meter = document.createElement("meter");
+      meter.min = 0;
+      meter.max = 1;
+      meter.dataset.side = side;
+      meter.setAttribute("aria-label", `${lane.name} ${side} peak`);
+      meters.append(meter);
+    }
+    const peak = document.createElement("output");
+    peak.className = "audio-lane-peak";
+    meters.append(peak);
+    channel.append(meters);
+    const level = document.createElement("div");
+    channel.append(level);
+    mountLevel(level, {
+      label: ctx.L("Volume", "Volumen"),
+      get: () => lane.volume,
+      set: (v) => {
+        lane.volume = v;
+        ctx.engine.setProject(ctx.project);
+      },
+      start: ctx.snapshot,
+      commit: () => ctx.changed(),
+    });
+    for (const [key, label, min, max] of [
+      ["preGainDb", ctx.L("Pre gain", "Ganancia previa"), -24, 12],
+      ["pan", ctx.L("Pan", "Panorama"), -1, 1],
+    ] as const) {
+      const wrapper = document.createElement("label"),
+        input = document.createElement("input"),
+        output = document.createElement("output");
+      wrapper.textContent = label;
+      input.type = "range";
+      input.min = String(min);
+      input.max = String(max);
+      input.step = key === "pan" ? ".01" : ".1";
+      input.value = String(lane[key] ?? 0);
+      output.textContent = input.value;
+      let editing = false;
+      input.oninput = () => {
+        if (!editing) {
+          ctx.snapshot();
+          editing = true;
+        }
+        lane[key] = +input.value;
+        output.textContent = input.value;
+        ctx.engine.setProject(ctx.project);
+      };
+      input.onchange = () => {
+        editing = false;
+        ctx.changed();
+      };
+      wrapper.append(input, output);
+      channel.append(wrapper);
+    }
+    const label = document.createElement("label"),
+      group = document.createElement("select");
+    label.textContent = ctx.L("Group", "Grupo");
+    group.append(new Option(ctx.L("None", "Ninguno"), ""));
+    for (const g of ctx.project.mixerGroups)
+      group.append(new Option(g.name, g.id));
+    group.value = lane.groupId ?? "";
+    group.onchange = () => {
+      ctx.snapshot();
+      lane.groupId = group.value || null;
+      ctx.engine.setProject(ctx.project);
+      ctx.changed();
+    };
+    label.append(group);
+    channel.append(label);
+    mountAudioEffects(channel, lane, ctx, ctx.L("Track", "Pista"));
+    root.append(channel);
+  }
   ctx.$("#mixerMaster").value = ctx.project.master;
-  ctx.$("#mixerMasterValue").textContent =
-    `${Math.round(ctx.project.master * 100)}%`;
+  ctx.$("#mixerMasterValue").textContent = formatDb(
+    levelDb(ctx.project.master),
+  );
   ctx
     .$("#masterBypassBtn")
     .setAttribute("aria-pressed", String(ctx.project.masterSettings.bypass));
@@ -182,6 +301,18 @@ export function renderMixer(ctx: RuntimeContext) {
 
 export function animateMixer(ctx: RuntimeContext) {
   if (ctx.activeView !== "mix" || document.hidden) return;
+  for (const card of ctx.$$(".audio-mixer-channel")) {
+    const reading = ctx.engine.audioLaneMeter(card.dataset.audioMix!);
+    for (const side of ["left", "right"] as const) {
+      const meter = card.querySelector(`meter[data-side=${side}]`);
+      if (meter) meter.value = reading[side];
+    }
+    const held = Math.max(reading.peak, +(card.dataset.peak || 0) * 0.98);
+    card.dataset.peak = String(held);
+    const output = card.querySelector(".audio-lane-peak");
+    if (output) output.textContent = formatDb(levelDb(held));
+    card.classList.toggle("clipping", reading.peak >= 1);
+  }
   let loudnessEnergy = 0;
   for (const channel of ctx.$$("[data-mix-track]")) {
     const track = channel.dataset.mixTrack as TrackId,
@@ -299,14 +430,25 @@ export function renderMixGroups(ctx: RuntimeContext) {
     const group = ctx.project.mixerGroups.find(
       (item: any) => item.id === card.dataset.mixGroup,
     )!;
-    card.querySelector("[data-group-volume]").oninput = (event: any) => {
-      group.volume = +event.target.value;
-      ctx.engine.setProject(ctx.project);
-    };
+    const levelHost = document.createElement("div");
+    card
+      .querySelector("[data-group-volume]")!
+      .closest("label")!
+      .replaceWith(levelHost);
+    mountLevel(levelHost, {
+      label: ctx.L("Group volume", "Volumen de grupo"),
+      get: () => group.volume,
+      set: (v) => {
+        group.volume = v;
+        ctx.engine.setProject(ctx.project);
+      },
+      start: ctx.snapshot,
+      commit: () => ctx.changed(),
+    });
     card.querySelector("[data-group-duck]").oninput = (event: any) =>
       (group.sidechainAmount = +event.target.value);
     card
-      .querySelectorAll("input")
+      .querySelectorAll("[data-group-duck]")
       .forEach((input: any) => (input.onchange = () => ctx.changed()));
   });
   ctx.$$("[data-mix-track]").forEach((channel) => {

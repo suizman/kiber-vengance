@@ -1,3 +1,5 @@
+import { formatDb, levelDb } from "./ui/level-control";
+import { setupOutputMix } from "./ui/output-mix";
 import { setupLocalVoice } from "./ui/local-voice";
 import { bindNoteDrag as bindNoteGesture } from "./features/note-editor";
 import { ProjectSession } from "./state/project-session";
@@ -1666,10 +1668,10 @@ const controlDescriptions: Record<string, [string, string, string, string]> = {
     "Activa o desactiva el clic acentuado durante la reproducción.",
   ],
   masterVolume: [
-    "Master volume",
-    "Volumen maestro",
-    "Set the final output level for the complete mix.",
-    "Ajusta el nivel final de salida de toda la mezcla.",
+    "Program volume",
+    "Volumen de Program",
+    "Set the song level before the final Master and deck blend.",
+    "Ajusta la canción antes del Master final y el balance con los platos.",
   ],
   languageSelect: [
     "Language",
@@ -2859,7 +2861,7 @@ function renderAll() {
   $("#recordMode").value = project.editor.recordMode || "quantized";
   $("#swing").value = Math.round(project.swing * 100);
   $("#masterVolume").value = project.master;
-  $("#masterValue").textContent = Math.round(project.master * 100);
+  $("#masterValue").textContent = formatDb(levelDb(project.master));
   updateOrb();
   installControlHelp();
   syncStudioUi();
@@ -3033,9 +3035,9 @@ $("#title").onchange = () => {
 $("#masterVolume").onpointerdown = snapshot;
 $("#masterVolume").oninput = () => {
   project.master = +$("#masterVolume").value;
-  $("#masterValue").textContent = Math.round(project.master * 100);
+  $("#masterValue").textContent = formatDb(levelDb(project.master));
   $("#mixerMaster").value = project.master;
-  $("#mixerMasterValue").textContent = `${Math.round(project.master * 100)}%`;
+  $("#mixerMasterValue").textContent = `${formatDb(levelDb(project.master))}%`;
   engine.setProject(project);
 };
 $("#masterVolume").onchange = () => changed();
@@ -3785,6 +3787,7 @@ document.addEventListener("visibilitychange", () => {
 void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));
 
 setupLocalVoice(runtime);
+setupOutputMix(runtime);
 
 if (autosaveRecoveryNotice) {
   const warning = $("#saveWarning");

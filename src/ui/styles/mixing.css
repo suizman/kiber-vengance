@@ -1,0 +1,241 @@
+.level-control {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 76px 68px 44px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 0;
+}
+.level-control label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.level-control input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  touch-action: none;
+}
+.level-control input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+}
+.level-control output {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.level-control button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.level-control input[type="range"] {
+  min-height: 44px;
+}
+.output-mix {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line, #344057);
+  background: var(--panel, #101625);
+}
+.output-mix details summary,
+.audio-fx summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+  color: var(--cyan, #2ee8ff);
+}
+.audio-fx {
+  padding: 8px;
+  border: 1px solid var(--line, #344057);
+  min-width: 0;
+}
+.audio-fx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.audio-fx-grid label {
+  display: grid;
+  min-width: 0;
+  font-size: 14px;
+}
+.audio-fx-grid input {
+  width: 100%;
+  min-height: 44px;
+}
+.audio-fx > button,
+.audio-fx > select {
+  margin: 4px;
+  max-width: 100%;
+}
+.audio-mixer-channel {
+  min-width: 260px;
+  padding: 12px;
+  border: 1px solid var(--lane, #344057);
+}
+.audio-mixer-channel header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.audio-mixer-channel header b {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.audio-mixer-channel meter {
+  width: 100%;
+  height: 14px;
+}
+.audio-mixer-channel label:not(.level-control label) {
+  display: grid;
+  gap: 5px;
+  margin-block: 8px;
+}
+.audio-mixer-channel input {
+  min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
+}
+.audio-mixer-channel select {
+  max-width: 100%;
+}
+.audio-lane-head .level-control {
+  flex: 1 1 100%;
+  min-width: 230px;
+}
+.audio-lane .audio-fx {
+  margin-block: 8px;
+}
+@media (max-width: 600px) {
+  .level-control {
+    grid-template-columns: minmax(80px, 1fr) 66px 56px 44px;
+    gap: 5px;
+  }
+  .level-control output {
+    font-size: 11px;
+  }
+  .output-mix {
+    padding: 8px;
+  }
+  .audio-mixer-channel {
+    min-width: 0;
+    width: 100%;
+  }
+}
+.mixer-channel .level-control {
+  grid-template-columns: 1fr 44px;
+  gap: 4px;
+}
+.mixer-channel .level-control label {
+  grid-column: 1/-1;
+}
+.mixer-channel .level-control output {
+  grid-column: 1;
+  grid-row: 3;
+}
+.mixer-channel .level-control button {
+  grid-column: 2;
+  grid-row: 2/4;
+}
+.mixer-channel .level-control input[type="number"] {
+  grid-column: 1;
+  max-width: 100%;
+}
+.mix-group .level-control {
+  grid-template-columns: 1fr 60px 58px 44px;
+}
+@media (max-width: 600px) {
+  .mix-group .level-control {
+    grid-template-columns: minmax(80px, 1fr) 66px 56px 44px;
+  }
+}
+.master-control[hidden] {
+  display: none !important;
+}
+.compact-master {
+  position: relative;
+  flex: none;
+}
+.compact-master summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 8px;
+  border: 1px solid var(--line, #344057);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--cyan, #2ee8ff);
+}
+.master-popover {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 60;
+  width: min(340px, calc(100vw - 24px));
+  padding: 12px;
+  background: var(--panel, #101625);
+  border: 1px solid var(--cyan, #2ee8ff);
+  box-shadow: 0 10px 30px #0008;
+}
+.dual-deck-mixer > details.output-mix {
+  grid-column: 1/-1;
+  width: 100%;
+}
+#app .mix-group .level-control {
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 4px;
+}
+#app .mix-group .level-control label {
+  grid-column: 1/-1;
+}
+#app .mix-group .level-control output {
+  grid-column: 1;
+  grid-row: 3;
+}
+#app .mix-group .level-control button {
+  grid-column: 2;
+  grid-row: 2/4;
+}
+#app .mix-group .level-control input[type="number"] {
+  grid-column: 1;
+  max-width: 100%;
+}
+.audio-lane-meters {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  min-width: 0;
+}
+.audio-lane-meters meter {
+  width: 100%;
+  height: 12px;
+}
+.audio-lane-meters output {
+  grid-column: 1/-1;
+  font-size: 12px;
+}
+.clipping {
+  color: var(--red, #ff4e72);
+  border-color: var(--red, #ff4e72);
+}
+.audio-fx-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0;
+}
+.audio-fx-tabs [aria-pressed="true"] {
+  border-color: var(--cyan, #2ee8ff);
+  color: var(--cyan, #2ee8ff);
+}
+.sampler-controls label[hidden] {
+  display: none !important;
+}
+.sampler-level {
+  grid-column: 1/-1;
+}
+.sampler-level label {
+  margin: 0 !important;
+}
