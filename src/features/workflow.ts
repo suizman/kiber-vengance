@@ -525,7 +525,8 @@ export function bindNoteDrag(
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
-      if (capture?.hasPointerCapture(pointerId)) capture.releasePointerCapture(pointerId);
+      if (capture?.hasPointerCapture(pointerId))
+        capture.releasePointerCapture(pointerId);
       if (!moved && selecting && wasSelected && ev.type !== "pointercancel") {
         ctx.selectedNotes.delete(id);
         ctx.syncSelectedClasses();
@@ -1157,6 +1158,18 @@ export function wavOptions(ctx: RuntimeContext) {
     signal: ctx.exportController?.signal,
     drumSamples: ctx.engine.drumSamples,
     audioAssets: ctx.engine.audioAssets,
+    onStage: (stage: "prepare" | "schedule" | "render" | "encode") => {
+      const labels = {
+        prepare: ctx.L("Preparing audio…", "Preparando audio…"),
+        schedule: ctx.L("Preparing the mix…", "Preparando la mezcla…"),
+        render: ctx.L("Processing audio…", "Procesando audio…"),
+        encode: ctx.L("Encoding WAV…", "Codificando WAV…"),
+      };
+      ctx.setExportProgress(
+        { prepare: 12, schedule: 25, render: 45, encode: 85 }[stage],
+        labels[stage],
+      );
+    },
   };
 }
 
@@ -1168,7 +1181,10 @@ export async function renderStems(ctx: RuntimeContext) {
     ),
     jobs =
       (selected.has("master") ? 1 : 0) +
-      TRACKS.filter((track) => selected.has(track)).length;
+      TRACKS.filter((track) => selected.has(track)).length +
+      ctx.project.audioLanes.filter((lane: import("../model").AudioLane) =>
+        selected.has(`audio:${lane.id}`),
+      ).length;
   ctx.exportController = new AbortController();
   ctx.$("#cancelExportBtn").disabled = false;
   let done = 0;
@@ -1184,6 +1200,7 @@ export async function renderStems(ctx: RuntimeContext) {
     if (ctx.exportController.signal.aborted)
       throw new DOMException("Export cancelled", "AbortError");
     const isolated = structuredClone(ctx.project);
+    isolated.audioLanes = [];
     TRACKS.forEach((id) => {
       isolated.tracks[id].solo = id === track;
       isolated.tracks[id].mute = false;
@@ -1198,6 +1215,26 @@ export async function renderStems(ctx: RuntimeContext) {
     );
     files.push({
       name: `${base}-${track}.wav`,
+      data: await renderWav(isolated, { song: true, ...ctx.wavOptions() }),
+    });
+    done++;
+  }
+  for (const lane of ctx.project.audioLanes.filter(
+    (lane: import("../model").AudioLane) => selected.has(`audio:${lane.id}`),
+  )) {
+    if (ctx.exportController.signal.aborted)
+      throw new DOMException("Export cancelled", "AbortError");
+    const isolated = structuredClone(ctx.project);
+    for (const id of TRACKS) {
+      isolated.tracks[id].mute = true;
+      isolated.tracks[id].solo = false;
+    }
+    isolated.audioLanes = [structuredClone(lane)];
+    isolated.audioLanes[0].solo = true;
+    isolated.audioLanes[0].mute = false;
+    ctx.setExportProgress((done / Math.max(1, jobs)) * 88, lane.name);
+    files.push({
+      name: `${base}-audio-${lane.id.replace(/[^a-z0-9_-]/gi, "-")}.wav`,
       data: await renderWav(isolated, { song: true, ...ctx.wavOptions() }),
     });
     done++;

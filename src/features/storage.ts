@@ -14,6 +14,7 @@ import { studioBridge, type StudioView } from "../ui/bridge";
 
 import {
   projectAssets,
+  renderAssets,
   createProject,
   createEmptyProject,
   migrateProject,
@@ -186,6 +187,21 @@ export async function deleteAsset(ctx: RuntimeContext, id: string) {
 }
 
 export function renderExportTargets(ctx: RuntimeContext) {
+  const stems = ctx.$(".stem-selection");
+  stems
+    ?.querySelectorAll("[data-audio-stem]")
+    .forEach((node: Element) => node.remove());
+  for (const lane of ctx.project.audioLanes) {
+    const label = document.createElement("label"),
+      input = document.createElement("input");
+    label.dataset.audioStem = lane.id;
+    input.type = "checkbox";
+    input.dataset.stem = `audio:${lane.id}`;
+    input.checked = true;
+    label.append(input, document.createTextNode(lane.name));
+    stems?.append(label);
+  }
+
   const target = ctx.$("#exportTargets");
   if (!target) return;
   const labels: Record<QuickExportKind, string> = {
@@ -734,7 +750,49 @@ export async function performExport(
     ctx.toast(msg("ui_8631a6aeb0e3"));
     return;
   }
-  if (kind === "bundle" && (await missingProjectAssets(ctx)).length) { await showMissingAssets(ctx); return; }
+  if (["wav", "clip-wav", "stems", "bundle"].includes(kind)) {
+    try {
+      let sources = projectAssets(ctx.project);
+      if (kind !== "bundle") {
+        let rendering = ctx.project;
+        if (kind === "stems") {
+          const selected = new Set(
+            ctx
+              .$$("[data-stem]:checked")
+              .map((input: HTMLInputElement) => input.dataset.stem),
+          );
+          if (!selected.has("master")) {
+            rendering = structuredClone(ctx.project);
+            for (const id of TRACKS) {
+              rendering.tracks[id].mute = !selected.has(id);
+              rendering.tracks[id].solo = false;
+            }
+            rendering.audioLanes = rendering.audioLanes.filter(
+              (lane: import("../model").AudioLane) =>
+                selected.has(`audio:${lane.id}`),
+            );
+            for (const lane of rendering.audioLanes) {
+              lane.mute = false;
+              lane.solo = false;
+            }
+          }
+        }
+        const options = ctx.wavOptions();
+        sources = renderAssets(rendering, kind !== "clip-wav", options.region);
+      }
+      const missing = await missingProjectAssets(ctx, sources);
+      if (missing.length) {
+        await showMissingAssets(ctx);
+        return;
+      }
+      await ctx.loadLocalSamples();
+      await ctx.loadSamplerAsset();
+      await ctx.loadAudioAssets();
+    } catch (error) {
+      ctx.toast(String(error));
+      return;
+    }
+  }
   const meta = ctx.exportMeta[kind],
     target = await ctx.prepareQuickExport(
       kind,

@@ -3032,6 +3032,15 @@ $("#metroBtn").onclick = () => {
 $("#tempo").onchange = () => {
   snapshot();
   project.tempo = Math.max(50, Math.min(220, +$("#tempo").value));
+  const initialTempo = project.tempoMap.find((event: any) => event.step === 0);
+  if (initialTempo) initialTempo.bpm = project.tempo;
+  else
+    project.tempoMap.unshift({
+      id: cryptoId(),
+      step: 0,
+      bpm: project.tempo,
+      curve: "jump",
+    });
   changed();
 };
 $("#meterSelect").onchange = () => {

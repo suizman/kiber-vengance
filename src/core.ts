@@ -168,6 +168,66 @@ export function instrumentSettings(
   ) as InstrumentState;
 }
 
+export function mixAudible(project: Project, id: string): boolean {
+  const all = [
+    ...TRACKS.map((track) => ({ id: track, ...project.tracks[track] })),
+    ...project.audioLanes,
+  ];
+  const source = all.find((item) => item.id === id);
+  if (!source || source.mute || (all.some((item) => item.solo) && !source.solo))
+    return false;
+  const group = project.mixerGroups.find((item) => item.id === source.groupId);
+  return (
+    !group?.mute &&
+    (!project.mixerGroups.some((item) => item.solo) || !!group?.solo)
+  );
+}
+export function globalValue(
+  project: Project,
+  target: string,
+  step: number,
+  fallback: number,
+): number {
+  let value = fallback;
+  for (const lane of project.automationLanes)
+    if (lane.target === target)
+      value = evaluateAutomationLane(lane, step, value);
+  for (const route of project.modulationRoutes)
+    if (route.target === target) {
+      const wave = Math.sin(
+        projectSeconds(project, step) *
+          Math.PI *
+          2 *
+          Math.max(0.01, route.rate),
+      );
+      const modulation = (route.bipolar ? wave : (wave + 1) / 2) * route.amount;
+      value += modulation * (target === "master.volume" ? 0.25 : 1);
+    }
+  return value;
+}
+export function sidechainFactor(
+  project: Project,
+  groupId: string | null | undefined,
+  elapsedSeconds: number,
+): number {
+  const group = project.mixerGroups.find((item) => item.id === groupId);
+  if (
+    !group ||
+    group.sidechainSource !== "drums" ||
+    elapsedSeconds < 0 ||
+    elapsedSeconds >= 0.22
+  )
+    return 1;
+  const minimum = 1 - Math.max(0, Math.min(0.9, group.sidechainAmount));
+  return minimum ** (1 - elapsedSeconds / 0.22);
+}
+export function masterValue(project: Project, step: number): number {
+  return Math.max(
+    0,
+    Math.min(1.5, globalValue(project, "master.volume", step, project.master)),
+  );
+}
+
 /** A voice gets its own snapshot; subsequent clip edits cannot change its release. */
 export function clipTrackState(
   project: Project,
@@ -182,9 +242,34 @@ export function clipTrackState(
     ),
   };
   if (step !== undefined) {
-    for (const lane of project.automationLanes || [])
-      if (lane.target === `track.${clip.track}.cutoff`)
-        cfg.cutoff = 120 + evaluateAutomationLane(lane, step, 0.5) * 11880;
+    const prefix = `track.${clip.track}.`;
+    cfg.cutoff =
+      120 +
+      Math.max(
+        0,
+        Math.min(
+          1,
+          globalValue(
+            project,
+            prefix + "cutoff",
+            step,
+            ((cfg.cutoff || 1800) - 120) / 11880,
+          ),
+        ),
+      ) *
+        11880;
+    cfg.pan = Math.max(
+      -1,
+      Math.min(
+        1,
+        globalValue(project, prefix + "pan", step, (cfg.pan + 1) / 2) * 2 - 1,
+      ),
+    );
+    const group = project.mixerGroups.find((item) => item.id === cfg.groupId);
+    cfg.volume =
+      Math.max(0, globalValue(project, prefix + "volume", step, cfg.volume)) *
+      (group?.volume ?? 1);
+    cfg.mute = !mixAudible(project, clip.track);
   }
   return cfg;
 }
@@ -242,6 +327,85 @@ export function tempoAtStep(project: Project, step: number): number {
       Math.max(0, Math.min(1, (step - left.step) / (right.step - left.step)))
   );
 }
+/** Only sources participating in this composition render (takes/sampler are separate live captures). */
+export function renderAssets(
+  project: Project,
+  song = true,
+  region?: { start: number; end: number },
+) {
+  const ids = new Set<string>();
+  const playback = playbackEvents(project, { song }),
+    start = region?.start ?? 0,
+    end = region?.end ?? playback.durationSteps;
+  if (song)
+    for (const lane of project.audioLanes) {
+      if (!mixAudible(project, lane.id)) continue;
+      for (const item of lane.regions)
+        if (item.startStep < end && item.startStep + item.lengthSteps > start)
+          ids.add(item.assetId);
+    }
+  if (mixAudible(project, "drums"))
+    for (const event of playback.events) {
+      if (
+        event.track !== "drums" ||
+        event.step >= end ||
+        event.step + event.length <= start
+      )
+        continue;
+      const sample = project.samples.find((item) => item.slot === event.pitch);
+      if (sample) ids.add(sample.id);
+    }
+  return projectAssets(project).filter((asset) => ids.has(asset.id));
+}
+
+/** Shared musical clock. Linear BPM ramps are integrated analytically. */
+export function projectSeconds(
+  project: Project,
+  step: number,
+  swing = true,
+): number {
+  if (step < 0) return step * secondsPerStep(tempoAtStep(project, 0));
+  const events = [...project.tempoMap].sort((a, b) => a.step - b.step);
+  const boundaries = [
+    0,
+    ...events.map((e) => e.step).filter((s) => s > 0 && s < step),
+    step,
+  ];
+  let seconds = 0;
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const start = boundaries[i]!,
+      end = boundaries[i + 1]!,
+      bpm = tempoAtStep(project, start);
+    const active = events.filter((e) => e.step <= start).at(-1),
+      next = events.find((e) => e.step > start);
+    const slope =
+      active?.curve === "linear" && next
+        ? (next.bpm - active.bpm) / (next.step - active.step)
+        : 0;
+    seconds +=
+      Math.abs(slope) < 1e-10
+        ? ((end - start) * 15) / bpm
+        : (15 * Math.log((bpm + slope * (end - start)) / bpm)) / slope;
+  }
+  if (swing && project.swing) {
+    const integer = Math.floor(step),
+      fraction = step - integer;
+    const delay = (at: number) =>
+      at % 2 ? secondsPerStep(tempoAtStep(project, at)) * project.swing : 0;
+    seconds += delay(integer) * (1 - fraction) + delay(integer + 1) * fraction;
+  }
+  return seconds;
+}
+export function projectDuration(
+  project: Project,
+  start: number,
+  length: number,
+): number {
+  return (
+    projectSeconds(project, start + length) - projectSeconds(project, start)
+  );
+}
+
 export function stepWithSwing(
   step: number,
   tempo: number,
@@ -1565,6 +1729,17 @@ export function sceneLengthSteps(project: Project, scene: Scene): number {
     ),
   );
 }
+export function songDurationSteps(project: Project): number {
+  return Math.max(
+    project.arrangement.reduce(
+      (sum, scene) => sum + sceneLengthSteps(project, scene) * scene.repeats,
+      0,
+    ),
+    ...project.audioLanes.flatMap((lane) =>
+      lane.regions.map((region) => region.startStep + region.lengthSteps),
+    ),
+  );
+}
 export function playbackEvents(
   project: Project,
   { song = true }: { song?: boolean } = {},
@@ -1643,6 +1818,7 @@ export function playbackEvents(
     for (const track of TRACKS)
       append(activeClip(project, track), track, 0, durationSteps);
   }
+  if (song) durationSteps = Math.max(durationSteps, songDurationSteps(project));
   return { events, durationSteps };
 }
 
@@ -1821,29 +1997,51 @@ export function encodeMidi(
       n & 255,
     ],
     u16 = (n: number) => [(n >>> 8) & 255, n & 255],
-    tempo = Math.round(60000000 / project.tempo),
-    unit = Math.log2(project.meter.unit),
-    meta = [
-      0,
-      0xff,
-      0x51,
-      3,
-      (tempo >> 16) & 255,
-      (tempo >> 8) & 255,
-      tempo & 255,
-      0,
-      0xff,
-      0x58,
-      4,
-      project.meter.beats,
-      unit,
-      24,
-      8,
-      0,
-      0xff,
-      0x2f,
-      0,
-    ];
+    meta: number[] = [];
+  const changes: Array<{ step: number; bytes: number[] }> = [];
+  const duration = playbackEvents(project, { song }).durationSteps;
+  const tempoSteps = new Set<number>([0]);
+  for (const event of project.tempoMap) {
+    if (event.step <= duration) tempoSteps.add(event.step);
+    const next = [...project.tempoMap]
+      .sort((a, b) => a.step - b.step)
+      .find((item) => item.step > event.step);
+    if (event.curve === "linear" && next)
+      for (
+        let step = event.step + 0.25;
+        step < Math.min(next.step, duration);
+        step += 0.25
+      )
+        tempoSteps.add(step);
+  }
+  for (const step of tempoSteps) {
+    const tempo = Math.round(60000000 / tempoAtStep(project, step));
+    changes.push({
+      step,
+      bytes: [
+        0xff,
+        0x51,
+        3,
+        (tempo >> 16) & 255,
+        (tempo >> 8) & 255,
+        tempo & 255,
+      ],
+    });
+  }
+  const meters = [{ step: 0, ...project.meter }, ...project.meterMap];
+  for (const event of meters.filter((item) => item.step <= duration))
+    changes.push({
+      step: event.step,
+      bytes: [0xff, 0x58, 4, event.beats, Math.log2(event.unit), 24, 8],
+    });
+  changes.sort((a, b) => a.step - b.step);
+  let lastTick = 0;
+  for (const change of changes) {
+    const tick = Math.round(change.step * 120);
+    meta.push(...variable(tick - lastTick), ...change.bytes);
+    lastTick = tick;
+  }
+  meta.push(0, 0xff, 0x2f, 0);
   chunks.push(meta);
   TRACKS.forEach((track, i) =>
     chunks.push(

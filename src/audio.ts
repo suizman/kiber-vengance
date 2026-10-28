@@ -6,14 +6,19 @@ import {
   automationValue,
   clipLengthSteps,
   dbToGain,
-  evaluateAutomationLane,
+  masterValue,
+  mixAudible,
   frequency,
   meterSteps,
   notesAtStep,
   playbackEvents,
+  renderAssets,
   sceneLengthSteps,
+  songDurationSteps,
+  sidechainFactor,
   secondsPerStep,
-  stepWithSwing,
+  projectSeconds,
+  projectDuration,
   tempoAtStep,
   TRACKS,
 } from "./core.js";
@@ -105,8 +110,10 @@ export class AudioEngine {
     }
   >();
   audioAssets = new Map<string, AudioBuffer>();
+  audioLaneOutputs = new Map<string, GainNode>();
   activeAudioSources = new Set<AudioBufferSourceNode>();
   audioResumeStep: number | null = null;
+  lastKickTime = -Infinity;
   constructor(
     onStep: (
       step: number,
@@ -362,6 +369,23 @@ export class AudioEngine {
   }
   setProject(project: Project) {
     this.project = project;
+    for (const [id, output] of this.audioLaneOutputs) {
+      const lane = project.audioLanes.find((item) => item.id === id);
+      const group = project.mixerGroups.find(
+        (item) => item.id === lane?.groupId,
+      );
+      output.gain.setTargetAtTime(
+        lane && mixAudible(project, id)
+          ? lane.volume * (group?.volume ?? 1)
+          : 0,
+        this.ctx.currentTime,
+        0.02,
+      );
+      if (!lane) {
+        output.disconnect();
+        this.audioLaneOutputs.delete(id);
+      }
+    }
     if (this.master) {
       const bypass = Boolean(project.masterSettings?.bypass),
         now = this.ctx.currentTime;
@@ -389,19 +413,9 @@ export class AudioEngine {
       for (const id of TRACKS) {
         this.updateEffectBus(
           id,
-          project.tracks[id],
+          clipTrackState(project, activeClip(project, id), this.position),
           activeClip(project, id).character,
         );
-        const cfg = project.tracks[id],
-          group = project.mixerGroups?.find((item) => item.id === cfg.groupId);
-        if (group && this.buses[id])
-          this.buses[id].output.gain.setTargetAtTime(
-            group.mute
-              ? 0
-              : (cfg.volume ?? 1) * dbToGain(cfg.preGainDb ?? 0) * group.volume,
-            now,
-            0.02,
-          );
       }
     }
   }
@@ -640,14 +654,15 @@ export class AudioEngine {
       energy = 0.78 + macros.energy * 0.25 + (macros.aggression || 0) * 0.32,
       soloActive = TRACKS.some((track) => this.project.tracks[track].solo),
       audible =
-        !cfg.mute &&
+        mixAudible(this.project, id) &&
         (!soloActive || cfg.solo) &&
         !this.launcherStopped?.has(id),
       smooth = (p: AudioParam, v: number) =>
         p.setTargetAtTime(v, Math.max(this.ctx.currentTime, time), 0.025),
       fader =
         Math.max(0, Math.min(2, cfg.volume ?? 1)) *
-        dbToGain(cfg.preGainDb ?? 0);
+        dbToGain(cfg.preGainDb ?? 0) *
+        sidechainFactor(this.project, cfg.groupId, time - this.lastKickTime);
     bus.saturation.curve = this.saturationCurve(
       bypass ? 0 : (fx.saturation || 0) * energy,
     );
@@ -713,6 +728,8 @@ export class AudioEngine {
         source.stop();
       } catch {}
     this.activeAudioSources.clear();
+    for (const output of this.audioLaneOutputs.values()) output.disconnect();
+    this.audioLaneOutputs.clear();
   }
   stop() {
     this.playing = false;
@@ -759,6 +776,13 @@ export class AudioEngine {
         cursor += length;
       }
     }
+    if (target < songDurationSteps(this.project)) {
+      this.position = target;
+      this.sceneIndex = this.project.arrangement.length;
+      this.sceneStep = target - cursor;
+      this.sceneRepeat = 0;
+      return target;
+    }
     this.position = 0;
     this.sceneIndex = 0;
     this.sceneRepeat = 0;
@@ -771,7 +795,8 @@ export class AudioEngine {
     if (this.nextTime < this.ctx.currentTime - 0.1)
       this.nextTime = this.ctx.currentTime + 0.03;
     while (this.nextTime < this.ctx.currentTime + 0.12) {
-      const base = secondsPerStep(tempoAtStep(this.project, this.position)),
+      const position = this.position,
+        base = secondsPerStep(tempoAtStep(this.project, position)),
         wasCounting = this.countInRemaining > 0;
       if (wasCounting) {
         const count = this.countInRemaining;
@@ -785,10 +810,7 @@ export class AudioEngine {
       }
       this.nextTime += wasCounting
         ? base
-        : base +
-          (this.position % 2
-            ? base * this.project.swing
-            : -base * this.project.swing);
+        : projectDuration(this.project, position, 1);
     }
   }
   scheduleMusicStep(time: number) {
@@ -799,7 +821,27 @@ export class AudioEngine {
         ? this.project.arrangement[this.sceneIndex]
         : null,
       soloActive = TRACKS.some((track) => this.project.tracks[track].solo);
+    if (
+      mixAudible(this.project, "drums") &&
+      !this.launcherStopped.has("drums") &&
+      (!this.songMode || scene)
+    ) {
+      const drums = scene
+        ? this.project.clips.find((clip) => clip.id === scene.clipIds.drums) ||
+          activeClip(this.project, "drums")
+        : activeClip(this.project, "drums");
+      const local =
+        (this.songMode ? this.sceneStep : this.position) %
+        clipLengthSteps(drums);
+      if (
+        notesAtStep(this.project, drums, "drums", local).some(
+          (note) => note.pitch === 0,
+        )
+      )
+        this.lastKickTime = time;
+    }
     for (const track of TRACKS) {
+      if (this.songMode && !scene) continue;
       const clip = scene
           ? this.project.clips.find((c) => c.id === scene.clipIds[track]) ||
             activeClip(this.project, track)
@@ -825,7 +867,7 @@ export class AudioEngine {
             (0.65 + (expression.pressure ?? n.velocity) * 0.35),
           noteTime = Math.max(
             this.ctx.currentTime + 0.001,
-            time + (n.offset || 0) * secondsPerStep(this.project.tempo),
+            time + projectDuration(this.project, this.position, n.offset || 0),
           ),
           cutoff = Math.max(
             0,
@@ -844,7 +886,11 @@ export class AudioEngine {
             track,
             n.pitch + (expression.bend || 0),
             noteTime,
-            n.length * secondsPerStep(this.project.tempo),
+            projectDuration(
+              this.project,
+              this.position + (n.offset || 0),
+              n.length,
+            ),
             velocity,
             cfg,
             character,
@@ -854,53 +900,11 @@ export class AudioEngine {
       }
     }
     if (this.songMode) this.scheduleAudioRegions(time, this.position);
-    for (const lane of this.project.automationLanes || []) {
-      const value = evaluateAutomationLane(lane, this.position, 0.5);
-      if (lane.target === "master.volume")
-        this.master.gain.setTargetAtTime(value, time, 0.015);
-      else {
-        const match = /^track\.([^.]+)\.(volume|pan|cutoff)$/.exec(lane.target);
-        if (match && TRACKS.includes(match[1] as TrackId)) {
-          const track = match[1] as TrackId,
-            param = match[2]!;
-          if (param === "volume")
-            this.buses[track]?.output.gain.setTargetAtTime(value, time, 0.015);
-          else if (param === "pan")
-            this.project.tracks[track].pan = value * 2 - 1;
-        }
-      }
-    }
-    for (const route of this.project.modulationRoutes || []) {
-      const phase = Math.sin(time * Math.PI * 2 * Math.max(0.01, route.rate)),
-        value = phase * route.amount;
-      if (route.target === "master.volume")
-        this.master.gain.setTargetAtTime(
-          Math.max(0, Math.min(1.5, this.project.master + value * 0.25)),
-          time,
-          0.02,
-        );
-      else {
-        const match = /^track\.([^.]+)\.(volume|pan|cutoff)$/.exec(
-          route.target,
-        );
-        if (!match || !TRACKS.includes(match[1] as TrackId)) continue;
-        const track = match[1] as TrackId,
-          bus = this.buses[track],
-          cfg = this.project.tracks[track];
-        if (match[2] === "volume")
-          bus.output.gain.setTargetAtTime(
-            Math.max(0, (cfg.volume ?? 1) * (1 + value)),
-            time,
-            0.02,
-          );
-        else if (match[2] === "cutoff")
-          bus.tone.gain.setTargetAtTime(
-            Math.max(-18, Math.min(18, value * 12)),
-            time,
-            0.02,
-          );
-      }
-    }
+    this.master?.gain.setTargetAtTime(
+      masterValue(this.project, this.position),
+      time,
+      0.015,
+    );
     this.onStep(
       this.songMode ? this.sceneStep : this.position,
       time,
@@ -909,40 +913,25 @@ export class AudioEngine {
     );
   }
   duckGroups(time: number) {
-    for (const group of this.project.mixerGroups || []) {
-      if (group.sidechainSource !== "drums" || group.sidechainAmount <= 0)
-        continue;
-      for (const track of TRACKS) {
-        const cfg = this.project.tracks[track],
-          bus = this.buses[track];
-        if (cfg.groupId !== group.id || !bus) continue;
-        const normal =
-            Math.max(0, Math.min(2, cfg.volume ?? 1)) *
-            dbToGain(cfg.preGainDb ?? 0) *
-            group.volume,
-          duck = normal * (1 - Math.min(0.9, group.sidechainAmount));
-        bus.output.gain.cancelScheduledValues(time);
-        bus.output.gain.setValueAtTime(
-          Math.max(0.0001, bus.output.gain.value),
-          time,
-        );
-        bus.output.gain.linearRampToValueAtTime(
-          Math.max(0.0001, duck),
-          time + 0.012,
-        );
-        bus.output.gain.exponentialRampToValueAtTime(
-          Math.max(0.0001, normal),
-          time + 0.22,
-        );
-      }
-    }
+    this.lastKickTime = time;
   }
   scheduleAudioRegions(time: number, step: number) {
-    const solo = (this.project.audioLanes || []).some((lane) => lane.solo),
-      resuming = this.audioResumeStep === step,
-      stepSeconds = secondsPerStep(this.project.tempo);
+    const resuming = this.audioResumeStep === step,
+      stepSeconds = secondsPerStep(tempoAtStep(this.project, step));
     for (const lane of this.project.audioLanes || []) {
-      if (lane.mute || (solo && !lane.solo)) continue;
+      let output = this.audioLaneOutputs.get(lane.id);
+      if (!output) {
+        const created: GainNode = this.ctx.createGain();
+        output = created;
+        const group = this.project.mixerGroups.find(
+          (item) => item.id === lane.groupId,
+        );
+        created.gain.value = mixAudible(this.project, lane.id)
+          ? lane.volume * (group?.volume ?? 1)
+          : 0;
+        created.connect(this.master);
+        this.audioLaneOutputs.set(lane.id, created);
+      }
       for (const region of lane.regions) {
         const trigger = Math.floor(region.startStep),
           startsNow = trigger === step,
@@ -964,13 +953,19 @@ export class AudioEngine {
             0,
             Math.min(
               buffer.duration - 0.001,
-              region.offsetSeconds + elapsedSteps * stepSeconds * rate,
+              region.offsetSeconds +
+                projectDuration(this.project, region.startStep, elapsedSteps) *
+                  rate,
             ),
           ),
           available = Math.max(0.001, buffer.duration - offset),
           wanted = Math.max(
             0.001,
-            (region.lengthSteps - elapsedSteps) * stepSeconds * rate,
+            projectDuration(
+              this.project,
+              region.startStep + elapsedSteps,
+              region.lengthSteps - elapsedSteps,
+            ) * rate,
           ),
           duration = Math.min(available, wanted),
           source = this.ctx.createBufferSource(),
@@ -979,7 +974,7 @@ export class AudioEngine {
         source.buffer = buffer;
         source.playbackRate.value = rate;
         pan.pan.value = Math.max(-1, Math.min(1, lane.pan));
-        const level = Math.max(0.0001, lane.volume * dbToGain(region.gainDb)),
+        const level = Math.max(0.0001, dbToGain(region.gainDb)),
           audible = Math.max(0.01, duration / rate),
           fadeInTotal = Math.min(
             region.lengthSteps * stepSeconds * 0.45,
@@ -1008,7 +1003,7 @@ export class AudioEngine {
           );
           gain.gain.linearRampToValueAtTime(0.0001, when + audible);
         }
-        source.connect(gain).connect(pan).connect(this.master);
+        source.connect(gain).connect(pan).connect(output);
         this.activeAudioSources.add(source);
         source.onended = () => {
           this.activeAudioSources.delete(source);
@@ -1043,7 +1038,8 @@ export class AudioEngine {
     if (!this.songMode) return;
     const scene = this.project.arrangement[this.sceneIndex];
     if (!scene) {
-      this.seek(0, true);
+      if (this.position >= songDurationSteps(this.project)) this.seek(0, true);
+      else this.sceneStep++;
       return;
     }
     this.sceneStep++;
@@ -1052,9 +1048,9 @@ export class AudioEngine {
       this.sceneRepeat++;
       if (this.sceneRepeat >= scene.repeats) {
         this.sceneRepeat = 0;
-        this.sceneIndex =
-          (this.sceneIndex + 1) % this.project.arrangement.length;
-        if (this.sceneIndex === 0) this.position = 0;
+        this.sceneIndex++;
+        if (this.position >= songDurationSteps(this.project))
+          this.seek(0, true);
       }
     }
   }
@@ -1717,6 +1713,9 @@ export class AudioEngine {
       samplerLoaded: Boolean(this.samplerBuffer),
       samplerVoices: this.samplerVoices.size,
       audioAssets: this.audioAssets.size,
+      audioLaneLevels: [...this.audioLaneOutputs.values()].map(
+        (output) => output.gain.value,
+      ),
       activeAudioRegions: this.activeAudioSources.size,
       schedulerActive: Boolean(this.timer),
       contextState: this.ctx?.state || "uninitialized",
@@ -1763,7 +1762,7 @@ function makeSaturationCurve(amount: number) {
   }
   return c;
 }
-function wavBlob(
+export function wavBlob(
   buffer: AudioBuffer,
   bitDepth: 16 | 32 = 16,
   normalize = false,
@@ -1776,10 +1775,11 @@ function wavBlob(
     v = new DataView(ab),
     str = (o: number, s: string) =>
       [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  const channels = [buffer.getChannelData(0), buffer.getChannelData(1)];
   let peak = 0;
   if (normalize)
     for (let ch = 0; ch < 2; ch++)
-      for (const sample of buffer.getChannelData(ch))
+      for (const sample of channels[ch]!)
         peak = Math.max(peak, Math.abs(sample));
   const gain = normalize && peak > 0 ? Math.min(8, 0.988 / peak) : 1;
   str(0, "RIFF");
@@ -1801,10 +1801,7 @@ function wavBlob(
           dither && bitDepth === 16
             ? (Math.random() - Math.random()) / 65536
             : 0,
-        x = Math.max(
-          -1,
-          Math.min(1, buffer.getChannelData(ch)[i]! * gain + noise),
-        );
+        x = Math.max(-1, Math.min(1, channels[ch]![i]! * gain + noise));
       if (bitDepth === 32) v.setFloat32(off, x, true);
       else v.setInt16(off, x < 0 ? x * 32768 : x * 32767, true);
       off += bytes;
@@ -1834,6 +1831,8 @@ export interface RenderWavOptions {
     }
   >;
   audioAssets?: Map<string, AudioBuffer>;
+  onStage?: (stage: "prepare" | "schedule" | "render" | "encode") => void;
+  renderTimeoutMs?: number;
 }
 export async function renderWav(
   project: Project,
@@ -1849,9 +1848,22 @@ export async function renderWav(
     dry = false,
     drumSamples,
     audioAssets,
+    onStage,
+    renderTimeoutMs = 45000,
   }: RenderWavOptions = {},
 ) {
   if (signal?.aborted) throw new DOMException("Export cancelled", "AbortError");
+  onStage?.("prepare");
+  for (const asset of renderAssets(project, song, region)) {
+    const sample = project.samples.find((item) => item.id === asset.id);
+    const loaded = sample
+      ? drumSamples?.has(sample.slot)
+      : audioAssets?.has(asset.id);
+    if (!loaded)
+      throw new Error(
+        `Audio source unavailable or undecodable: ${asset.name} (${asset.id})`,
+      );
+  }
   const playback = playbackEvents(project, { song }),
     regionStart = Math.max(0, region?.start || 0),
     regionEnd = Math.max(
@@ -1873,22 +1885,38 @@ export async function renderWav(
         };
       }),
     durationSteps = regionEnd - regionStart,
+    eventTime = (step: number) =>
+      projectSeconds(project, regionStart + step) -
+      projectSeconds(project, regionStart),
+    eventDuration = (step: number, length: number) =>
+      projectDuration(project, regionStart + step, length),
     sr = sampleRate,
     duration =
-      stepWithSwing(durationSteps, project.tempo, project.swing) +
-      Math.max(0, Math.min(12, tailSeconds)),
+      eventTime(durationSteps) + Math.max(0, Math.min(12, tailSeconds)),
     ctx = new OfflineAudioContext(2, Math.ceil(duration * sr), sr),
     master = ctx.createGain(),
     tone = ctx.createBiquadFilter(),
     comp = ctx.createDynamicsCompressor(),
     limiter = ctx.createDynamicsCompressor();
-  master.gain.value = project.master * 0.78;
+  master.gain.value = project.master;
+  master.channelCount = project.masterSettings?.monoCheck ? 1 : 2;
+  master.channelCountMode = project.masterSettings?.monoCheck
+    ? "explicit"
+    : "max";
+  comp.knee.value = 12;
+  comp.attack.value = 0.012;
+  comp.release.value = 0.2;
+  limiter.knee.value = 1;
+  limiter.attack.value = 0.001;
   tone.type = "highshelf";
   tone.frequency.value = 5200;
   tone.gain.value = 1.2;
-  comp.threshold.value = -14;
+  comp.threshold.value = Math.max(
+    -30,
+    Math.min(-6, (project.masterSettings?.targetLufs ?? -14) - 1),
+  );
   comp.ratio.value = 3;
-  limiter.threshold.value = -1.5;
+  limiter.threshold.value = project.masterSettings?.ceilingDb ?? -1;
   limiter.ratio.value = 20;
   if (project.masterSettings?.bypass) master.connect(ctx.destination);
   else
@@ -1897,6 +1925,31 @@ export async function renderWav(
       .connect(comp)
       .connect(limiter)
       .connect(ctx.destination);
+  onStage?.("schedule");
+  const audibleEvents = events.filter((event) =>
+    mixAudible(project, event.track),
+  );
+  const hasAudio =
+    song &&
+    project.audioLanes.some(
+      (lane) =>
+        mixAudible(project, lane.id) &&
+        lane.regions.some(
+          (item) =>
+            audioAssets?.has(item.assetId) &&
+            item.startStep < regionEnd &&
+            item.startStep + item.lengthSteps > regionStart,
+        ),
+    );
+  // No source can excite the offline graph. Avoid starting idle feedback and
+  // convolution nodes (which can stall some Chromium audio backends).
+  if (!audibleEvents.length && !hasAudio)
+    return wavBlob(
+      ctx.createBuffer(2, Math.ceil(duration * sr), sr),
+      bitDepth,
+      normalize,
+      dither,
+    );
   let impulse: AudioBuffer | undefined;
   const getImpulse = () => {
     if (impulse) return impulse;
@@ -1909,12 +1962,11 @@ export async function renderWav(
     return impulse;
   };
   const buses: any = {},
-    soloActive = TRACKS.some((track) => project.tracks[track].solo),
     trackOutputs = Object.fromEntries(
       TRACKS.map((track) => {
         const output = ctx.createGain(),
           cfg = project.tracks[track],
-          audible = !cfg.mute && (!soloActive || cfg.solo);
+          audible = mixAudible(project, track);
         output.gain.value = audible
           ? cfg.volume * dbToGain(cfg.preGainDb ?? 0)
           : 0;
@@ -1926,13 +1978,42 @@ export async function renderWav(
       TRACKS.map((track) => {
         const output = ctx.createGain(),
           cfg = project.tracks[track],
-          audible = !cfg.mute && (!soloActive || cfg.solo);
+          audible = mixAudible(project, track);
         output.gain.value = audible ? dbToGain(cfg.preGainDb ?? 0) : 0;
         output.connect(master);
         return [track, output];
       }),
     ) as Record<TrackId, GainNode>;
-  for (const clip of project.clips) {
+  const kicks = audibleEvents
+    .filter((event) => event.track === "drums" && event.pitch === 0)
+    .map((event) => eventTime(event.step))
+    .sort((a, b) => a - b);
+  let kickIndex = 0,
+    lastKick = -Infinity;
+  for (let step = 0; step < durationSteps; step++) {
+    const time = eventTime(step),
+      absolute = step + regionStart;
+    while (kickIndex < kicks.length && kicks[kickIndex]! <= time)
+      lastKick = kicks[kickIndex++]!;
+    master.gain.setTargetAtTime(masterValue(project, absolute), time, 0.015);
+    for (const track of TRACKS) {
+      const cfg = clipTrackState(project, activeClip(project, track), absolute);
+      const level = cfg.mute
+        ? 0
+        : cfg.volume *
+          dbToGain(cfg.preGainDb ?? 0) *
+          sidechainFactor(project, cfg.groupId, time - lastKick);
+      trackOutputs[track].gain.setTargetAtTime(level, time, 0.025);
+      preSendOutputs[track].gain.setTargetAtTime(
+        cfg.mute ? 0 : dbToGain(cfg.preGainDb ?? 0),
+        time,
+        0.025,
+      );
+    }
+  }
+  for (const clip of project.clips.filter((clip) =>
+    audibleEvents.some((event) => event.clipId === clip.id),
+  )) {
     const { fx, macros } = clip.character,
       input = ctx.createGain(),
       eq = ctx.createBiquadFilter(),
@@ -1992,8 +2073,8 @@ export async function renderWav(
     buses[clip.id] = input;
   }
   const guitarEvent = (e: import("./core.js").PlaybackEvent, cfg: any) => {
-    const start = stepWithSwing(e.step, project.tempo, project.swing),
-      noteDuration = e.length * secondsPerStep(project.tempo),
+    const start = eventTime(e.step),
+      noteDuration = eventDuration(e.step, e.length),
       end =
         start +
         Math.max(0.12, noteDuration) +
@@ -2062,8 +2143,8 @@ export async function renderWav(
     pick.start(start);
   };
   const toneEvent = (e: import("./core.js").PlaybackEvent, cfg: any) => {
-    const start = stepWithSwing(e.step, project.tempo, project.swing),
-      end = start + e.length * secondsPerStep(project.tempo),
+    const start = eventTime(e.step),
+      end = start + eventDuration(e.step, e.length),
       clip = project.clips.find((c) => c.id === e.clipId)!,
       { lfo, macros } = clip.character,
       f = ctx.createBiquadFilter(),
@@ -2140,7 +2221,7 @@ export async function renderWav(
       addOsc(cfg.osc2Wave, cfg.osc2Mix, 0.5);
   };
   const drumEvent = (e: import("./core.js").PlaybackEvent, cfg: any) => {
-    const start = stepWithSwing(e.step, project.tempo, project.swing),
+    const start = eventTime(e.step),
       g = ctx.createGain(),
       pan = ctx.createStereoPanner(),
       custom = drumSamples?.get(e.pitch);
@@ -2234,10 +2315,7 @@ export async function renderWav(
     }
   };
   for (const e of events)
-    if (
-      !project.tracks[e.track].mute &&
-      (!soloActive || project.tracks[e.track].solo)
-    ) {
+    if (mixAudible(project, e.track)) {
       const clip =
         project.clips.find((clip) => clip.id === e.clipId) ||
         activeClip(project, e.track);
@@ -2248,9 +2326,9 @@ export async function renderWav(
           ? guitarEvent(e, cfg)
           : toneEvent(e, cfg);
     }
-  const audioSolo = (project.audioLanes || []).some((lane) => lane.solo);
-  for (const lane of project.audioLanes || []) {
-    if (lane.mute || (audioSolo && !lane.solo)) continue;
+
+  for (const lane of song ? project.audioLanes : []) {
+    if (!mixAudible(project, lane.id)) continue;
     for (const regionItem of lane.regions) {
       const buffer = audioAssets?.get(regionItem.assetId);
       if (!buffer) continue;
@@ -2263,37 +2341,47 @@ export async function renderWav(
       const rate = audioRegionRate(regionItem, project.tempo),
         startStep = Math.max(0, absoluteStart),
         skipSteps = Math.max(0, -absoluteStart),
-        start = stepWithSwing(startStep, project.tempo, project.swing),
+        start = eventTime(startStep),
         offset = Math.max(
           0,
           Math.min(
             buffer.duration - 0.001,
             regionItem.offsetSeconds +
-              skipSteps * secondsPerStep(project.tempo) * rate,
+              eventDuration(absoluteStart, skipSteps) * rate,
           ),
         ),
         available = Math.max(0.001, buffer.duration - offset),
         wanted =
-          (regionItem.lengthSteps - skipSteps) *
-          secondsPerStep(project.tempo) *
-          rate,
+          eventDuration(
+            startStep,
+            Math.min(
+              regionItem.lengthSteps - skipSteps,
+              durationSteps - startStep,
+            ),
+          ) * rate,
         sampleDuration = Math.min(available, wanted),
         audible = sampleDuration / rate,
         source = ctx.createBufferSource(),
         gain = ctx.createGain(),
         pan = ctx.createStereoPanner(),
-        level = Math.max(0.0001, lane.volume * dbToGain(regionItem.gainDb));
+        level = Math.max(
+          0.0001,
+          lane.volume *
+            (project.mixerGroups.find((group) => group.id === lane.groupId)
+              ?.volume ?? 1) *
+            dbToGain(regionItem.gainDb),
+        );
       source.buffer = buffer;
       source.playbackRate.value = rate;
       pan.pan.value = Math.max(-1, Math.min(1, lane.pan));
       gain.gain.setValueAtTime(level, start);
       const fadeIn = Math.min(
           audible * 0.45,
-          regionItem.fadeInSteps * secondsPerStep(project.tempo),
+          eventDuration(startStep, regionItem.fadeInSteps),
         ),
         fadeOut = Math.min(
           audible * 0.45,
-          regionItem.fadeOutSteps * secondsPerStep(project.tempo),
+          eventDuration(startStep, regionItem.fadeOutSteps),
         );
       if (fadeIn) {
         gain.gain.setValueAtTime(0.0001, start);
@@ -2310,7 +2398,31 @@ export async function renderWav(
       source.start(start, offset, sampleDuration);
     }
   }
-  const rendered = await ctx.startRendering();
+  onStage?.("render");
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  let abortListener: (() => void) | undefined;
+  let rendered: AudioBuffer;
+  try {
+    rendered = await Promise.race([
+      ctx.startRendering(),
+      new Promise<never>((_, reject) => {
+        deadline = setTimeout(
+          () =>
+            reject(
+              new Error("Offline render timed out during audio processing"),
+            ),
+          Math.max(1000, renderTimeoutMs),
+        );
+        abortListener = () =>
+          reject(new DOMException("Export cancelled", "AbortError"));
+        signal?.addEventListener("abort", abortListener, { once: true });
+      }),
+    ]);
+  } finally {
+    clearTimeout(deadline);
+    if (abortListener) signal?.removeEventListener("abort", abortListener);
+  }
+  onStage?.("encode");
   if (signal?.aborted) throw new DOMException("Export cancelled", "AbortError");
   return wavBlob(rendered, bitDepth, normalize, dither);
 }

@@ -5,7 +5,7 @@ import axe from 'axe-core';
 import { readFileSync } from 'node:fs';
 
 const server=preview(Number(process.env.BROWSER_TEST_PORT)||4201),{url,ready}=server;
-function silentWav(){const frames=8000,buffer=Buffer.alloc(44+frames*2);buffer.write('RIFF',0);buffer.writeUInt32LE(buffer.length-8,4);buffer.write('WAVEfmt ',8);buffer.writeUInt32LE(16,16);buffer.writeUInt16LE(1,20);buffer.writeUInt16LE(1,22);buffer.writeUInt32LE(8000,24);buffer.writeUInt32LE(16000,28);buffer.writeUInt16LE(2,32);buffer.writeUInt16LE(16,34);buffer.write('data',36);buffer.writeUInt32LE(frames*2,40);return buffer}
+function silentWav(seconds=1){const frames=8000*seconds,buffer=Buffer.alloc(44+frames*2);buffer.write('RIFF',0);buffer.writeUInt32LE(buffer.length-8,4);buffer.write('WAVEfmt ',8);buffer.writeUInt32LE(16,16);buffer.writeUInt16LE(1,20);buffer.writeUInt16LE(1,22);buffer.writeUInt32LE(8000,24);buffer.writeUInt32LE(16000,28);buffer.writeUInt16LE(2,32);buffer.writeUInt16LE(16,34);buffer.write('data',36);buffer.writeUInt32LE(frames*2,40);return buffer}
 
 test('Chromium desktop and mobile flows are responsive and accessible',async t=>{
   await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});
@@ -43,9 +43,9 @@ test('motion, effects and vector controls belong to the active clip',async t=>{
   await page.keyboard.press('Control+k');await page.keyboard.type('mute');assert.equal(await page.locator('.key.active').count(),0);assert.match(await page.locator('.command-item').first().textContent(),/SHIFT M/);await page.keyboard.press('Enter');assert.equal(await page.locator('[data-mute="lead"]').getAttribute('aria-pressed'),'true');await page.keyboard.press('Shift+m');
 });
 
-test('quick exports remember file handles and overwrite the same destination',async t=>{
+test('quick exports remember file handles and overwrite the same destination',{timeout:60000},async t=>{
   await ready();const browser=await launchBrowser();t.after(async()=>{await browser.close()});const page=await browser.newPage({viewport:{width:1280,height:900}});await page.addInitScript(()=>{globalThis.__quickSaves={pickers:0,writes:[]};Object.defineProperty(globalThis,'showSaveFilePicker',{configurable:true,value:async options=>{const name=options.suggestedName;globalThis.__quickSaves.pickers++;return{name,queryPermission:async()=>'granted',requestPermission:async()=>'granted',createWritable:async()=>({write:async data=>globalThis.__quickSaves.writes.push({name,size:data.size??data.byteLength??String(data).length}),close:async()=>{}})}}})});await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});await page.locator('.note-block').first().waitFor();
-  const waitForWrites=expected=>page.waitForFunction(count=>globalThis.__quickSaves.writes.length===count,expected,{timeout:30000});
+  const waitForWrites=async expected=>{console.log(`Waiting export stage ${expected}`);try{await page.waitForFunction(count=>globalThis.__quickSaves.writes.length===count,expected,{timeout:30000})}catch(error){throw new Error(`Export stage ${expected}: ${await page.locator('#renderStatus').textContent()} / ${await page.locator('#toast').textContent()}`,{cause:error})}};
   await page.locator('#exportAsBtn').click();await page.locator('.export-advanced').nth(1).locator('summary').click();await page.locator('[data-export="midi"]').click();await waitForWrites(1);
   await page.locator('[data-export="midi"]').click();await waitForWrites(2);
   let state=await page.evaluate(()=>globalThis.__quickSaves);assert.equal(state.pickers,1);assert.equal(state.writes[0].name,state.writes[1].name);assert.ok(state.writes.every(write=>write.size>20));
@@ -713,4 +713,32 @@ test('project packages restore every binary including takes into a fresh browser
   await fresh.reload({waitUntil:'networkidle'}); await fresh.locator('#missingAssetsDialog').waitFor();
   await fresh.locator('#missingAssetsDialog input').setInputFiles({name:'take.webm',mimeType:'audio/webm',buffer:silentWav()});
   await fresh.waitForFunction(()=>!document.querySelector('#missingAssetsDialog'));
+});
+
+
+test('offline WAV uses the tempo map, global master and audio isolation', {timeout:60000}, async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage();await page.goto(`${url}/?qa=1`);
+  const result=await page.evaluate(async()=>{
+    const core=await import('/core.js'),{renderWav}=await import('/audio.js'),p=core.createEmptyProject();p.clips.forEach(clip=>clip.bars=1);p.swing=0;p.masterSettings.bypass=true;p.master=1;
+    p.tempoMap=[{id:'a',step:0,bpm:120,curve:'jump'},{id:'b',step:8,bpm:60,curve:'jump'}];
+    const context=new globalThis.OfflineAudioContext(2,44100,44100),buffer=context.createBuffer(1,44100*4,44100);const pcm=buffer.getChannelData(0);for(let i=0;i<pcm.length;i++)pcm[i]=.1*Math.sin(i*2*Math.PI*220/44100);
+    const lane=core.createAudioLane('Reference');lane.regions.push(core.createAudioRegion('ref','Reference',0,16,4));p.audioLanes.push(lane);
+    const options={song:true,bitDepth:32,sampleRate:44100,tailSeconds:0,audioAssets:new Map([['ref',buffer]])};
+    const measure=async(project)=>{const wav=await renderWav(project,options),v=new DataView(await wav.arrayBuffer());let sum=0,count=0;for(let at=44;at<v.byteLength;at+=4){const n=v.getFloat32(at,true);sum+=n*n;count++}return {duration:(v.byteLength-44)/8/44100,rms:Math.sqrt(sum/count)}};
+    const full=await measure(p);const automation=core.createAutomationLane('master.volume');automation.points=[{id:'zero',step:0,value:.5,curve:'jump'}];p.automationLanes.push(automation);const half=await measure(p);
+    const isolated=globalThis.structuredClone(p);isolated.audioLanes=[];const silent=await measure(isolated);
+    return {full,half,silent};
+  });
+  assert.equal(result.full.duration,3);assert.ok(result.full.rms>.02);assert.ok(Math.abs(result.half.rms/result.full.rms-.5)<.03);assert.equal(result.silent.rms,0);
+});
+
+
+test('audio region buses respond to instrument Solo while their source remains playing', {timeout:30000}, async t=>{
+ await ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage();await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});await goToView(page,'audio');
+ await page.locator('#audioImport').setInputFiles({name:'long-source.wav',mimeType:'audio/wav',buffer:silentWav(8)});await page.locator('.audio-region').waitFor();await page.locator('#playBtn').click();
+ await page.waitForFunction(()=>globalThis.__kvDiagnostics().activeAudioRegions>0&&globalThis.__kvDiagnostics().audioLaneLevels.some(level=>level>.4));
+ await page.locator('[data-solo="lead"]').click();await page.waitForFunction(()=>globalThis.__kvDiagnostics().audioLaneLevels.every(level=>level<.001));
+ assert.ok((await page.evaluate(()=>globalThis.__kvDiagnostics())).activeAudioRegions>0);
+ await page.locator('[data-solo="lead"]').click();await page.waitForFunction(()=>globalThis.__kvDiagnostics().audioLaneLevels.some(level=>level>.4));await page.locator('#pauseBtn').click();
+ assert.equal((await page.evaluate(()=>globalThis.__kvDiagnostics())).audioLaneLevels.length,0);
 });

@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PROJECT_VERSION, projectAssets, TRACKS, createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, meterSteps, setProjectMeter,
+  PROJECT_VERSION, renderAssets, mixAudible, masterValue, clipTrackState, projectSeconds, projectDuration, projectAssets, TRACKS, createProject, createEmptyProject, migrateProject, activeClip, clipsForTrack, createClip, meterSteps, setProjectMeter,
   makeNote, toggleNote, duplicateClip, deleteClip, varyClip, resizeClip, clipLengthSteps, quantizeClip, automationValue, notesAtStep,
   generateClip, generateBacking, sceneLengthSteps, playbackEvents, encodeMidi, addArrangementScene, duplicateArrangementScene,
   moveArrangementScene, removeArrangementScene, distributeArrangementPatterns, isInScale, createPerformanceTake,
   quantizePerformanceTake, captureLauncherScenes, duplicateArrangementSelection, removeArrangementSelection, dbToGain, gainToDb, History,
   createAudioLane, createAudioRegion, audioRegionRate, createAutomationLane, evaluateAutomationLane, detectTransientSlices, transformNotes, tempoAtStep
 } from '../dist/core.js';
-import { AudioEngine } from '../dist/audio.js';
+import { AudioEngine, wavBlob } from '../dist/audio.js';
 
 test('v6 demo is a complete serializable hybrid song with studio workflow state', () => {
   const p=createProject();
@@ -227,6 +227,7 @@ test('song scheduling and clip launches use each instrument and preserve voice s
   assert.equal(b.instrument.cutoff, originalCutoff);
 });
 
+
 test('binary inventory includes takes and deduplicates shared region/sampler sources', () => {
   const p = createEmptyProject();
   p.sampler.assetId = 'shared'; p.sampler.name = 'Sampler'; p.sampler.type = 'audio/ogg';
@@ -238,4 +239,80 @@ test('binary inventory includes takes and deduplicates shared region/sampler sou
     {id:'shared',type:'audio/ogg'}, {id:'recording',type:'audio/webm;codecs=opus'}
   ]);
   assert.deepEqual(projectAssets(migrateProject(JSON.parse(JSON.stringify(p)))) , projectAssets(p));
+});
+
+test('MIDI emits tempo ramps and later meter events at absolute musical ticks', () => {
+  const p = createEmptyProject();
+  p.tempoMap = [{id:'a',step:0,bpm:100,curve:'linear'}, {id:'b',step:8,bpm:160,curve:'jump'}];
+  p.meterMap = [{id:'m',step:8,beats:3,unit:4}];
+  const midi = encodeMidi(p), view = new DataView(midi.buffer);
+  const end = 22 + view.getUint32(18); let offset = 22, tick = 0; const tempos = [], meters = [];
+  while (offset < end) {
+    let delta = 0, b;
+    do { b=midi[offset++]; delta=(delta<<7)|(b&127); } while (b&128);
+    tick += delta; assert.equal(midi[offset++],255);
+    const type=midi[offset++], size=midi[offset++], data=[...midi.slice(offset,offset+size)]; offset+=size;
+    if(type===81) tempos.push({tick,bpm:60000000/((data[0]<<16)|(data[1]<<8)|data[2])});
+    if(type===88) meters.push({tick,beats:data[0],unit:2**data[1]});
+  }
+  assert.equal(tempos.length,33); assert.equal(tempos[0].tick,0); assert.equal(tempos.at(-1).tick,960);
+  assert.ok(Math.abs(tempos.at(-1).bpm-160)<.001);
+  assert.ok(meters.some(m=>m.tick===960&&m.beats===3&&m.unit===4));
+});
+
+test('shared clock integrates jumps, ramps, swing and region offsets', () => {
+ const p=createEmptyProject(); p.swing=0;
+ p.tempoMap=[{id:'a',step:0,bpm:120,curve:'jump'},{id:'b',step:8,bpm:60,curve:'jump'}];
+ assert.equal(projectSeconds(p,16),3); assert.equal(projectDuration(p,8,8),2);
+ p.tempoMap[0].curve='linear';
+ assert.ok(Math.abs(projectSeconds(p,8)-2*Math.log(2))<1e-10);
+ p.swing=.3;
+ assert.ok(projectSeconds(p,1)>projectSeconds(p,1,false));
+ assert.equal(projectDuration(p,0,2),projectSeconds(p,2,false));
+});
+
+
+test('global mixer rules cover audio solo, group mute and master automation without mutating the project',()=>{
+ const p=createEmptyProject(),lane=createAudioLane('Voice');p.audioLanes.push(lane);lane.solo=true;
+ assert.equal(mixAudible(p,'lead'),false);assert.equal(mixAudible(p,lane.id),true);
+ lane.solo=false;const group=p.mixerGroups[0];p.tracks.lead.groupId=group.id;group.mute=true;
+ assert.equal(mixAudible(p,'lead'),false);group.mute=false;group.volume=.5;
+ const automation=createAutomationLane('master.volume');automation.points=[{id:'m',step:0,value:.2,curve:'jump'}];p.automationLanes.push(automation);
+ assert.equal(masterValue(p,0),.2);
+ const before=JSON.stringify(p),cfg=clipTrackState(p,activeClip(p,'lead'),0);
+ assert.ok(Math.abs(cfg.volume-p.tracks.lead.volume*.5)<1e-10);assert.equal(JSON.stringify(p),before);
+});
+
+test('audio regions extend the song transport without repeating the last instrument scene',()=>{
+ const p=createEmptyProject(),lane=createAudioLane('Long voice');lane.regions.push(createAudioRegion('voice','Long voice',8,40,6));p.audioLanes.push(lane);
+ assert.equal(playbackEvents(p,{song:true}).durationSteps,48);
+ const engine=new AudioEngine();engine.project=p;engine.songMode=true;assert.equal(engine.seek(40,true),40);
+ assert.equal(engine.sceneIndex,p.arrangement.length);engine.advanceTransport();assert.equal(engine.position,41);
+ engine.seek(47,true);engine.advanceTransport();assert.equal(engine.position,0);
+});
+
+
+test('WAV encoding reads channel views once and preserves stereo PCM samples', async()=>{
+ let reads=0;const left=new Float32Array([-.5,.25,2]),right=new Float32Array([.5,-.25,-2]);
+ const buffer={length:3,sampleRate:48000,getChannelData(channel){reads++;return channel?right:left}};
+ const blob=wavBlob(buffer,32,false,false),view=new DataView(await blob.arrayBuffer());
+ assert.equal(reads,2);assert.equal(blob.size,68);assert.equal(view.getFloat32(44,true),-.5);assert.equal(view.getFloat32(48,true),.5);assert.equal(view.getFloat32(60,true),1);assert.equal(view.getFloat32(64,true),-1);
+});
+
+
+test('render inventory requires audible composition sources without blocking on unrelated takes',()=>{
+ const p=createEmptyProject(),take=createPerformanceTake('Unrelated take',16);take.audioAssetId='missing-take';p.performanceTakes.push(take);
+ p.sampler.assetId='unused-sampler';assert.equal(renderAssets(p).length,0);
+ const lane=createAudioLane('Voice');lane.regions.push(createAudioRegion('voice','Voice',8,8,1));p.audioLanes.push(lane);
+ assert.deepEqual(renderAssets(p).map(asset=>asset.id),['voice']);assert.equal(renderAssets(p,false).length,0);assert.equal(renderAssets(p,true,{start:0,end:8}).length,0);
+ lane.mute=true;assert.equal(renderAssets(p).length,0);
+});
+
+
+test('live audio-lane buses follow global Solo/Mute and group changes during a sustained region',()=>{
+ const p=createEmptyProject(),lane=createAudioLane('Sustained voice');p.audioLanes.push(lane);const engine=new AudioEngine();engine.ctx={currentTime:0};
+ const output={gain:{value:1,setTargetAtTime(value){this.value=value}},disconnect(){}};engine.audioLaneOutputs.set(lane.id,output);
+ engine.setProject(p);assert.equal(output.gain.value,lane.volume);p.tracks.lead.solo=true;engine.setProject(p);assert.equal(output.gain.value,0);
+ p.tracks.lead.solo=false;lane.mute=true;engine.setProject(p);assert.equal(output.gain.value,0);lane.mute=false;engine.setProject(p);assert.equal(output.gain.value,lane.volume);
+ p.audioLanes=[];engine.setProject(p);assert.equal(engine.audioLaneOutputs.size,0);
 });

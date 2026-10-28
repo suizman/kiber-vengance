@@ -321,7 +321,10 @@ export async function captureScratchMix(ctx: RuntimeContext) {
   ctx.$("#scratchStatus").textContent = msg("ui_160f2d508bb1");
   try {
     const bars = Math.max(1, +ctx.$("#scratchBars").value),
-      wav = await renderWav(ctx.project, { song: false });
+      wav = await renderWav(ctx.project, {
+        song: false,
+        drumSamples: ctx.engine.drumSamples,
+      });
     await ctx.engine.init();
     const decoded = await ctx.engine.ctx.decodeAudioData(
         await wav.arrayBuffer(),
