@@ -1,3 +1,4 @@
+import { acquireInference } from "./inference-lock";
 import { CPU_CACHE, type LocalBackend } from "./model-config";
 import cpuWorkerUrl from "./cpu-worker.ts?worker&url";
 import gpuWorkerUrl from "./inference-worker.ts?worker&url";
@@ -137,7 +138,7 @@ async function openWorker(kind: "gpu" | "cpu" = "gpu") {
     current?.reject(error);
   };
 }
-export async function loadLocalModel(
+async function loadLocalModelImpl(
   onProgress: (fraction: number, text: string) => void,
   mode: LocalBackend = "auto",
 ) {
@@ -201,6 +202,16 @@ export async function loadLocalModel(
   }
   return selected;
 }
+export async function loadLocalModel(
+  ...args: Parameters<typeof loadLocalModelImpl>
+) {
+  const release = acquireInference("melody load");
+  try {
+    return await loadLocalModelImpl(...args);
+  } finally {
+    release();
+  }
+}
 export async function generateLocalPlan(
   prompt: string,
   key: string,
@@ -210,10 +221,15 @@ export async function generateLocalPlan(
 ) {
   if (!ready) throw new Error("Load the local model first.");
   progress = onProgress ?? null;
-  return request(
-    { kind: "generate", prompt, key, scale, bars },
-    backend === "cpu" ? 300000 : 120000,
-  );
+  const release = acquireInference("melody");
+  try {
+    return await request(
+      { kind: "generate", prompt, key, scale, bars },
+      backend === "cpu" ? 300000 : 120000,
+    );
+  } finally {
+    release();
+  }
 }
 export async function deleteLocalModelCache() {
   stopLocalModel();

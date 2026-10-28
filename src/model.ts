@@ -197,7 +197,19 @@ export interface SamplerInstrument {
   reverse: boolean;
   polyphony: number;
 }
+export interface SpeechGeneration {
+  kind: "speech";
+  model: string;
+  text: string;
+  language: "en" | "es";
+  voice: string;
+  speed: number;
+  dtype: "fp32" | "q8";
+  phonemes: string;
+  createdAt: number;
+}
 export interface AudioRegion {
+  generation?: SpeechGeneration;
   id: string;
   assetId: string;
   name: string;

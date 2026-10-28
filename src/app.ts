@@ -1,3 +1,4 @@
+import { setupLocalVoice } from "./ui/local-voice";
 import { captureMusicalContext } from "./ai/composer";
 import { requestConfirmation } from "./ui/dialogs";
 import {
@@ -3841,6 +3842,7 @@ document.addEventListener("visibilitychange", () => {
 
 void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));
 
+setupLocalVoice(runtime);
 
 if (autosaveRecoveryNotice) {
   const warning = $("#saveWarning");

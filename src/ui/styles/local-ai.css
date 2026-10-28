@@ -318,6 +318,27 @@ dialog.appearance-dialog.local-ai-dialog {
   }
 }
 
+#localVoiceDialog textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  margin: 8px 0 16px;
+}
+#localVoiceDialog .ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+#localVoiceDialog audio { width: 100%; }
+#localVoiceDialog header {
+  position: sticky;
+  top: -28px;
+  z-index: 1;
+  background: #1a2029;
+}
 #missingAssetsDialog label {
   display: block;
   overflow-wrap: anywhere;

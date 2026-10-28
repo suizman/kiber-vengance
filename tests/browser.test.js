@@ -715,6 +715,31 @@ test('project packages restore every binary including takes into a fresh browser
   await fresh.waitForFunction(()=>!document.querySelector('#missingAssetsDialog'));
 });
 
+test('local voice controls are opt-in, bilingual, cancellable and preserve captured insertion with undo', {timeout:60000}, async t=>{
+  await ready();const browser=await launchBrowser();t.after(()=>browser.close());
+  // Protocol fixture only: real speech evidence comes from test-local-voice.mjs.
+  const fixture=`self.onmessage=({data})=>{if(data.kind==='load')self.postMessage({kind:'loaded'});if(data.kind==='generate')setTimeout(()=>{const pcm=new Float32Array(24000);for(let i=0;i<pcm.length;i++)pcm[i]=.1*Math.sin(i*2*Math.PI*220/24000);self.postMessage({kind:'audio',pcm,sampleRate:24000,phonemes:'fixture'})},300)};`;
+  for(const viewport of [{width:1366,height:1000},{width:390,height:844}]){
+    const page=await browser.newPage({viewport}),requests=[];page.on('request',request=>{if(/huggingface.co/.test(request.url()))requests.push(request.url())});
+    await page.route('**/voice-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:fixture}));
+    await page.goto(`${url}/?qa=1`,{waitUntil:'networkidle'});await goToView(page,'audio');await page.locator('#localVoiceBtn').click();
+    assert.equal(requests.length,0);assert.equal(await page.locator('#generateLocalVoice').isDisabled(),true);
+    await page.locator('#voiceLanguage').selectOption('es');await page.locator('#voiceText').fill('Una frase de prueba.');
+    await page.locator('#loadLocalVoice').click();await page.waitForFunction(()=>!globalThis.document.querySelector('#generateLocalVoice').disabled);
+    await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();
+    await page.waitForFunction(()=>!globalThis.document.querySelector('#insertLocalVoice').disabled);
+    await page.locator('#insertLocalVoice').click();await page.waitForFunction(()=>!globalThis.document.querySelector('#loadLocalVoice').disabled);
+    await page.locator('#localVoiceDialog header button').click();assert.equal(await page.locator('.audio-region').count(),1);
+    await page.locator('#undoBtn').click();assert.equal(await page.locator('.audio-region').count(),0);await page.locator('#redoBtn').click();assert.equal(await page.locator('.audio-region').count(),1);
+    await page.locator('#localVoiceBtn').click();await page.locator('#generateLocalVoice').click();await page.getByRole('button',{name:'Cancel',exact:true}).click();
+    assert.equal(await page.locator('#voicePreview').count(),1);assert.equal(await page.locator('#generateLocalVoice').isDisabled(),true);
+    await page.addScriptTag({content:axe.source});const audit=await page.evaluate(async()=>await globalThis.axe.run(globalThis.document.querySelector('#localVoiceDialog')));
+    assert.deepEqual(audit.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>v.id),[]);
+    assert.equal(await page.locator('#localVoiceDialog').evaluate(dialog=>dialog.scrollWidth<=dialog.clientWidth),true);
+    await page.screenshot({path:`/private/tmp/kiber-voice-${viewport.width}.png`});await page.close();
+  }
+});
+
 test('offline WAV uses the tempo map, global master and audio isolation', {timeout:60000}, async t=>{
   await ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage();await page.goto(`${url}/?qa=1`);
   const result=await page.evaluate(async()=>{
