@@ -203,3 +203,6 @@ The **▶ CLIP** button beside the clip start locator becomes **Ⅱ PAUSE** duri
 In Arrange, **LOAD TO COMPOSE** activates all five clips assigned to that section and opens the Compose editor. This provides a direct way to edit a complete section without selecting each track's clip manually.
 
 Mix and voice update: the header Master controls Program plus both decks, with independent Cue/preview levels. Audio imports and generated speech support non-destructive Clip/Track effects. See [audio mixing and voice](docs/AUDIO_MIX_AND_VOICE.md) for controls, model downloads, compatibility and verification limits.
+
+
+Chatterbox remains an experimental desktop voice engine. It is blocked on phones/tablets and devices reporting 4 GB RAM or less to avoid memory-related page restarts; the voice dialog offers Kokoro q8 while retaining your text. See [local voice compatibility](docs/LOCAL_VOICE.md).

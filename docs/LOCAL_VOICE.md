@@ -43,3 +43,12 @@ The next experiment needs an explicitly permitted bank/vocoder with exact model 
 ## Mixing, pacing and expressive-engine extension (2026-10-28)
 
 See [Audio mixing and voice](AUDIO_MIX_AND_VOICE.md) for the additive audio-effect/provenance contracts, pinned Kokoro revision, per-line speed/pauses, original/processed WAV workflow and optional Chatterbox experiment. The numeric template correction and actual inference evidence must be kept separate from UI worker fixtures. Qwen free-form style direction remains unvalidated in this browser integration and has no product control.
+
+
+## Mobile Chatterbox restart protection (2026-10-28)
+
+A user reported that loading Chatterbox on mobile restarted the page. Its approximately 570 MB of downloaded weights require additional runtime/session memory; an OS/browser out-of-memory kill cannot reliably be caught in JavaScript. The exact failure on the user's physical device has not been measured.
+
+Chatterbox is now unavailable on detected phones/tablets (including iPad desktop user agents) and devices reporting 4 GB RAM or less. The dialog explains this before any download and offers **Use Kokoro q8**, preserving text/language and prior generated audio. The service and worker enforce the same admission policy; shrinking a desktop window alone does not block it. This is a conservative compatibility policy, not a measurement or guarantee of free memory. Desktop Chatterbox remains experimental; no mobile Chatterbox inference capability is claimed.
+
+Large Chatterbox model/runtime downloads no longer await Cache.put on a cloned response while leaving its twin unread. They stream directly into Cache Storage, then read the stored response once. Cache failure triggers a new online request rather than retaining a fallback copy in memory. Download progress reports received MB; runtime blob URLs are revoked after session initialization, and changing engines terminates the previous voice worker. Music assets, DNS and project schema are untouched. Physical iPhone/Safari and peak-memory measurements remain unverified.

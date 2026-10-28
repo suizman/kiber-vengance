@@ -21,6 +21,7 @@ import {
   type SpeechSettings,
 } from "../ai/voice";
 import { getLanguage } from "./i18n";
+import { chatterboxUnavailable } from "../ai/voice-safety";
 import type { Project } from "../model";
 interface Context {
   project: Project;
@@ -74,6 +75,7 @@ export function setupLocalVoice(ctx: Context) {
       step: number;
     } | null>(null);
     const L = (en: string, spanish: string) => (es ? spanish : en);
+    const blocked = engine === "chatterbox" && chatterboxUnavailable(navigator);
     const settings = (): SpeechSettings => ({
       engine,
       device: "wasm",
@@ -177,6 +179,7 @@ export function setupLocalVoice(ctx: Context) {
       setOpen(false);
     };
     const load = async () => {
+      if (blocked) return;
       const token = ++epoch.current;
       setBusy(true);
       setReady(false);
@@ -344,6 +347,8 @@ export function setupLocalVoice(ctx: Context) {
               value={engine}
               disabled={busy}
               onChange={(e) => {
+                stop();
+                setStatus("");
                 setEngine(e.currentTarget.value as "kokoro" | "chatterbox");
                 setVoice(
                   e.currentTarget.value === "chatterbox"
@@ -358,7 +363,7 @@ export function setupLocalVoice(ctx: Context) {
               <option value="kokoro">Kokoro · CPU</option>
               <option value="chatterbox">
                 Chatterbox · CPU ·{" "}
-                {L("Expressive · experimental", "Expresivo · experimental")}
+                {L("Desktop · experimental", "Escritorio · experimental")}
               </option>
             </select>
           </label>
@@ -397,6 +402,34 @@ export function setupLocalVoice(ctx: Context) {
                 )}
               </p>
             </>
+          )}
+
+          {blocked && (
+            <section id="voiceDeviceNotice" role="note">
+              <p>
+                {L(
+                  "Chatterbox is unavailable on mobile, tablets and devices reporting 4 GB RAM or less. Its ≈570 MB download expands further in memory and can cause the browser to restart the page. Use Kokoro q8 here; Chatterbox remains experimental on desktop.",
+                  "Chatterbox no está disponible en móviles, tablets y equipos que indican 4 GB de RAM o menos. La descarga de ≈570 MB necesita aún más memoria al cargar y puede hacer que el navegador reinicie la página. Usa Kokoro q8 aquí; Chatterbox sigue siendo experimental en escritorio.",
+                )}
+              </p>
+              <button
+                id="useLightweightVoice"
+                onClick={() => {
+                  stop();
+                  setEngine("kokoro");
+                  setDtype("q8");
+                  setVoice(language === "es" ? "ef_dora" : "af_heart");
+                  setStatus(
+                    L(
+                      "Kokoro q8 selected. Load it to continue.",
+                      "Kokoro q8 seleccionado. Cárgalo para continuar.",
+                    ),
+                  );
+                }}
+              >
+                {L("Use Kokoro q8", "Usar Kokoro q8")}
+              </button>
+            </section>
           )}
 
           <label>
@@ -558,7 +591,8 @@ export function setupLocalVoice(ctx: Context) {
         <div class="ai-actions">
           <button
             id="loadLocalVoice"
-            disabled={busy}
+            disabled={busy || blocked}
+            aria-describedby={blocked ? "voiceDeviceNotice" : undefined}
             onClick={() => void load()}
           >
             {L("Download / load model", "Descargar / cargar modelo")}
@@ -567,6 +601,7 @@ export function setupLocalVoice(ctx: Context) {
             id="generateLocalVoice"
             disabled={
               busy ||
+              blocked ||
               !ready ||
               !text.trim() ||
               !Number.isFinite(speed) ||

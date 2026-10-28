@@ -4,6 +4,8 @@ import { PreTrainedTokenizer } from "@huggingface/transformers";
 import factoryUrl from "onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs?url";
 import gpuFactoryUrl from "onnxruntime-web/ort-wasm-simd-threaded.jspi.mjs?url";
 import gpuFallbackUrl from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url";
+import { modelBytes } from "./model-download";
+import { chatterboxUnavailable } from "./voice-safety";
 const scope = globalThis as unknown as {
   postMessage(value: unknown): void;
   onmessage: ((event: MessageEvent) => void) | null;
@@ -27,24 +29,14 @@ let embed: ort.InferenceSession,
   tokenizer: PreTrainedTokenizer,
   voice: Float32Array;
 async function file(model: string, revision: string, path: string) {
-  const url = `https://huggingface.co/${model}/resolve/${revision}/${path}`,
-    cache = await caches.open("kv-expressive-model-v1");
-  let response = await cache.match(url);
-  if (!response) {
-    scope.postMessage({ kind: "progress", text: `Downloading ${path}` });
-    response = await fetch(url);
-    if (!response.ok) throw Error(`${path}: HTTP ${response.status}`);
-    try {
-      await cache.put(url, response.clone());
-    } catch {
-      scope.postMessage({
-        kind: "progress",
-        text: "Model cache unavailable; continuing online",
-      });
-    }
-  }
-  return new Uint8Array(await response.arrayBuffer());
+  return modelBytes(
+    `https://huggingface.co/${model}/resolve/${revision}/${path}`,
+    path,
+    progress,
+  );
 }
+const progress = (text: string) =>
+  scope.postMessage({ kind: "progress", text });
 const i64 = (data: number[] | bigint[], dims: number[]) =>
   new ort.Tensor("int64", BigInt64Array.from(data.map(BigInt)), dims);
 async function session(
@@ -65,34 +57,26 @@ async function session(
   return ort.InferenceSession.create(graph, options);
 }
 scope.onmessage = async ({ data }) => {
+  let runtimeUrl = "";
   try {
     if (data.kind === "load") {
+      if (chatterboxUnavailable(navigator))
+        throw Error(
+          "Chatterbox requires desktop memory. Use Kokoro q8 on mobile.",
+        );
       const device = data.device === "webgpu" ? "webgpu" : "wasm";
       const jspi =
         typeof (WebAssembly as typeof WebAssembly & { Suspending?: unknown })
           .Suspending === "function";
       const variant = device === "wasm" ? "jsep" : jspi ? "jspi" : "asyncify";
       const runtime = `https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0/dist/ort-wasm-simd-threaded.${variant}.wasm`;
-      const cache = await caches.open("kv-expressive-model-v1");
-      let response = await cache.match(runtime);
-      if (!response) {
-        response = await fetch(runtime);
-        if (!response.ok) throw Error(`Runtime HTTP ${response.status}`);
-        try {
-          await cache.put(runtime, response.clone());
-        } catch {
-          scope.postMessage({
-            kind: "progress",
-            text: "Runtime cache unavailable; continuing online",
-          });
-        }
-      }
+      runtimeUrl = URL.createObjectURL(
+        new Blob([await modelBytes(runtime, "Voice runtime", progress)], {
+          type: "application/wasm",
+        }),
+      );
       ort.env.wasm.wasmPaths = {
-        wasm: URL.createObjectURL(
-          new Blob([await response.arrayBuffer()], {
-            type: "application/wasm",
-          }),
-        ),
+        wasm: runtimeUrl,
         mjs: new URL(
           device === "wasm"
             ? factoryUrl
@@ -109,6 +93,7 @@ scope.onmessage = async ({ data }) => {
         device,
         "onnx/embed_tokens.onnx_data",
       );
+      progress("Preparing expressive language model…");
       lm = await session(
         MODEL,
         REV,
@@ -116,6 +101,7 @@ scope.onmessage = async ({ data }) => {
         device,
         "onnx/language_model_q4.onnx_data",
       );
+      progress("Preparing expressive audio decoder…");
       decoder = await session(
         DECODER,
         DEC_REV,
@@ -315,5 +301,7 @@ scope.onmessage = async ({ data }) => {
     }
   } catch (error) {
     scope.postMessage({ kind: "error", message: String(error) });
+  } finally {
+    if (runtimeUrl) URL.revokeObjectURL(runtimeUrl);
   }
 };

@@ -1,4 +1,5 @@
 import { VOICE_ENGINES } from "./voice-engines";
+import { chatterboxUnavailable } from "./voice-safety";
 import expressiveWorkerUrl from "./chatterbox-worker.ts?worker&url";
 import workerUrl from "./voice-worker.ts?worker&url";
 import { acquireInference } from "./inference-lock";
@@ -82,6 +83,10 @@ export async function loadVoice(
   settings: SpeechSettings,
   progress: (text: string) => void,
 ) {
+  if (settings.engine === "chatterbox" && chatterboxUnavailable(navigator))
+    throw new Error(
+      "Chatterbox is unavailable on mobile/tablets and low-memory devices to prevent page restarts. Use Kokoro q8.",
+    );
   freeVoice();
   const token = epoch,
     controller = new AbortController();

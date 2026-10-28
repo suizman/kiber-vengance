@@ -8,6 +8,47 @@ const load = async path => {
 };
 const {DeckProcessor}=await load('../src/audio/deck.ts');
 const {ProjectSession}=await load('../src/state/project-session.ts');
+const {chatterboxUnavailable}=await load('../src/ai/voice-safety.ts');
+const {modelBytes}=await load('../src/ai/model-download.ts');
+
+test('expressive voice blocks phones, iPad desktop mode and reported low memory without confusing touch laptops with tablets',()=>{
+ for(const device of [
+  {userAgent:'Mozilla iPhone Safari'}, {userAgent:'Mozilla Android Chrome'},
+  {userAgent:'Mozilla Macintosh Safari',maxTouchPoints:5},
+  {userAgent:'desktop',userAgentData:{mobile:true}},
+  {userAgent:'Windows Chrome',deviceMemory:4},
+  {userAgent:'Linux Chrome',deviceMemory:2},
+ ])assert.equal(chatterboxUnavailable(device),true,JSON.stringify(device));
+ for(const device of [
+  {userAgent:'Macintosh Safari',maxTouchPoints:0},
+  {userAgent:'Windows Chrome',maxTouchPoints:10,deviceMemory:8},
+  {userAgent:'Linux Firefox'},
+ ])assert.equal(chatterboxUnavailable(device),false,JSON.stringify(device));
+});
+
+test('large voice downloads are consumed into cache before reading and recover from unavailable storage',async()=>{
+ const originalFetch=globalThis.fetch,originalCaches=Object.getOwnPropertyDescriptor(globalThis,'caches');
+ let requests=0,puts=0,cached=null,quota=false;
+ const bytes=new Uint8Array([1,2,3,4]);
+ globalThis.fetch=async()=>{requests++;const response=new globalThis.Response(bytes);response.clone=()=>{throw Error('Large response must never be cloned')};return response};
+ Object.defineProperty(globalThis,'caches',{configurable:true,value:{open:async()=>({
+  match:async()=>cached?new globalThis.Response(cached):undefined,
+  put:async(url,response)=>{puts++;const body=await response.arrayBuffer();assert.equal(response.bodyUsed,true);if(quota)throw Error('quota');cached=body;},
+ })}});
+ try{
+  assert.deepEqual(await modelBytes('https://model.test/weights','weights',()=>{}),bytes);
+  assert.equal(puts,1);assert.equal(requests,1);
+  assert.deepEqual(await modelBytes('https://model.test/weights','weights',()=>{}),bytes);assert.equal(requests,1);
+  quota=true;cached=null;const messages=[];
+  assert.deepEqual(await modelBytes('https://model.test/weights','weights',s=>messages.push(s)),bytes);
+  assert.equal(requests,3);assert.ok(messages.some(s=>s.includes('without storage')));
+  Object.defineProperty(globalThis,'caches',{configurable:true,value:{open:async()=>{throw Error('Unavailable')}}});
+  assert.deepEqual(await modelBytes('https://model.test/weights','weights',()=>{}),bytes);assert.equal(requests,4);
+ }finally{
+  globalThis.fetch=originalFetch;
+  if(originalCaches)Object.defineProperty(globalThis,'caches',originalCaches);else delete globalThis.caches;
+ }
+});
 
 test('deck load acknowledgements cannot resolve a replaced load or the other deck',async()=>{
  const Original=globalThis.AudioWorkletNode;

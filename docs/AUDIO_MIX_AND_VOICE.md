@@ -50,3 +50,8 @@ The tests distinguish DSP/reference signals, browser protocol fixtures and genui
 Physical iPhone/Safari, speakers/headphones and microphone hardware need separate validation. CPU/WebGPU availability is not a promise of equal speed, low memory or cold-offline startup on every device. Successful PCM generation does not certify naturalness or emotional interpretation.
 
 Primary references: [Kokoro voices](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md), [Chatterbox ONNX protocol](https://huggingface.co/onnx-community/chatterbox-multilingual-ONNX), [WebGPU decoder](https://huggingface.co/danyalmalik/Chatterbox-ONNX-WebGPU), [multilingual voice vector](https://huggingface.co/danyalmalik/Chatterbox-Multilingual-ONNX-WebGPU), [Qwen instructions](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice).
+
+
+### Mobile compatibility correction
+
+After a reported mobile page restart, Chatterbox is restricted to desktop devices that do not report 4 GB RAM or less. Phones/tablets, including iPad desktop mode, are blocked before download, with a text-preserving Kokoro q8 action. Large-file caching now avoids unread Response.clone branches; runtime blob URLs are released. This prevents starting the unsupported heavy mobile workflow; it does not certify Chatterbox mobile inference or measure physical-device memory. See LOCAL_VOICE.md.

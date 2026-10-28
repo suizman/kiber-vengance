@@ -195,3 +195,8 @@ Publicación completada: Sites versión 32, estado nativo `succeeded`, desde fue
 ## Volume, audio FX and speech interpretation — 2026-10-28
 
 Implement shared dB level controls across instruments, audio lanes, sampler, groups, decks and final output; preserve legacy Program values. Add real stereo metering and an actual final deck-inclusive Master. Apply independent non-destructive audio-region and lane FX using common live/offline DSP. Keep speech original assets and add fragment pacing, treatment audition/download and an optional genuine expressive engine. Free-form Qwen direction is gated on browser feasibility; it must not become a decorative control. Delivery evidence and exact remaining limitations: `docs/AUDIO_MIX_AND_VOICE.md` and the current PROJECT_MEMORY entry.
+
+
+### Mobile voice compatibility (2026-10-28)
+
+Reported mobile Chatterbox page restarts are addressed by blocking this heavy experimental engine on phones/tablets and reported <=4 GB devices before downloads, with a text-preserving Kokoro q8 alternative. Large model caching avoids unread cloned responses. Chatterbox mobile inference remains unsupported; actual device/peak-memory validation is still open.
