@@ -6,7 +6,7 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-28.
 
-## Authorized feature release preparation (2026-10-28)
+## Published reliability, AI and voice release (2026-10-28, Sites 32)
 
 - User explicitly requested updated memory, agent instructions, product plan and UX review, separate feature/improvement commits, push to the existing repository and then ChatGPT Site deployment.
 - Existing Site was re-read before release: its audience is public and its current live URL is `https://studio.suizman.org`; latest server version was 31. Preserve these settings. Older release notes naming only the generated Site domain are historical.
@@ -15,7 +15,9 @@ Last updated: 2026-10-28.
 - Release rebuild/typecheck/lint and all 54 unit tests passed again. Distribution identifies runtime source `08f3da4`; the 54-unit/43-browser full-suite evidence remains valid because runtime source is unchanged by commit separation and documentation.
 - Remote `master` had advanced to `43a2483` (`a560fd9` focused editor/deck/state refactor plus its build). Normal merge `e31a2c2` preserves that work and all feature commits; no force-push or old Sites-history merge is used. Recovery/hide flushing now runs through typed ProjectSession, whose pending guard prevents overwriting an external storage fixture when no edit is pending. Shared deck capture retains custom drum sources through the typed DeckAudio contract.
 - The merged runtime source revision is `e31a2c2`; its rebuild, lint/typecheck and 56 unit tests passed. The combined `npm run check:full` exited 0: 56 unit tests and 43 Chromium/Firefox workflows, no skips or failures. Log: `/private/tmp/kiber-merged-release-full.log`. Earlier `08f3da4` footer/54-unit evidence describes the pre-integration state.
-- Publication is pending while this preparation entry is written. Record the actual saved version, source revision and terminal deployment result after publishing; do not infer success from an upload.
+- GitHub push succeeded through distribution commit `51b94c6`, a normal fast-forward of the existing remote including its focused refactor. The main workspace was clean at publication. The distribution footer is `e31a2c2`.
+- The official Sites source helper synchronized the exact tracked tree in an isolated checkout and pushed source `bce68188ccd3a8771e4fd98b706ee2b5d2806170`. Saved Sites version **32** deployed with native terminal status **succeeded**. Deployment: `appgdep_6ae13d2ddf84819195d7a7eea45757b9`. Returned URL: `https://kiber-vengance.starrylemur35.chatgpt.site`. Existing public audience and custom-domain configuration were preserved.
+- Memory, AGENTS, product plan and UX review were updated. Singing/majority musical preference/native-device limits remain explicit. A subsequent documentation-only commit records this completed publication; it does not change the verified runtime or require a second Site version.
 
 ## Reliability, composer quality mode and local speech (2026-10-28, local work)
 

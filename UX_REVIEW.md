@@ -57,3 +57,5 @@ Validation: the current delivery passed `npm run check:full` with 54 unit tests 
 Release integration preserves the concurrent focused piano/deck/state refactor from remote `43a2483`. Its keyed note rendering, shared deck controllers, extracted piano/deck CSS and typed ProjectSession remain in place. The recovery flush uses the session's pending guard, and both shared deck captures retain custom drum samples. The combined runtime is revalidated before publication rather than reusing the pre-merge gate.
 
 Combined release verification after that integration: `npm run check:full` passed with 56 unit tests and 43 Chromium/Firefox workflows, no failures or skips. The earlier 54-unit count describes the implementation before the remote refactor was incorporated.
+
+Publication confirmed: Sites version 32 returned native `succeeded` on 2026-10-28, with runtime footer `e31a2c2`. The public audience and existing custom-domain configuration were retained. The documented research/listening/device limitations remain open after deployment.
