@@ -328,94 +328,6 @@
   .selection-editor input[type="range"] {
     width: 65px;
   }
-  .piano-shell {
-    height: 360px;
-    display: grid;
-    grid-template-columns: 64px 1fr;
-    grid-template-rows: 24px 1fr;
-    overflow: hidden;
-  }
-  .roll-corner {
-    display: grid;
-    place-items: center;
-  }
-  .roll-ruler {
-    overflow: hidden;
-    border-bottom: 1px solid var(--line);
-    position: relative;
-  }
-  .ruler-content {
-    height: 24px;
-    position: relative;
-    will-change: transform;
-  }
-  .ruler-content span {
-    position: absolute;
-    inset-block: 0;
-    padding: 7px 4px;
-    white-space: nowrap;
-  }
-  .piano-labels {
-    overflow: hidden;
-    position: relative;
-  }
-  .piano-labels > div {
-    will-change: transform;
-  }
-  .pitch-label {
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 7px;
-    border-bottom: 1px solid #292720;
-    background: #151513;
-    font: 700 7px Inter;
-    color: #77736a;
-  }
-  .pitch-label.in-scale {
-    color: #c0b9aa;
-    background: #1b1914;
-  }
-  .pitch-label:nth-child(12n + 1) {
-    border-top: 1px solid #77705f;
-  }
-  .roll-pane {
-    overflow: auto;
-  }
-  .sequencer {
-    position: relative;
-    cursor: crosshair;
-  }
-  .note-block {
-    position: absolute;
-    padding: 0;
-    border: 1px solid color-mix(in srgb, var(--track) 70%, #fff);
-    background: color-mix(
-      in srgb,
-      var(--track) calc(35% + var(--vel) * 35%),
-      #171610
-    );
-    box-shadow: inset 0 1px #ffffff33;
-    z-index: 2;
-  }
-  .note-block:hover {
-    filter: brightness(1.2);
-  }
-  .note-block.selected {
-    outline: 2px solid #fff;
-    outline-offset: -2px;
-    z-index: 3;
-  }
-  .note-resize {
-    position: absolute;
-    right: -1px;
-    top: 0;
-    bottom: 0;
-    width: 6px;
-    cursor: ew-resize;
-  }
-  .roll-playhead,
   .automation-playhead {
     position: absolute;
     top: 0;
@@ -816,10 +728,6 @@
       margin: 7px 0;
       overflow: auto;
     }
-    .piano-shell {
-      height: 340px;
-      grid-template-columns: 54px 1fr;
-    }
     .automation-pane {
       margin-left: 54px;
     }
@@ -1023,17 +931,6 @@
     width: 80px;
     height: 1px;
   }
-  .note-block {
-    border-left: 3px solid #fff6;
-    box-shadow:
-      inset 0 1px #ffffff33,
-      2px 2px 0 #000;
-  }
-  .note-block.selected {
-    outline-color: var(--pressure);
-    box-shadow: 0 0 13px #ff4b3260;
-  }
-  .roll-playhead,
   .automation-playhead {
     background: var(--pressure);
     box-shadow: 0 0 12px #ff4b32;
@@ -1326,44 +1223,6 @@
   .composition-tools button {
     height: 30px;
   }
-  .piano-shell {
-    height: 390px;
-    margin-inline: 14px;
-    grid-template-columns: 68px 1fr;
-  }
-  .roll-corner,
-  .roll-ruler {
-    background: #0d1222;
-    border-color: #27304d;
-  }
-  .pitch-label {
-    background: #0c1020;
-    border-color: #1a233d;
-    color: #68748e;
-  }
-  .pitch-label.in-scale {
-    color: #c1cae0;
-    background: #11172a;
-  }
-  .note-block {
-    border: 1px solid color-mix(in srgb, var(--track) 72%, #fff);
-    border-left: 3px solid #fff8;
-    background: linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--track) calc(44% + var(--vel) * 35%), #111629),
-      color-mix(in srgb, var(--track) 22%, #0b1020)
-    );
-    box-shadow:
-      inset 0 1px #ffffff55,
-      0 3px 10px #02040b;
-  }
-  .note-block.selected {
-    outline: 2px solid #fff;
-    box-shadow:
-      0 0 0 2px var(--track),
-      0 0 18px color-mix(in srgb, var(--track) 60%, transparent);
-  }
-  .roll-playhead,
   .automation-playhead {
     background: var(--magenta);
     box-shadow:
@@ -1471,11 +1330,6 @@
     }
     .composition-tools {
       margin-inline: 8px;
-    }
-    .piano-shell {
-      height: 365px;
-      margin-inline: 8px;
-      grid-template-columns: 58px 1fr;
     }
     .automation-head {
       margin-inline: 8px;
@@ -1607,23 +1461,6 @@
   }
   .performance-orb.compact .brand-emblem {
     width: 72px;
-  }
-  .record-label .brand-emblem {
-    width: 68px;
-    height: 55px;
-    opacity: 0.48;
-    filter: drop-shadow(0 0 8px #2ee8ff66);
-  }
-  .record-label small {
-    z-index: 2;
-  }
-  .record-label::after {
-    content: "К/V";
-    position: absolute;
-    top: 17px;
-    color: #f2f6ff;
-    font: 900 7px var(--display-font);
-    letter-spacing: 0.12em;
   }
   @keyframes kvSignal {
     to {
@@ -2104,10 +1941,9 @@
     height: 27px;
   }
   .master-strip {
-    grid-template-columns: auto minmax(170px, 1fr) 180px auto auto minmax(
-        105px,
-        0.45fr
-      ) minmax(105px, 0.45fr);
+    grid-template-columns:
+      auto minmax(170px, 1fr) 180px auto auto minmax(105px, 0.45fr)
+      minmax(105px, 0.45fr);
   }
   .master-strip p {
     grid-column: 1/-1;
@@ -2737,111 +2573,6 @@
     padding: 0;
     gap: 18px 14px;
   }
-  .scratch-deck {
-    position: relative;
-    min-width: 0;
-    padding: 18px;
-  }
-  .scratch-deck::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    padding: 1px;
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-  .scratch-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-  }
-  .scratch-head h2 {
-    margin: 0;
-  }
-  .scratch-capture {
-    display: flex;
-    align-items: flex-end;
-    gap: 7px;
-  }
-  .scratch-capture label {
-    display: grid;
-    gap: 4px;
-  }
-  .scratch-capture select,
-  .scratch-capture button {
-    height: 34px;
-  }
-  .scratch-capture select {
-    padding-inline: 8px;
-  }
-  .scratch-capture button {
-    padding-inline: 12px;
-  }
-  .scratch-wave-shell {
-    position: relative;
-    height: 72px;
-    margin: 14px 0;
-    overflow: hidden;
-  }
-  .scratch-wave-shell canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .scratch-wave-shell > i {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 2px;
-    transform: translateX(-1px);
-    will-change: left;
-  }
-  .scratch-wave-shell > span {
-    position: absolute;
-    left: 10px;
-    bottom: 7px;
-    pointer-events: none;
-  }
-  .scratch-console {
-    display: grid;
-    grid-template-columns: 250px 1fr;
-    gap: 20px;
-    align-items: center;
-  }
-  .turntable-shell {
-    position: relative;
-    display: grid;
-    place-items: center;
-    min-height: 250px;
-  }
-  .scratch-platter {
-    --rotation: 0deg;
-    position: relative;
-    width: 238px;
-    height: 238px;
-    border: 8px solid #161e35;
-    border-radius: 50%;
-    touch-action: none;
-    user-select: none;
-    cursor: grab;
-    transform: rotate(var(--rotation));
-    background: repeating-radial-gradient(
-      circle,
-      #111522 0 2px,
-      #060912 3px 5px
-    );
-    box-shadow:
-      0 0 0 1px #435071,
-      0 22px 35px #02030ba8,
-      inset 0 0 38px #000,
-      0 0 44px #8b7cff1f;
-    will-change: transform;
-  }
   .scratch-platter:not(.disabled):active {
     cursor: grabbing;
     box-shadow:
@@ -2850,115 +2581,12 @@
       inset 0 0 38px #000,
       0 0 52px #2ee8ff2b;
   }
-  .scratch-platter.disabled {
-    opacity: 0.35;
-    filter: saturate(0.25);
-    cursor: not-allowed;
-  }
-  .vinyl-grooves {
-    position: absolute;
-    inset: 12px;
-    border-radius: 50%;
-    background: repeating-radial-gradient(
-      circle,
-      transparent 0 3px,
-      #ffffff0c 4px,
-      #0000 5px 8px
-    );
-  }
-  .vinyl-mark {
-    position: absolute;
-    width: 5px;
-    height: 34px;
-    left: calc(50% - 2px);
-    top: 15px;
-    border-radius: 4px;
-    background: linear-gradient(var(--magenta), var(--cyan));
-    box-shadow: 0 0 13px var(--magenta);
-  }
-  .record-label {
-    position: absolute;
-    inset: 66px;
-    display: grid;
-    place-items: center;
-    border: 1px solid #526080;
-    border-radius: 50%;
-    overflow: hidden;
-    background:
-      radial-gradient(circle at 34% 25%, #2ee8ff77, transparent 22%),
-      conic-gradient(from 25deg, #141f3e, #64235c, #173f58, #141f3e);
-    box-shadow: inset 0 0 24px #02030b;
-  }
-  .record-label svg {
-    width: 54px;
-    height: 54px;
-    fill: #ffffff14;
-  }
-  .record-label b {
-    position: absolute;
-    font: 900 20px var(--display-font);
-    letter-spacing: -0.12em;
-  }
-  .record-label small {
-    position: absolute;
-    bottom: 18px;
-    color: #b8c4dd;
-    font: 800 6px var(--ui-font);
-  }
-  .spindle {
-    position: absolute;
-    width: 11px;
-    height: 11px;
-    left: calc(50% - 5px);
-    top: calc(50% - 5px);
-    border: 2px solid #eff6ff;
-    border-radius: 50%;
-    background: #59667d;
-    box-shadow: 0 0 11px #fff8;
-  }
-  .deck-speed {
-    position: absolute;
-    right: 0;
-    bottom: 9px;
-    display: grid;
-    padding: 6px 8px;
-  }
-  .scratch-controls {
-    display: grid;
-    gap: 17px;
-  }
-  .scratch-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 7px;
-  }
-  .scratch-actions button {
-    height: 37px;
-  }
-  .deck-slider {
-    display: grid;
-    gap: 8px;
-  }
-  .deck-slider span {
-    display: flex;
-    justify-content: space-between;
-  }
   .crossfader input {
     height: 5px;
   }
   .crossfader input::-webkit-slider-thumb {
     width: 16px;
     height: 23px;
-  }
-  .scratch-hint {
-    margin: 0;
-    padding: 9px 11px;
-  }
-  .scratch-deck.scratching::after {
-    content: "MANUAL CONTROL";
-    position: absolute;
-    right: 18px;
-    bottom: 14px;
   }
   @keyframes capture-pulse {
     50% {
@@ -2975,9 +2603,6 @@
     }
     .perform-macros {
       grid-template-columns: repeat(3, 1fr);
-    }
-    .scratch-console {
-      grid-template-columns: 260px 1fr;
     }
   }
   @media (max-width: 760px) {
@@ -2999,44 +2624,6 @@
     }
     .perform-macros {
       grid-template-columns: repeat(2, 1fr);
-    }
-    .scratch-deck {
-      padding: 14px 10px;
-    }
-    .scratch-head {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-    .scratch-capture {
-      width: 100%;
-    }
-    .scratch-capture label {
-      flex: 1;
-    }
-    .scratch-capture select {
-      width: 100%;
-    }
-    .scratch-console {
-      grid-template-columns: 1fr;
-    }
-    .turntable-shell {
-      min-height: 238px;
-    }
-    .scratch-platter {
-      width: 220px;
-      height: 220px;
-    }
-    .record-label {
-      inset: 61px;
-    }
-    .scratch-controls {
-      gap: 14px;
-    }
-    .scratch-actions {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .scratch-wave-shell {
-      height: 64px;
     }
   }
 
@@ -3622,10 +3209,9 @@
   }
   .sample-slot {
     display: grid;
-    grid-template-columns: 100px minmax(150px, 1fr) repeat(
-        5,
-        minmax(65px, 0.5fr)
-      ) auto;
+    grid-template-columns:
+      100px minmax(150px, 1fr) repeat(5, minmax(65px, 0.5fr))
+      auto;
     align-items: center;
     gap: 8px;
     padding: 9px;
@@ -3742,11 +3328,6 @@
   .performance-orb.compact .brand-emblem {
     width: 72px;
     height: auto;
-  }
-  .record-label .brand-emblem {
-    width: 68px;
-    height: 55px;
-    fill: none;
   }
   @media (max-width: 1100px) {
     .brand-icon {
@@ -3876,16 +3457,6 @@
     .selection-editor input[type="range"] {
       min-height: 22px;
     }
-    .piano-shell {
-      height: 360px;
-      margin-inline: 8px;
-      grid-template-columns: 44px minmax(0, 1fr);
-    }
-    .roll-pane {
-      min-width: 0;
-      min-height: 0;
-      touch-action: pan-x pan-y;
-    }
     .track-select {
       min-height: 44px;
     }
@@ -3942,32 +3513,6 @@
     width: auto;
     min-width: 22px;
     padding: 0 6px;
-  }
-  .scratch-capture .scratch-import {
-    display: grid;
-    place-items: center;
-    height: 34px;
-    padding: 0 12px;
-    cursor: pointer;
-  }
-  .scratch-capture .scratch-import input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .scratch-capture .scratch-import:focus-within {
-    outline: 2px solid var(--cyan);
-    outline-offset: 2px;
-  }
-  @media (max-width: 760px) {
-    .scratch-capture {
-      flex-wrap: wrap;
-    }
-    .scratch-capture .scratch-import {
-      flex-basis: 100%;
-    }
   }
 
   /* Fast musical taps must not trigger the browser's double-tap zoom. Pinch zoom remains available. */
@@ -4163,29 +3708,8 @@
       min-height: 56px;
     }
   }
-
-  .scratch-pro {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 16px;
-  }
-  .scratch-pro label {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .scratch-pro p {
-    grid-column: 1/-1;
-  }
-  .scratch-pro button,
-  .scratch-pro select,
   #scratchMic {
     min-height: 44px;
-  }
-  .scratch-pro input {
-    width: 100%;
-    touch-action: manipulation;
   }
 
   /* Shared studio control scale. Instrument geometry remains independently sized. */

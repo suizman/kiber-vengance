@@ -1,4 +1,6 @@
 import { setupLocalVoice } from "./ui/local-voice";
+import { bindNoteDrag as bindNoteGesture } from "./features/note-editor";
+import { ProjectSession } from "./state/project-session";
 import { captureMusicalContext } from "./ai/composer";
 import { requestConfirmation } from "./ui/dialogs";
 import {
@@ -16,8 +18,12 @@ import * as arrangement from "./features/arrangement";
 import * as mixer from "./features/mixer";
 import * as scratch from "./features/scratch";
 import * as sampler from "./features/sampler";
-// Shared runtime state is injected into feature controllers; UI components never own audio lifetime.
+// Compatibility facade for retained features. New editor/deck/session code uses state/contracts.ts.
+// UI components never own the audio engine lifetime.
 const runtime = {
+  get beginProjectEdit() {
+    return beginProjectEdit;
+  },
   get reportError() {
     return reportError;
   },
@@ -51,7 +57,7 @@ const runtime = {
   get LANGUAGE_STORAGE() {
     return LANGUAGE_STORAGE;
   },
-  get project() {
+  get project(): any {
     return project;
   },
   set project(value: typeof project) {
@@ -111,12 +117,6 @@ const runtime = {
   set metronome(value: typeof metronome) {
     metronome = value;
   },
-  get saveTimer() {
-    return saveTimer;
-  },
-  set saveTimer(value: typeof saveTimer) {
-    saveTimer = value;
-  },
   get animation() {
     return animation;
   },
@@ -170,30 +170,6 @@ const runtime = {
   },
   set scratchBuffer(value: typeof scratchBuffer) {
     scratchBuffer = value;
-  },
-  get scratchAnimation() {
-    return scratchAnimation;
-  },
-  set scratchAnimation(value: typeof scratchAnimation) {
-    scratchAnimation = value;
-  },
-  get scratchAngle() {
-    return scratchAngle;
-  },
-  set scratchAngle(value: typeof scratchAngle) {
-    scratchAngle = value;
-  },
-  get scratchLastFrame() {
-    return scratchLastFrame;
-  },
-  set scratchLastFrame(value: typeof scratchLastFrame) {
-    scratchLastFrame = value;
-  },
-  get scratchStuttering() {
-    return scratchStuttering;
-  },
-  set scratchStuttering(value: typeof scratchStuttering) {
-    scratchStuttering = value;
   },
   get performanceTake() {
     return performanceTake;
@@ -272,12 +248,6 @@ const runtime = {
   },
   set mixerPeaks(value: typeof mixerPeaks) {
     mixerPeaks = value;
-  },
-  get lastRecovery() {
-    return lastRecovery;
-  },
-  set lastRecovery(value: typeof lastRecovery) {
-    lastRecovery = value;
   },
   get clipStartSteps() {
     return clipStartSteps;
@@ -624,14 +594,8 @@ const runtime = {
   get animateMixer() {
     return animateMixer;
   },
-  get setScratchControls() {
-    return setScratchControls;
-  },
   get updateScratchPlayButton() {
     return updateScratchPlayButton;
-  },
-  get drawScratchWaveform() {
-    return drawScratchWaveform;
   },
   get armScratchBuffer() {
     return armScratchBuffer;
@@ -650,12 +614,6 @@ const runtime = {
   },
   get animateScratchDeck() {
     return animateScratchDeck;
-  },
-  get scratchMotorRate() {
-    return scratchMotorRate;
-  },
-  get setupScratchPro() {
-    return setupScratchPro;
   },
   get setupScratchDeck() {
     return setupScratchDeck;
@@ -1080,7 +1038,7 @@ const $ = (s: string): any => document.querySelector(s),
 let copyQueued = false;
 let autosaveRecoveryBlocked = false;
 let autosaveRecoveryNotice = false;
-let project: any = loadProject(),
+let project: Project = loadProject(),
   selectedTrack: TrackId = "lead",
   selectedNotes = new Set<string>(),
   currentStep = -1,
@@ -1090,7 +1048,6 @@ let project: any = loadProject(),
   draggedScene = -1,
   recordArmed = false,
   metronome = false,
-  saveTimer: ReturnType<typeof setTimeout> | undefined,
   animation = 0,
   clipboard: NoteEvent[] = [],
   recording = new Map<string, any>(),
@@ -1100,10 +1057,6 @@ let project: any = loadProject(),
   pendingDeleteClipId: string | null = null,
   suppressSequencerClick = false,
   scratchBuffer: AudioBuffer | null = null,
-  scratchAnimation = 0,
-  scratchAngle = 0,
-  scratchLastFrame = performance.now(),
-  scratchStuttering = false,
   performanceTake: Blob | null = null,
   performanceStarted = 0,
   performanceTimer: ReturnType<typeof setInterval> | null = null,
@@ -1120,8 +1073,7 @@ let project: any = loadProject(),
   }> = [],
   selectedScenes = new Set<number>(),
   sceneClipboard: any[] = [],
-  mixerPeaks: Partial<Record<TrackId, number>> = {},
-  lastRecovery = 0;
+  mixerPeaks: Partial<Record<TrackId, number>> = {};
 const clipStartSteps = new Map<string, number>();
 let samplerArmed = false,
   loadedSamplerAssetId: string | null = null,
@@ -1136,7 +1088,7 @@ let language: Language =
   tutorialStep = 0,
   helpMode = false;
 const L = translate;
-const history = new History<any>();
+const history = new History<Project>();
 const engine = new AudioEngine(
   (
     step: number,
@@ -1237,53 +1189,56 @@ function esc(v: any) {
       )[c]!,
   );
 }
+const projectSession = new ProjectSession(() => project, history, {
+  storage: {
+    setItem(key, value) {
+      if (autosaveRecoveryBlocked)
+        throw new Error("Unreadable autosave could not be preserved");
+      localStorage.setItem(key, value);
+    },
+  },
+  key: STORAGE,
+  status(state) {
+    $("#saveState").textContent = msg(
+      state === "pending"
+        ? "ui_56a2285c5b11"
+        : state === "saved"
+          ? "ui_87222e82bf5d"
+          : "ui_3d56409d02fb",
+    );
+    const warning = $("#saveWarning");
+    if (warning && state !== "pending") {
+      warning.hidden = state !== "failed";
+      if (state === "failed") warning.textContent = msg("ui_008e26ff915f");
+    }
+  },
+  recovery(project) {
+    const list = loadVersions();
+    list.unshift({
+      id: cryptoId(),
+      label: `AUTO RECOVERY · ${project.title}`,
+      date: Date.now(),
+      project: structuredClone(project),
+    });
+    localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
+  },
+  recoveryFailed() {
+    toast(msg("ui_0af7730f9e25"));
+  },
+});
 function snapshot() {
-  history.push(project);
+  projectSession.checkpoint();
+}
+function beginProjectEdit() {
+  return projectSession.beginEdit(() => changed());
 }
 function changed(render = false) {
-  project.modifiedAt = Date.now();
-  $("#saveState").textContent = msg("ui_56a2285c5b11");
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistPendingProject, 350);
+  projectSession.changed();
   engine.setProject(project);
   if (project.sampler?.assetId !== loadedSamplerAssetId)
     void loadSamplerAsset();
   if (render) renderAll();
   syncStudioUi();
-}
-function persistPendingProject() {
-  clearTimeout(saveTimer);
-  saveTimer = undefined;
-  try {
-    if (autosaveRecoveryBlocked)
-      throw new Error("Unreadable autosave could not be preserved");
-    localStorage.setItem(STORAGE, JSON.stringify(project));
-    $("#saveState").textContent = msg("ui_87222e82bf5d");
-    $("#saveWarning")?.setAttribute("hidden", "");
-  } catch {
-    $("#saveState").textContent = msg("ui_3d56409d02fb");
-    const warning = $("#saveWarning");
-    if (warning) {
-      warning.hidden = false;
-      warning.textContent = msg("ui_008e26ff915f");
-    }
-    return;
-  }
-  if (Date.now() - lastRecovery > 60000) {
-    try {
-      const list = loadVersions();
-      list.unshift({
-        id: cryptoId(),
-        label: `AUTO RECOVERY · ${project.title}`,
-        date: Date.now(),
-        project: structuredClone(project),
-      });
-      localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
-      lastRecovery = Date.now();
-    } catch {
-      toast(msg("ui_0af7730f9e25"));
-    }
-  }
 }
 function toast(message: any, undo = false) {
   clearTimeout(toastTimer);
@@ -2203,7 +2158,7 @@ function bindNoteDrag(
   zoom: number,
   rowH: number,
 ): any {
-  return workflow.bindNoteDrag(runtime, el, c, rows, zoom, rowH);
+  return bindNoteGesture(runtime, el, c, rows, zoom, rowH);
 }
 function syncSelectedClasses(): any {
   return performanceFeature.syncSelectedClasses(runtime);
@@ -2334,14 +2289,8 @@ function animateMixer(): any {
   return mixer.animateMixer(runtime);
 }
 
-function setScratchControls(enabled: boolean): any {
-  return scratch.setScratchControls(runtime, enabled);
-}
 function updateScratchPlayButton(): any {
   return scratch.updateScratchPlayButton(runtime);
-}
-function drawScratchWaveform(buffer: AudioBuffer): any {
-  return scratch.drawScratchWaveform(runtime, buffer);
 }
 async function armScratchBuffer(
   buffer: AudioBuffer,
@@ -2370,13 +2319,6 @@ async function captureScratchMix(): Promise<any> {
 }
 function animateScratchDeck(now = performance.now()): any {
   return scratch.animateScratchDeck(runtime, now);
-}
-
-function scratchMotorRate(): any {
-  return scratch.scratchMotorRate(runtime);
-}
-function setupScratchPro(): any {
-  return scratch.setupScratchPro(runtime);
 }
 
 function setupScratchDeck(): any {
@@ -3834,10 +3776,10 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("pagehide", () => {
-  if (saveTimer) persistPendingProject();
+  projectSession.flush();
 });
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && saveTimer) persistPendingProject();
+  if (document.hidden) projectSession.flush();
 });
 
 void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));

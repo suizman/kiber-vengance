@@ -1,7 +1,12 @@
+import { renderRoll } from "../ui/piano-roll";
 import { requestConfirmation } from "../ui/dialogs";
 import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
 
-import { mountKeyboard, releaseAllKeyboards, revealKeyboardKey } from "../ui/components/keyboard";
+import {
+  mountKeyboard,
+  releaseAllKeyboards,
+  revealKeyboardKey,
+} from "../ui/components/keyboard";
 
 import { mountDial } from "../ui/components/dial";
 
@@ -140,36 +145,15 @@ export function renderPiano(ctx: RuntimeContext) {
       left: pane?.scrollLeft || 0,
       top: pane?.scrollTop || 0,
     };
-  ctx.$("#pianoLabelRows").innerHTML = rows
-    .map(
-      (p: number) =>
-        `<div class="pitch-label ${ctx.selectedTrack !== "drums" && isInScale(p, ctx.project.key, ctx.project.scale) ? "in-scale" : ""}">${ctx.selectedTrack === "drums" ? (DRUM_NAMES[p] ?? "DRUM") : (ctx.pitchNames[p % 12] ?? "N") + Math.floor(p / 12 - 1)}</div>`,
-    )
-    .join("");
-  ctx.$("#pianoLabelRows").style.height = `${rows.length * rowH}px`;
-  const barSteps = c.stepsPerBar || meterSteps(ctx.project.meter),
-    beatSteps = ctx.project.meter.unit === 8 ? 2 : 4;
-  ctx.$("#rollRuler").innerHTML =
-    `<div class="ruler-content" style="width:${steps * zoom}px">${Array.from({ length: steps }, (_, s) => `<span style="left:${s * zoom}px;width:${zoom}px">${s % barSteps === 0 ? `BAR ${s / barSteps + 1}` : s % beatSteps === 0 ? (Math.floor(s / beatSteps) % ctx.project.meter.beats) + 1 : ""}</span>`).join("")}</div>`;
-  const seq = ctx.$("#sequencer");
-  seq.style.width = `${steps * zoom}px`;
-  seq.style.height = `${rows.length * rowH}px`;
-  seq.style.setProperty("--step", `${zoom}px`);
-  seq.style.setProperty("--beat", `${zoom * beatSteps}px`);
-  seq.style.setProperty("--bar", `${zoom * barSteps}px`);
-  seq.style.setProperty("--row", `${rowH}px`);
-  seq.innerHTML =
-    c.notes
-      .map((n) => {
-        const row =
-          ctx.selectedTrack === "drums"
-            ? DRUM_NAMES.length - 1 - n.pitch
-            : TRACK_META[ctx.selectedTrack].high - n.pitch;
-        if (row < 0 || row >= rows.length) return "";
-        return `<button class="note-block ${ctx.selectedNotes.has(n.id) ? "selected" : ""}" data-note="${n.id}" style="left:${(n.step + (n.offset || 0)) * zoom + 1}px;top:${row * rowH + 2}px;width:${Math.max(5, n.length * zoom - 2)}px;height:${rowH - 4}px;--vel:${n.velocity}" title="${ctx.selectedTrack === "drums" ? DRUM_NAMES[n.pitch] : ctx.pitchNames[n.pitch % 12]} · ${n.length.toFixed(3)} steps · offset ${(n.offset || 0).toFixed(3)} · velocity ${Math.round(n.velocity * 127)}"><span class="note-resize"></span></button>`;
-      })
-      .join("") +
-    `<div class="roll-playhead" style="left:${Math.max(0, ctx.currentStep % steps) * zoom}px"></div>`;
+  const seq = renderRoll(document.querySelector("#app")!, {
+    clip: c,
+    project: ctx.project,
+    track: ctx.selectedTrack,
+    rows,
+    selected: ctx.selectedNotes,
+    pitchNames: ctx.pitchNames,
+    step: ctx.currentStep,
+  });
   seq.onclick = (e: any) => {
     if (ctx.suppressSequencerClick) {
       ctx.suppressSequencerClick = false;
@@ -434,9 +418,14 @@ export function startPerformance(
     ctx.startSamplerPerformance(source, samplerPitch, velocity, samplerKey);
     return;
   }
-  const keys = ctx.keyMap.includes(source) && source.length === 1
-    ? ctx.$$(`#keyboard .key[data-pitch="${pitch}"], #performanceKeyboard .key[data-pitch="${pitch}"]`)
-    : el ? [el] : [];
+  const keys =
+    ctx.keyMap.includes(source) && source.length === 1
+      ? ctx.$$(
+          `#keyboard .key[data-pitch="${pitch}"], #performanceKeyboard .key[data-pitch="${pitch}"]`,
+        )
+      : el
+        ? [el]
+        : [];
   heldPerformanceKeys.set(source, keys);
   for (const key of keys) {
     revealKeyboardKey(key);
@@ -502,7 +491,9 @@ export function endPerformance(
   const keys = heldPerformanceKeys.get(source) || (el ? [el] : []);
   heldPerformanceKeys.delete(source);
   for (const key of keys) {
-    const held = [...heldPerformanceKeys.values()].some((other) => other.includes(key));
+    const held = [...heldPerformanceKeys.values()].some((other) =>
+      other.includes(key),
+    );
     key.classList.toggle("active", held);
     key.setAttribute("aria-pressed", String(held));
   }

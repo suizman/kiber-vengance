@@ -43,6 +43,9 @@ export function preview(port) {
 
 // New grouped navigation and the original DOM both expose the same feature views.
 export async function goToView(page,view) {
+  // Navigation must wait for Preact to bind the visible shell, rather than
+  // clicking the unbound controls in the static HTML during a cold load.
+  await page.locator('#app.studio-shell .studio-nav [data-space]').first().waitFor({state:'attached'});
   if(await page.locator('#soundInspectorBtn[aria-expanded=true]').count())await setSoundInspector(page,false);
   const direct=page.locator(`[data-view="${view}"]`);
   for(let i=0;i<await direct.count();i++)if(await direct.nth(i).isVisible()){await direct.nth(i).click();return}
