@@ -315,6 +315,15 @@ export class AudioEngine {
         this.deckMeters.set(deck.id, new StereoMeter(this.ctx, deck.gain!));
       }
       this.createEffectBuses();
+      // Apply persisted levels before the first live note or sampler voice.
+      const initialMix = normalizeOutputMix(this.project?.outputMix);
+      this.finalGain.gain.value = initialMix.muted ? 0 : initialMix.master;
+      this.previewGain.gain.value = initialMix.muted
+        ? 0
+        : initialMix.master * initialMix.preview;
+      this.samplerOutput.gain.value = this.project?.sampler?.gain ?? 1;
+      this.master.gain.value = this.project?.master ?? 1;
+      if (this.project) this.setProject(this.project);
       if (this.ctx.state === "suspended") await this.ctx.resume();
     }
     if (this.ctx.state === "suspended") await this.ctx.resume();

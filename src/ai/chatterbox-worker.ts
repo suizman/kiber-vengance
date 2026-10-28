@@ -68,8 +68,10 @@ scope.onmessage = async ({ data }) => {
   try {
     if (data.kind === "load") {
       const device = data.device === "webgpu" ? "webgpu" : "wasm";
-      const jspi=typeof (WebAssembly as typeof WebAssembly & {Suspending?:unknown}).Suspending === 'function';
-      const variant=device==='wasm'?'jsep':jspi?'jspi':'asyncify';
+      const jspi =
+        typeof (WebAssembly as typeof WebAssembly & { Suspending?: unknown })
+          .Suspending === "function";
+      const variant = device === "wasm" ? "jsep" : jspi ? "jspi" : "asyncify";
       const runtime = `https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.0-dev.20260914-8d85527a0/dist/ort-wasm-simd-threaded.${variant}.wasm`;
       const cache = await caches.open("kv-expressive-model-v1");
       let response = await cache.match(runtime);
@@ -91,7 +93,14 @@ scope.onmessage = async ({ data }) => {
             type: "application/wasm",
           }),
         ),
-        mjs: new URL(device==='wasm'?factoryUrl:jspi?gpuFactoryUrl:gpuFallbackUrl, import.meta.url).href,
+        mjs: new URL(
+          device === "wasm"
+            ? factoryUrl
+            : jspi
+              ? gpuFactoryUrl
+              : gpuFallbackUrl,
+          import.meta.url,
+        ).href,
       };
       embed = await session(
         MODEL,

@@ -554,6 +554,7 @@ test("two live decks load independently, mix, seek and follow separate BPM contr
   await wave.press("End");
   assert.equal(await wave.getAttribute("aria-valuenow"), "100");
   await page.locator("#deckBPlay").click();
+  await page.waitForFunction(()=>!globalThis.__kvDiagnostics().scratchPlayingB);
   assert.equal(
     (await page.evaluate(() => globalThis.__kvDiagnostics())).scratchPlayingB,
     false,

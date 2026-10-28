@@ -32,13 +32,13 @@ test('mobile audio effects and level controls persist, undo and stay within the 
 test('final Master controls deck audio and excludes preview while Cue stays independent',async t=>{
  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());const page=await browser.newPage();await page.goto(server.url+'/?qa=1');
  const result=await page.evaluate(async()=>{
-  const {AudioEngine}=await import('/audio.js'),{createEmptyProject}=await import('/core.js');const engine=new AudioEngine(),project=createEmptyProject();project.masterSettings.bypass=true;engine.setProject(project);await engine.init();engine.setProject(project);
+  const {AudioEngine}=await import('/audio.js'),{createEmptyProject}=await import('/core.js');const engine=new AudioEngine(),project=createEmptyProject();project.masterSettings.bypass=true;project.outputMix.master=0;project.sampler.gain=.25;engine.project=project;await engine.init();const boot={master:engine.finalGain.gain.value,sampler:engine.samplerOutput.gain.value};project.outputMix.master=1;engine.setProject(project);
   engine.setScratchMix(1);engine.setScratchCrossfade(0);engine.setScratchCue('A');
   const source=engine.ctx.createOscillator();source.frequency.value=220;source.connect(engine.deck('A').filter);source.start();
   const rms=()=>{const data=new Float32Array(engine.analyser.fftSize);engine.analyser.getFloatTimeDomainData(data);return Math.sqrt(data.reduce((sum,n)=>sum+n*n,0)/data.length);};
   const wait=async()=>{const start=engine.ctx.currentTime;const wall=Date.now();while(engine.ctx.currentTime-start<.3){if(Date.now()-wall>15000)throw Error(`Audio clock stalled: ${engine.ctx.state}`);await new Promise(resolve=>setTimeout(resolve,20));}};await wait();const deck=rms();project.outputMix.master=0;engine.setProject(project);await wait();const silent=rms(),cue=engine.deck('A').cueGain.gain.value;
-  source.stop();project.outputMix.master=1;engine.setProject(project);const preview=engine.ctx.createOscillator();preview.connect(engine.previewGain);preview.start();await wait();const previewExcluded=rms();preview.stop();await engine.ctx.close();return {deck,silent,cue,previewExcluded};
- });assert.ok(result.deck>.1,JSON.stringify(result));assert.ok(result.silent<.001,JSON.stringify(result));assert.equal(result.cue,1);assert.ok(result.previewExcluded<.001,JSON.stringify(result));
+  source.stop();project.outputMix.master=1;engine.setProject(project);const preview=engine.ctx.createOscillator();preview.connect(engine.previewGain);preview.start();await wait();const previewExcluded=rms();preview.stop();await engine.ctx.close();return {deck,silent,cue,previewExcluded,boot};
+ });assert.equal(result.boot.master,0);assert.equal(result.boot.sampler,.25);assert.ok(result.deck>.1,JSON.stringify(result));assert.ok(result.silent<.001,JSON.stringify(result));assert.equal(result.cue,1);assert.ok(result.previewExcluded<.001,JSON.stringify(result));
 });
 test('expressive speech settings and selected treatment survive insertion and reload (protocol fixture)',async t=>{
  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});const page=await context.newPage();
