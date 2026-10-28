@@ -63,3 +63,18 @@ Typecheck, production build, lint and all 44 unit tests passed. Eight focused Ch
 Real CPU inference passed in WebKit (4.7 s initial / 4.1 s offline) and Firefox (40.9 s initial / 34.2 s cached cold-offline). Both exercised genuine continuation, partial regeneration, selected sound/BPM in exported JSON, insertion and persistence. Times are observations on this host, not guarantees. A separate pure-composer measurement with 2,048 context notes and three 96-note proposals measured 1.4 ms median / 2.1 ms p95.
 
 `npm run check:full` passed its check stage and seven browser workflows but encountered the existing quick WAV export write-wait timeout. The run ended at its 300-second bound; a full-suite pass is not claimed. Source commits `9acf8bc` (CPU output reliability) and `a61784f` (contextual composer) and distribution commit `e72a5cb` were pushed to the existing repository. Sites version 30 was successfully deployed at https://kiber-vengance.starrylemur35.chatgpt.site. The footer identifies `a61784f`; Site audience and repository visibility were preserved.
+
+
+## Local composer update (2026-10-28, not deployed)
+
+Motif degrees now retain octave information before register/leap fitting. With variation enabled, timing and gates vary deterministically to provide anticipations and breathing space without changing explicit onset density. Accompaniment preferences are evaluated at four-step pulse windows as well as the phrase cadence, instead of using only a whole-bar summary. Existing source-rhythm behavior remains available.
+
+The optional **Quality mode** performs three sequential calls to the existing model, then ranks/deduplicates candidate arrangements locally by rhythm, interval variety and excessive leaps. Default quick mode still uses one call. This heuristic does not establish that the music sounds better; a blind preference study remains pending. Shaping quality proposals retains their own inferred plans. Partial regeneration, cancellation and failed calls preserve the previous proposals. Melody and speech inference share a mutual-exclusion lock; a busy engine gives a visible error instead of running a second heavy inference.
+
+No blind majority listening result is claimed. Existing real CPU/GPU evidence above describes the previous release; current UI fixtures and musical invariant tests are recorded separately from genuine model inference.
+
+
+The local functional delivery passed `npm run check:full` (54 unit tests, 43 browser workflows) on 2026-10-28; this supersedes the previous release's unresolved WAV-suite limitation for the current local source. The old release/deployment evidence remains historical. Quality-mode protocol tests explicitly block Service Workers to prevent a PWA request from bypassing the simulated worker and accidentally invoking the real model.
+
+
+For a blind compiler comparison, run `node scripts/prepare-composer-listening.mjs` (before committing the update, or set `COMPOSER_BASELINE` to the previous source revision). It prepares A/B WAV pairs for electro-rock, cinematic and synthwave at `/private/tmp/kiber-composer-listening`, with an answer key saved separately. Both sides use the same authored musical plan, seed, native synth and dry normalized rendering. These are compiler comparisons, not recordings of genuine AI calls and not a completed listening study. Record preferences before opening the key; no majority winner has been recorded.

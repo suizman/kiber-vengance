@@ -171,3 +171,19 @@ Validación completa: 28 pruebas del núcleo y 20 recorridos Firefox/Chromium, s
 - [x] Diseño lado a lado en escritorio y apilado en móvil, con crossfader accesible al desplazarse. El ajuste de tempo usa velocidad de reproducción y cambia el tono.
 
 Validación: `check:full` superado con 28 pruebas del núcleo y 21 recorridos de navegador en Chromium y Firefox. La prueba nueva cubre mezcla simultánea y preescucha con salida simulada; la separación física de auriculares y Safari/iPhone reales siguen pendientes de verificación.
+
+## Fiabilidad, compositor y voz — trabajo local 2026-10-28
+
+Paquetes con inventario binario deduplicado, manifiesto MIME y tomas; restauración compatible con el ZIP anterior; revinculación visible y bloqueo de exportación si faltan fuentes necesarias; reloj compartido scheduler/WAV con mapas de tempo, MIDI con eventos de tempo/compás y rampas discretizadas; aislamiento instrumental y stems por lane de audio; mezcla global Solo/Mute/grupos/automatización y sidechain compartido; autosave ilegible preservado, flush al ocultar la página y avisos visibles en todos los espacios. El diagnóstico DevTools localizó el bloqueo histórico de WAV en llamadas a getChannelData por muestra: la codificación ahora obtiene cada canal una vez. Detalles y diferencias pendientes entre buses live/offline: `docs/RELIABILITY.md`.
+
+Compositor: octavas preservadas, ventanas armónicas por pulso, variaciones deterministas de ritmo/duración y modo Calidad optativo con tres inferencias secuenciales, selección heurística local y conservación de propuestas ante error/cancelación. No se afirma preferencia musical mayoritaria: la escucha ciega sigue pendiente.
+
+Voz hablada local experimental: Kokoro en worker separado, ES/EN con eSpeak multilingüe, descarga explícita, cachés administrables, q8/FP32, escucha/WAV, inserción capturando pista/cursor, parámetros en regiones v6 y Undo/Redo. Inferencia real ES/EN q8/FP32 e inserción/recarga verificadas en Chromium. El banco y vocoder de voz cantada, las muestras cantadas, la alineación y la memoria web siguen pendientes; no hay control de canto ni sustitución por servicio externo. Ver `docs/LOCAL_VOICE.md`. Esta sección describe trabajo local, sin publicación en Sites.
+
+
+Validación funcional local de cierre: `npm run check:full` terminó con exit 0, tipado/build/lint, 54 pruebas unitarias y 43 flujos reales de navegador Chromium/Firefox. Log de sesión: `/private/tmp/kiber-verified-check-full.log`. La escucha ciega y la viabilidad de canto siguen abiertas; este resultado no las sustituye.
+
+
+## Publicación autorizada (2026-10-28)
+
+El usuario ha solicitado actualizar memoria, instrucciones y UX review, crear commits separados por mejora, hacer push y desplegar el Site existente. Se conserva el modelo v6, la audiencia pública y el dominio actual `https://studio.suizman.org`. La revisión UX vigente está en `UX_REVIEW.md`; canto y evaluaciones perceptivas amplias continúan pendientes. El resultado efectivo de publicación se registrará en PROJECT_MEMORY.md tras confirmar el estado terminal del despliegue.
