@@ -15,7 +15,7 @@ const files=(await readdir('dist',{recursive:true})).filter(file=>/\.(html|js|cs
 const digest=createHash('sha256');for(const file of files)digest.update(await readFile(`dist/${file}`));
 const version=digest.digest('hex').slice(0,12);
 // Optional inference runtime is cached only after the user explicitly loads it.
-const precache=files.filter(file=>!/^assets\/(inference-worker-|cpu-worker-|voice-worker-|espeak-ng-|ort-wasm-)/.test(file));
+const precache=files.filter(file=>!/^assets\/(inference-worker-|cpu-worker-|voice-worker-|chatterbox-worker-|espeak-ng-|ort-wasm-)/.test(file));
 await writeFile('dist/sw.js',`const CACHE='kv-studio-${version}';const ASSETS=${JSON.stringify(precache.map(f=>'./'+f))};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>(k.startsWith('kv-studio-')||k.startsWith('kiber-vengance-'))&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

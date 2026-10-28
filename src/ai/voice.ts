@@ -1,6 +1,13 @@
+import { VOICE_ENGINES } from "./voice-engines";
+import expressiveWorkerUrl from "./chatterbox-worker.ts?worker&url";
 import workerUrl from "./voice-worker.ts?worker&url";
 import { acquireInference } from "./inference-lock";
 export interface SpeechSettings {
+  engine?: "kokoro" | "chatterbox";
+  device?: "wasm" | "webgpu";
+  intensity?: number;
+  pauseMs?: number;
+  segments?: { text: string; speed: number; pauseMs: number }[];
   text: string;
   language: "en" | "es";
   voice: string;
@@ -8,6 +15,7 @@ export interface SpeechSettings {
   dtype: "q8" | "fp32";
 }
 export interface SpeechResult {
+  revision?: string;
   pcm: Float32Array;
   sampleRate: number;
   phonemes: string;
@@ -79,7 +87,10 @@ export async function loadVoice(
     controller = new AbortController();
   boot = controller;
   try {
-    const url = new URL(workerUrl, location.href).href,
+    const url = new URL(
+        settings.engine === "chatterbox" ? expressiveWorkerUrl : workerUrl,
+        location.href,
+      ).href,
       cache = await caches.open("kv-local-voice-runtime-v1");
     let response = await cache.match(url);
     if (!response) {
@@ -99,11 +110,16 @@ export async function loadVoice(
       );
     worker = new Worker(developmentModule ? url : blobUrl!, { type: "module" });
     await request(
-      { kind: "load", dtype: settings.dtype, voice: settings.voice },
+      {
+        kind: "load",
+        dtype: settings.dtype,
+        voice: settings.voice,
+        device: settings.device ?? "wasm",
+      },
       progress,
-      300000,
+      settings.engine === "chatterbox" ? 600000 : 300000,
     );
-    loaded = settings.dtype;
+    loaded = `${settings.engine ?? "kokoro"}:${settings.dtype}:${settings.device ?? "wasm"}`;
   } catch (error) {
     freeVoice();
     throw error;
@@ -113,21 +129,28 @@ export async function generateSpeech(
   settings: SpeechSettings,
   progress: (text: string) => void,
 ): Promise<SpeechResult> {
-  if (loaded !== settings.dtype) throw new Error("Load this precision first");
+  if (
+    loaded !==
+    `${settings.engine ?? "kokoro"}:${settings.dtype}:${settings.device ?? "wasm"}`
+  )
+    throw new Error("Load this precision first");
   const result = await request(
     { kind: "generate", ...settings },
     progress,
-    300000,
+    settings.engine === "chatterbox" ? 900000 : 300000,
   );
   return {
     ...result,
     settings: { ...settings },
-    model: "onnx-community/Kokoro-82M-v1.0-ONNX",
+    model: VOICE_ENGINES[settings.engine ?? "kokoro"].model,
+    revision: VOICE_ENGINES[settings.engine ?? "kokoro"].revision,
   };
 }
 export async function deleteVoiceCache() {
   freeVoice();
   for (const name of [
+    "kv-expressive-model-v1",
+    "kv-expressive-tokenizer-v1",
     "kv-local-voice-model-v1",
     "kv-local-voice-vectors-v1",
     "kv-local-voice-runtime-v1",
@@ -140,7 +163,11 @@ export async function deleteVoiceCache() {
     if (!name.startsWith("kv-studio-")) continue;
     const cache = await caches.open(name);
     for (const request of await cache.keys())
-      if (/\/(voice-worker-|espeak-ng-)/.test(new URL(request.url).pathname))
+      if (
+        /\/(chatterbox-worker-|voice-worker-|espeak-ng-)/.test(
+          new URL(request.url).pathname,
+        )
+      )
         await cache.delete(request);
   }
 }

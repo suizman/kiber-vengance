@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js tests/refactor.test.js",
-    "test:e2e": "node --test tests/e2e.test.js tests/browser.test.js tests/ai-browser.test.js",
+    "test:e2e": "node --test tests/e2e.test.js tests/browser.test.js tests/ai-browser.test.js tests/mixing-browser.test.js",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint tests scripts eslint.config.js",
     "build:runtime": "vite build",
@@ -30,6 +30,7 @@
     "@huggingface/transformers": "4.3.1",
     "@huggingface/transformers-structured-output": "4.3.1",
     "@mlc-ai/web-llm": "0.2.86",
-    "preact": "^11.0.2"
+    "preact": "^11.0.2",
+    "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0"
   }
 }

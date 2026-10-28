@@ -1,3 +1,8 @@
+import { AudioEngine } from "../audio";
+import { processAudio } from "../audio/effects";
+import { normalizeEffects } from "../audio/effects-model";
+import { mountAudioEffects } from "./audio-effects";
+import type { AudioEffects } from "../model";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
@@ -21,7 +26,7 @@ interface Context {
   project: Project;
   transportPosition: number;
   globalStartStep: number;
-  engine: { playing: boolean };
+  engine: AudioEngine;
   putAsset(id: string, blob: Blob): Promise<void>;
   snapshot(): void;
   changed(render?: boolean): void;
@@ -46,6 +51,17 @@ export function setupLocalVoice(ctx: Context) {
       [voice, setVoice] = useState("af_heart"),
       [speed, setSpeed] = useState(1),
       [dtype, setDtype] = useState<"fp32" | "q8">("q8");
+    const [engine, setEngine] = useState<"kokoro" | "chatterbox">("kokoro"),
+      [device, setDevice] = useState<"wasm" | "webgpu">("wasm"),
+      [intensity, setIntensity] = useState(0.5),
+      [pauseMs] = useState(250),
+      [fragments, setFragments] = useState<
+        Record<number, { speed: number; pauseMs: number }>
+      >({}),
+      [effects, setEffects] = useState<AudioEffects>(normalizeEffects()),
+      [processed, setProcessed] = useState(false),
+      [processedUrl, setProcessedUrl] = useState("");
+    const effectsHost = useRef<HTMLDivElement>(null);
     const [lane, setLane] = useState(""),
       [status, setStatus] = useState(""),
       [result, setResult] = useState<SpeechResult | null>(null),
@@ -60,6 +76,18 @@ export function setupLocalVoice(ctx: Context) {
     } | null>(null);
     const L = (en: string, spanish: string) => (es ? spanish : en);
     const settings = (): SpeechSettings => ({
+      engine,
+      device,
+      intensity,
+      pauseMs,
+      segments: text
+        .split(/\n+/)
+        .filter((line) => line.trim())
+        .map((line, i) => ({
+          text: line,
+          speed: fragments[i]?.speed ?? speed,
+          pauseMs: fragments[i]?.pauseMs ?? pauseMs,
+        })),
       text,
       language,
       voice,
@@ -81,6 +109,61 @@ export function setupLocalVoice(ctx: Context) {
       setUrl(next);
       return () => URL.revokeObjectURL(next);
     }, [result]);
+    useEffect(() => {
+      if (!open || !effectsHost.current) return;
+      effectsHost.current.replaceChildren();
+      const owner = { effects };
+      mountAudioEffects(
+        effectsHost.current,
+        owner,
+        {
+          project: ctx.project,
+          snapshot: () => {},
+          changed: () => setEffects({ ...owner.effects }),
+          engine: { setProject: () => {} },
+        },
+        L("Voice treatment", "Tratamiento de voz"),
+      );
+    }, [open, es]);
+    useEffect(() => {
+      if (!result) return;
+      let cancelled = false,
+        next = "";
+      void (async () => {
+        const audioContext = new AudioContext();
+        try {
+          const buffer = audioContext.createBuffer(
+            1,
+            result.pcm.length,
+            result.sampleRate,
+          );
+          buffer.copyToChannel(new Float32Array(result.pcm), 0);
+          const output = await processAudio(
+            buffer,
+            effects,
+            effects.delay || effects.reverb ? 2.5 : 0,
+          );
+          if (cancelled) return;
+          next = URL.createObjectURL(
+            speechWav({
+              ...result,
+              pcm: output.getChannelData(0),
+              sampleRate: output.sampleRate,
+            }),
+          );
+          setProcessedUrl(next);
+        } catch (error) {
+          if (!cancelled) setStatus(String(error));
+        } finally {
+          await audioContext.close();
+        }
+      })();
+      return () => {
+        cancelled = true;
+        if (next) URL.revokeObjectURL(next);
+        setProcessedUrl("");
+      };
+    }, [result, effects]);
     const stop = () => {
       epoch.current++;
       freeVoice();
@@ -99,7 +182,7 @@ export function setupLocalVoice(ctx: Context) {
       setBusy(true);
       setReady(false);
       setStatus(
-        L("Loading Kokoro on this device…", "Cargando Kokoro en este equipo…"),
+        L("Loading voice on this device…", "Cargando voz en este equipo…"),
       );
       try {
         await loadVoice(settings(), setStatus);
@@ -130,6 +213,7 @@ export function setupLocalVoice(ctx: Context) {
         const next = await generateSpeech(settings(), setStatus);
         if (token === epoch.current) {
           captured.current = target;
+          setProcessed(false);
           setResult(next);
           setStatus(
             L("Ready to listen and insert", "Listo para escuchar e insertar"),
@@ -195,10 +279,16 @@ export function setupLocalVoice(ctx: Context) {
           Math.max(0.25, high - target.step),
           duration,
         );
+        region.effects = { ...effects };
         region.generation = {
           kind: "speech",
           model: result.model,
           ...result.settings,
+          revision: result.revision ?? "",
+          precision:
+            result.settings.engine === "chatterbox"
+              ? "q4-lm/q4-decoder/fp32-embeddings"
+              : result.settings.dtype,
           phonemes: result.phonemes,
           createdAt: Date.now(),
         };
@@ -225,9 +315,7 @@ export function setupLocalVoice(ctx: Context) {
         }}
       >
         <header class="appearance-header">
-          <h2 id="localVoiceTitle">
-            {L("Local voice · Kokoro", "Voz local · Kokoro")}
-          </h2>
+          <h2 id="localVoiceTitle">{L("Local voice", "Voz local")}</h2>
           <button onClick={close} aria-label={L("Close", "Cerrar")}>
             ×
           </button>
@@ -251,6 +339,85 @@ export function setupLocalVoice(ctx: Context) {
         </label>
         <div class="ai-musical-settings">
           <label>
+            {L("Voice engine", "Motor de voz")}
+            <select
+              id="voiceEngine"
+              value={engine}
+              disabled={busy}
+              onChange={(e) => {
+                setEngine(e.currentTarget.value as "kokoro" | "chatterbox");
+                setVoice(
+                  e.currentTarget.value === "chatterbox"
+                    ? "default"
+                    : language === "es"
+                      ? "ef_dora"
+                      : "af_heart",
+                );
+                setReady(false);
+              }}
+            >
+              <option value="kokoro">Kokoro · CPU</option>
+              <option value="chatterbox">
+                Chatterbox ·{" "}
+                {L("Expressive · experimental", "Expresivo · experimental")}
+              </option>
+            </select>
+          </label>
+          {engine === "chatterbox" && (
+            <>
+              <label>
+                {L("Processor", "Procesador")}
+                <select
+                  id="voiceDevice"
+                  value={device}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setDevice(e.currentTarget.value as "wasm" | "webgpu");
+                    setReady(false);
+                  }}
+                >
+                  <option value="wasm">CPU / WASM</option>
+                  <option value="webgpu" disabled={!("gpu" in navigator)}>
+                    WebGPU
+                  </option>
+                </select>
+              </label>
+              <label>
+                {L("Expression intensity", "Intensidad expresiva")}
+                <input
+                  id="voiceIntensity"
+                  type="range"
+                  min=".1"
+                  max="1"
+                  step=".05"
+                  value={intensity}
+                  disabled={busy}
+                  onInput={(e) => setIntensity(+e.currentTarget.value)}
+                />
+                <output>{intensity.toFixed(2)}</output>
+              </label>
+              <label>
+                {L("Interpretation", "Interpretación")}
+                <select
+                  disabled={busy}
+                  onChange={(e) => setIntensity(+e.currentTarget.value)}
+                  value={intensity}
+                >
+                  <option value="0.3">{L("Restrained", "Contenida")}</option>
+                  <option value="0.5">{L("Natural", "Natural")}</option>
+                  <option value="0.8">{L("Emphatic", "Enfática")}</option>
+                </select>
+              </label>
+              <p>
+                {L(
+                  "Optional download ≈570 MB plus runtime. No free-form style instructions. CPU can take several minutes; GPU support depends on this device.",
+                  "Descarga opcional ≈570 MB más runtime. Sin instrucciones libres de estilo. CPU puede tardar varios minutos; GPU depende del dispositivo.",
+                )}
+              </p>
+            </>
+          )}
+
+          <label>
             {L("Language", "Idioma")}
             <select
               id="voiceLanguage"
@@ -259,7 +426,13 @@ export function setupLocalVoice(ctx: Context) {
               onChange={(e) => {
                 const next = e.currentTarget.value as "es" | "en";
                 setLanguage(next);
-                setVoice(next === "es" ? "ef_dora" : "af_heart");
+                setVoice(
+                  engine === "chatterbox"
+                    ? "default"
+                    : next === "es"
+                      ? "ef_dora"
+                      : "af_heart",
+                );
                 setReady(false);
               }}
             >
@@ -278,18 +451,21 @@ export function setupLocalVoice(ctx: Context) {
                 setReady(false);
               }}
             >
-              {(language === "es"
-                ? ["ef_dora", "em_alex"]
-                : ["af_heart", "am_michael"]
+              {(engine === "chatterbox"
+                ? ["default"]
+                : language === "es"
+                  ? ["ef_dora", "em_alex"]
+                  : ["af_heart", "am_michael"]
               ).map((name) => (
                 <option value={name}>{name}</option>
               ))}
             </select>
           </label>
-          <label>
-            {L("Speed", "Velocidad")}
+          <label hidden={engine !== "kokoro"}>
+            {L("Speed · Kokoro", "Velocidad · Kokoro")}
             <input
               id="voiceSpeed"
+              hidden={engine !== "kokoro"}
               type="number"
               min=".6"
               max="1.5"
@@ -299,7 +475,7 @@ export function setupLocalVoice(ctx: Context) {
               onInput={(e) => setSpeed(+e.currentTarget.value)}
             />
           </label>
-          <label>
+          <label hidden={engine !== "kokoro"}>
             {L("Precision", "Precisión")}
             <select
               id="voicePrecision"
@@ -337,6 +513,66 @@ export function setupLocalVoice(ctx: Context) {
             "La inserción captura la pista elegida y el cursor de canción al iniciar la generación. Cada inserción crea una región de audio nueva.",
           )}
         </p>
+        {engine === "kokoro" && (
+          <details>
+            <summary>
+              {L(
+                "Phrasing · one fragment per line",
+                "Fraseo · un fragmento por línea",
+              )}
+            </summary>
+            {text
+              .split(/\n+/)
+              .filter((line) => line.trim())
+              .map((line, i) => (
+                <div class="ai-musical-settings">
+                  <span>{line}</span>
+                  <label>
+                    {L("Speed", "Velocidad")}
+                    <input
+                      aria-label={`${L("Fragment speed", "Velocidad del fragmento")} ${i + 1}`}
+                      type="number"
+                      min=".6"
+                      max="1.5"
+                      step=".05"
+                      value={fragments[i]?.speed ?? speed}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setFragments({
+                          ...fragments,
+                          [i]: {
+                            speed: +e.currentTarget.value,
+                            pauseMs: fragments[i]?.pauseMs ?? pauseMs,
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    {L("Pause after · ms", "Pausa al final · ms")}
+                    <input
+                      type="number"
+                      min="0"
+                      max="2000"
+                      step="50"
+                      value={fragments[i]?.pauseMs ?? pauseMs}
+                      disabled={busy}
+                      onChange={(e) =>
+                        setFragments({
+                          ...fragments,
+                          [i]: {
+                            speed: fragments[i]?.speed ?? speed,
+                            pauseMs: +e.currentTarget.value,
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              ))}
+          </details>
+        )}
+        <div ref={effectsHost} />
         <div class="ai-actions">
           <button
             id="loadLocalVoice"
@@ -390,11 +626,37 @@ export function setupLocalVoice(ctx: Context) {
         <p role="status">{status}</p>
         {result && (
           <section>
-            <audio id="voicePreview" controls src={url} ref={audio} />
+            <button
+              disabled={!processedUrl}
+              aria-pressed={processed}
+              onClick={() => {
+                audio.current?.pause();
+                setProcessed(!processed);
+              }}
+            >
+              {processed
+                ? L("Processed", "Procesado")
+                : L("Original", "Original")}
+            </button>
+            <audio
+              id="voicePreview"
+              controls
+              src={processed ? processedUrl : url}
+              ref={audio}
+              onLoadedMetadata={() => {
+                if (audio.current)
+                  void ctx.engine
+                    .routePreview(audio.current)
+                    .catch((error) => setStatus(String(error)));
+              }}
+            />
             <p>
               {result.settings.language.toUpperCase()} · {result.settings.voice}{" "}
-              · {result.settings.dtype} ·{" "}
-              {(result.pcm.length / result.sampleRate).toFixed(1)} s
+              ·{" "}
+              {result.settings.engine === "chatterbox"
+                ? "q4"
+                : result.settings.dtype}{" "}
+              · {(result.pcm.length / result.sampleRate).toFixed(1)} s
             </p>
             <button
               id="insertLocalVoice"
@@ -403,9 +665,14 @@ export function setupLocalVoice(ctx: Context) {
             >
               {L("Insert as audio region", "Insertar como región de audio")}
             </button>
-            <a href={url} download="kokoro-voice.wav">
-              WAV
+            <a href={url} download="voice-original.wav">
+              WAV · {L("Original", "Original")}
             </a>
+            {processedUrl && (
+              <a href={processedUrl} download="voice-processed.wav">
+                WAV · {L("Processed", "Procesado")}
+              </a>
+            )}
           </section>
         )}
       </dialog>

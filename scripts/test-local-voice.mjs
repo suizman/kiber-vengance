@@ -1,9 +1,11 @@
+import { routeVoiceDownloads } from "./voice-test-mirror.mjs";
+import { tmpdir } from "node:os";
 // Opt-in real Kokoro inference. Downloads weights; excluded from normal E2E.
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { launchBrowser, preview, goToView } from "../tests/browser-support.js";
 const server = preview(Number(process.env.VOICE_TEST_PORT) || 4241);
-let browser, monitor;
+let browser, monitor, closeMirror;
 try {
   await server.ready();
   browser = await launchBrowser();
@@ -11,6 +13,7 @@ try {
     viewport: { width: 1366, height: 1000 },
     acceptDownloads: true,
   });
+  closeMirror = await routeVoiceDownloads(page.context());
   page.on("pageerror", (error) => console.log("Page error:", error.message));
   page.on("console", (message) => {
     if (message.type() === "error")
@@ -94,9 +97,9 @@ try {
     assert.ok(wav.length > 48000);
     const data = Buffer.from(wav);
     assert.equal(data.toString("ascii", 0, 4), "RIFF");
-    await mkdir("/private/tmp/kiber-voice-samples", { recursive: true });
+    await mkdir(`${tmpdir()}/kiber-voice-samples`, { recursive: true });
     await writeFile(
-      `/private/tmp/kiber-voice-samples/${language}-${process.env.VOICE_PRECISION || "q8"}.wav`,
+      `${tmpdir()}/kiber-voice-samples/${language}-${process.env.VOICE_PRECISION || "q8"}.wav`,
       data,
     );
     console.log(
@@ -148,5 +151,6 @@ try {
 } finally {
   clearInterval(monitor);
   await browser?.close();
+  closeMirror?.();
   server.close();
 }
