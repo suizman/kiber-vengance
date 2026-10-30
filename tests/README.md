@@ -1,33 +1,32 @@
-# Browser validation
+# Validación de КИБЕР VENGANCE
 
-Run `npm run check:full` after building the application. Browser tests do not skip missing engines.
+![Capas de validación](../docs/wiki/assets/validation.svg)
 
-Install Chromium and Firefox once with `npx playwright install chromium firefox`. The portable resolver also accepts `CHROMIUM_EXECUTABLE_PATH` and `FIREFOX_EXECUTABLE_PATH`, system `/usr/bin/chromium`, and a local `.cache/ms-playwright` directory in the repository or its parent. Preview processes and browser contexts are closed on failure.
+## Ejecutar
 
-On headless Linux without an audio device, Firefox can leave AudioContext suspended indefinitely even after a real click. Install PulseAudio and use:
+Node.js **22.12+**; Python **3.12+** para pruebas del companion.
 
+```sh
+npm ci
+npx playwright install chromium firefox
+npm run check:full
+python -m unittest discover -s companion/tests -v
+node scripts/publish-wiki.mjs --check
 ```
-node scripts/with-null-audio.mjs npm run check:full
-```
 
-The wrapper creates a temporary local null sink, runs the tests and cleans up. It also supports an extracted PulseAudio installation under `../.cache/pulse` or an explicit `PULSEAUDIO_EXECUTABLE_PATH`. This exercises real Web Audio scheduling with a virtual output; it does not verify physical audio hardware. Restricted sandboxes may need broader process permissions for Firefox's temporary profile.
+| Comando | Comprueba |
+| --- | --- |
+| `npm run check` | Tipado estricto, distribución estática, lint y unitarias |
+| `npm run test:e2e` | Flujos Chromium/Firefox, audio, persistencia, exportación, accesibilidad y responsive |
+| `python -m unittest discover -s companion/tests -v` | Seguridad HTTP, instalación, jobs, cancelación y contratos nativos |
+| `node scripts/publish-wiki.mjs --check` | Páginas, enlaces e imágenes del manual |
 
-Coverage includes composition/edit/history, arrangement, mixer, import/export, persistent audio assets, clip-scoped sound, command palette, accessibility, responsive layouts, sampler, scratch capture and waveform seeking. The touch regression deliberately delays worklet initialization and releases a real touch pointer before initialization completes; it also checks rapid taps and pointer cancellation. The microphone flow uses Chromium's fake audio device and checks persistence after reloading.
+No se omiten navegadores ausentes. Configura `CHROMIUM_EXECUTABLE_PATH`, `FIREFOX_EXECUTABLE_PATH`, `FIREFOX_PLAYWRIGHT_MODULE` o `PYTHON_EXECUTABLE` si no usas los valores predeterminados.
 
-Local AI: normal unit tests validate model plans and musical compilation across keys, scales, tracks and meters. Browser tests check explicit opt-in, unsupported WebGPU, cancellation, Spanish mobile dialog/accessibility and zero model requests before load. They never replace model inference with a fake successful generation.
+En Linux sin dispositivo de audio: `node scripts/with-null-audio.mjs npm run check:full`. Los fixtures HTTP usan puerto libre y datos temporales, y los de workers bloquean Service Workers.
 
-Opt-in real-model smoke (build first): `node scripts/test-local-ai.mjs`. This downloads Qwen3 0.6B and requires a WebGPU adapter, sufficient GPU memory and model-host network access. It tests English inference, audition, new clip, Undo/Redo, reload, cached offline Spanish inference and unload. It is intentionally excluded from normal E2E. This macOS host's headless Chromium used `AI_TEST_UNSAFE_WEBGPU=1` plus its compatible `CHROMIUM_EXECUTABLE_PATH` to enable its test backend; this does not establish default browser support or physical audio quality.
+## Evidencia
 
-`node scripts/measure-ui.mjs` collects a five-run local Chromium load reference and compressed asset sizes. These are repeatable local comparisons, not field-performance measurements or a physical-iPhone substitute.
+Los fixtures de UI/protocolo no son inferencia real. Las pruebas de modelos son optativas por sus descargas/memoria. Ni PCM válido ni un null sink certifican calidad percibida, altavoces, Safari físico o rendimiento de GPU.
 
-For older macOS hosts, `FIREFOX_PLAYWRIGHT_MODULE=/absolute/path/to/a/matching/playwright/index.mjs` selects a matching installed Firefox launcher/browser pair. Chromium retains the current launcher and can use CHROMIUM_EXECUTABLE_PATH; the legacy all-browser launcher stalled even an isolated Chromium AudioWorklet probe on this host. An arbitrary Firefox executable from a different release can fail its browser protocol before any application test.
-
-The real-model smoke also accepts `AI_TEST_BROWSER=firefox|webkit|chromium`, `AI_TEST_BACKEND=cpu|gpu|auto`, `AI_TEST_PORT` and `AI_TEST_PLAYWRIGHT_MODULE`. It exercises real CPU/GPU generation, cancellation controls, application insertion/Undo/persistence and offline reload. CPU requests use a compact schema and may take minutes. Native Safari/Orion are not replaced by an automated WebKit engine test.
-
-Local voice validation is opt-in: `node scripts/test-local-voice.mjs` downloads real Kokoro weights and writes audition samples under `/private/tmp/kiber-voice-samples`. Set `VOICE_PRECISION=fp32` for full precision. The script checks ES/EN generation, a fresh preview URL per result, retained-worker offline Spanish inference, insertion, Undo/Redo and reload. It does not certify pronunciation or physical output. Normal browser voice tests use a labeled protocol fixture and never stand in for real-model evidence.
-
-The reliability tests additionally cover package assets/takes in a fresh browser context, missing-source relinking, WAV timing/master attenuation/isolation, autosave preservation/pagehide flush/quota errors, and optional three-call Quality generation. The known WAV encoder stall was traced to per-sample `getChannelData` calls; the unit regression requires one view per channel.
-
-Audio mixing checks are in `tests/mixing-browser.test.js`: actual OfflineAudioContext reference signals, final Master/Cue/preview routing, mobile persistence and a separately labeled expressive-worker UI fixture. Real optional expressive inference: `node scripts/test-expressive-voice.mjs`; it downloads substantial weights and writes ES/EN intensity samples to the OS temporary directory. `VOICE_MODEL_MIRROR` may point to original downloaded `<model>/<revision>/<file>` bytes; optional runtime binaries use `_runtime/<filename>`. This is a file mirror, not an inference fixture. Listening and physical-device validation remain separate.
-
-Desktop companion protocol fixtures select a free loopback port and seed only the isolated test browser connection port; pairing still uses the real HTTP server. This allows the tests to run while a real companion uses its normal port. Set `PYTHON_EXECUTABLE` to Python 3.12+ if the `python` command is unavailable. Service Workers stay blocked; fixture audio is not inference evidence.
+[Scripts reales, variables, arquitectura y releases](../docs/wiki/Desarrollo.md) · [Límites de compatibilidad](../docs/wiki/Compatibilidad-y-licencias.md).
