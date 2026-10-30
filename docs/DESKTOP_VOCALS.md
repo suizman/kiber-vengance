@@ -101,3 +101,8 @@ Published [companion 1.0.2](https://github.com/suizman/kiber-vengance/releases/t
 ## Site publication — version 36
 
 On 2026-10-30, the user requested the corresponding Site update. Version 36 deployed successfully at https://studio.suizman.org with the latest verified repository distribution (footer `33a0ce1`) and companion 1.0.2 downloads, including distinct Intel/Apple Silicon choices. Site source `fc6257a8022fd91f816e79c84202788de7c58cee` was synchronized through an isolated checkout; the public audience, custom domain and SSL were confirmed unchanged. The earlier version-35 status notes describe the state before this publication. Install and restart companion 1.0.2 to load the native vocoder correction; the website cannot replace an already-running local companion process.
+
+
+## Studio 6.0.1 and companion 1.0.3
+
+The [joint release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.3) contains the illustrated documentation/manual and desktop-only generation policy. Native [build 41089820844](https://github.com/suizman/kiber-vengance/actions/runs/41089820844) and [publication 41090189401](https://github.com/suizman/kiber-vengance/actions/runs/41090189401) succeeded for all four packages and checksum sidecars. The full studio gate passed with 59 unit tests and 52 browser workflows, plus 17 native tests. These admission/documentation changes do not constitute new model inference or physical-device certification. The complete user guide is [Voz y canto](wiki/Voz-y-canto.md); installer links are maintained in the versioned manifest.
