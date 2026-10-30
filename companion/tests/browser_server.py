@@ -24,7 +24,7 @@ for engine in ["diffsinger", "acestep"]:
     atomic_json(runtime / "installed.json", {"engine": engine, "profile": "cpu", "probe": {"fixture": True}})
 atomic_json(root / "models/acestep/installed.json", {"model": "Protocol fixture", "revision": "fixture"})
 atomic_json(root / "models/voices/fixture/voice.json", {"id": "fixture", "name": "Protocol fixture voice", "speakers": [], "languages": ["es", "en"], "expression": [], "license": "Test fixture only", "licenseUrl": "", "attribution": "Protocol fixture, not model inference", "commercial": False, "phonemes": ["SP", "es/a", "es/l"]})
-server = CompanionServer(root, 19738)
+server = CompanionServer(root, 0)
 
 
 def execute(job):
@@ -44,7 +44,7 @@ def execute(job):
 
 
 server.jobs.execute = execute
-print(json.dumps({"code": server.pairing.code, "ownerUrl": f"http://127.0.0.1:19738/#{server.pairing.dashboard_token}"}), flush=True)
+print(json.dumps({"code": server.pairing.code, "port": server.server_port, "ownerUrl": f"http://127.0.0.1:{server.server_port}/#{server.pairing.dashboard_token}"}), flush=True)
 def stop(*_):
     threading.Thread(target=server.shutdown, daemon=True).start()
 signal.signal(signal.SIGTERM, stop)

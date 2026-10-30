@@ -56,6 +56,13 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
     viewport: { width: 1440, height: 1000 },
     serviceWorkers: "block",
   });
+  // Isolate the fixture from a real companion already listening on its default port.
+  // Pairing still uses the real server and tokens survive reload normally.
+  await page.addInitScript((port) => {
+    const key = "kv-desktop-vocals-connection-v1";
+    if (!globalThis.localStorage.getItem(key))
+      globalThis.localStorage.setItem(key, JSON.stringify({ port, token: "" }));
+  }, local.port);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(server.url + "/?qa=1");
