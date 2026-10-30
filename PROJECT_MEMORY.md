@@ -14,6 +14,13 @@ Last updated: 2026-10-30.
 - Post-deployment native Site/domain reads confirmed version 36, public audience, active Site and https://studio.suizman.org with active SSL. No DNS/access/domain settings changed. The prior full typecheck/build/lint, 59 unit / 51 browser workflows, 17 native tests, real CoreML inference regression and final two companion browser checks remain the validation evidence; no runtime inputs changed during source synchronization or packaging.
 - This documentation-only follow-up records the successful deployment; it does not alter the verified runtime or require another Site version. Users still need companion 1.0.2 installed/restarted to receive its native CoreML correction; updating the Site only updates the studio and installer links.
 
+## Public data audit and English product plan (2026-10-30)
+
+- User requested sensitive-data checks and immediate notification of findings. Official Gitleaks 8.30.1 was SHA-256 verified, then run locally on tracked current files, all reachable Git history including merge-parent diffs, and published wiki history, with redacted reports stored outside the repository.
+- Two generic-api-key alerts in `src/ui/locales/en.json` were confirmed programmatically to be generated translation dictionary identifiers, not credentials (same historical origin `8e0451e`). No broad ignores were added. Wiki scan had zero findings. No versioned credential/environment/private-key files, non-noreply author emails, or non-placeholder contact candidates were found in current content/history. Screenshot PNGs had no text/EXIF chunks and showed only demo/test UI. No real sensitive values were printed or committed; no history rewrite or credential rotation was necessary. `docs/SECURITY_AUDIT.md` records the scope and limits without values.
+- PRODUCT_PLAN.md is now entirely English in its own commit, retaining all 52 checked acceptance items, milestones, dates, historical evidence and current v6/four-workspace/desktop-only voice decisions.
+- Native GitHub wiki publication succeeded at https://github.com/suizman/kiber-vengance/wiki, commit `965c5d5c3fbf6d6fdb641b87a188b117cd68bd5c`. Anonymous requests confirmed English-default Home, Spanish ES-Home and actual PNG delivery. It contains 26 guides plus navigation and shared English images. Publication succeeded after the user created the initial Home page.
+
 ## User-enabled public repository and wiki access (2026-10-30)
 
 - User explicitly reported making the repository public to enable the wiki. A native GitHub repository read confirmed private=false and has_wiki=true. Preserve this newly user-selected public visibility; older private-release notes below describe historical state, not current access.
