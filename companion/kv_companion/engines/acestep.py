@@ -9,6 +9,17 @@ MODEL_REVISION = "19671f406d603126926c1b7e2adc169acbcade22"
 MODEL_REPO = "ACE-Step/Ace-Step1.5"
 
 
+def local_models_ready(checkpoints: Path, manifest: dict):
+    for entry in manifest["files"]:
+        path = checkpoints / entry["path"]
+        # Upstream syncs these Python adapters from the pinned engine source on
+        # first initialization. Their size legitimately changes after generation;
+        # weights/configuration must still match the installed manifest sizes.
+        if not path.is_file() or (path.suffix != ".py" and path.stat().st_size != entry["size"]):
+            return False
+    return True
+
+
 def validate(payload):
     lyrics, style = payload.get("lyrics", ""), payload.get("style", "")
     if not isinstance(lyrics, str) or not lyrics.strip() or len(lyrics) > 4096:
@@ -70,10 +81,8 @@ def render(request: dict, root: Path, output: Path):
             # uses DiT-only generation and installs its complete, pinned manifest
             # explicitly. Missing files must fail here, never fetch during inference.
             manifest = json.loads((Path(__file__).parents[1] / "resources/ace-model.json").read_text())
-            for entry in manifest["files"]:
-                path = Path(checkpoint_path) / entry["path"]
-                if not path.is_file() or path.stat().st_size != entry["size"]:
-                    return "Model file missing/incomplete. Reinstall the model from the companion.", False
+            if not local_models_ready(Path(checkpoint_path), manifest):
+                return "Model file missing/incomplete. Reinstall the model from the companion.", False
             return None
     handler = LocalModelsHandler()
     message, ok = handler.initialize_service(

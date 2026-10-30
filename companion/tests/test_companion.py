@@ -159,6 +159,19 @@ class ModelContractTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): providers("gpu", ["CPUExecutionProvider"])
         self.assertEqual(providers("auto", ["CPUExecutionProvider"]), ["CPUExecutionProvider"])
 
+    def test_second_ace_generation_accepts_pinned_source_code_sync_but_not_missing_weights(self):
+        from kv_companion.engines.acestep import local_models_ready
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = {"files": [{"path": "model.safetensors", "size": 3}, {"path": "configuration.py", "size": 3}]}
+            (root / "model.safetensors").write_bytes(b"abc")
+            (root / "configuration.py").write_text("new adapter synced by pinned upstream source")
+            self.assertTrue(local_models_ready(root, manifest))
+            (root / "model.safetensors").write_bytes(b"ab")
+            self.assertFalse(local_models_ready(root, manifest))
+            (root / "model.safetensors").unlink()
+            self.assertFalse(local_models_ready(root, manifest))
+
     def test_music_proposal_validates_actual_upstream_limits(self):
         data = {"lyrics": "Hola mundo", "style": "industrial rock", "language": "es", "duration": 10, "bpm": 120}
         self.assertEqual(validate_ace(data)["duration"], 10)
