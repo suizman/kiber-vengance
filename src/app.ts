@@ -1,6 +1,7 @@
 import { formatDb, levelDb } from "./ui/level-control";
 import { setupOutputMix } from "./ui/output-mix";
 import { setupLocalVoice } from "./ui/local-voice";
+import { setupDesktopVocals } from "./ui/desktop-vocals";
 import { bindNoteDrag as bindNoteGesture } from "./features/note-editor";
 import { ProjectSession } from "./state/project-session";
 import { captureMusicalContext } from "./ai/composer";
@@ -3787,6 +3788,7 @@ document.addEventListener("visibilitychange", () => {
 void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));
 
 setupLocalVoice(runtime);
+setupDesktopVocals(runtime);
 setupOutputMix(runtime);
 
 if (autosaveRecoveryNotice) {

@@ -1,0 +1,80 @@
+.desktop-vocals-dialog {
+  max-width: min(1000px, 96vw);
+}
+.desktop-vocals-dialog p {
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.desktop-vocals-dialog .desktop-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: var(--cyan);
+  text-decoration: none;
+}
+.desktop-download-pending {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 8px;
+}
+.desktop-note-list {
+  max-height: 360px;
+  overflow: auto;
+  margin: 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.desktop-note-list table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  min-width: 580px;
+}
+.desktop-note-list th,
+.desktop-note-list td {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.desktop-note-list th {
+  color: var(--cyan);
+  position: sticky;
+  top: 0;
+  background: var(--panel, #11192b);
+}
+.desktop-note-list input {
+  min-height: 44px;
+  min-width: 90px;
+  width: 100%;
+  padding: 8px;
+}
+.desktop-vocals-dialog audio {
+  display: block;
+  width: 100%;
+  margin: 16px 0;
+}
+.desktop-vocals-dialog progress {
+  width: 100%;
+  accent-color: var(--cyan);
+}
+.desktop-vocals-dialog section {
+  margin: 18px 0;
+}
+.desktop-vocals-dialog .appearance-header {
+  z-index: 3;
+}
+.desktop-vocals-dialog input[type="number"] {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .desktop-vocals-dialog .ai-musical-settings {
+    grid-template-columns: 1fr;
+  }
+  .desktop-vocals-dialog .ai-actions > * {
+    flex: 1 1 150px;
+  }
+}

@@ -234,9 +234,23 @@ export interface SpeechGeneration {
   phonemes: string;
   createdAt: number;
 }
+export interface SingingGeneration {
+  kind: "singing";
+  engine: "diffsinger" | "acestep";
+  model: string;
+  revision: string;
+  device: string;
+  outputKind: "score-vocal" | "musical-proposal";
+  settings: Record<string, unknown>;
+  sha256: string;
+  attribution: string;
+  licenseUrl: string;
+  sourceClipId: string;
+  createdAt: number;
+}
 export interface AudioRegion {
   effects?: AudioEffects;
-  generation?: SpeechGeneration;
+  generation?: SpeechGeneration | SingingGeneration;
   id: string;
   assetId: string;
   name: string;

@@ -21,6 +21,7 @@ import {
   type SpeechSettings,
 } from "../ai/voice";
 import { getLanguage } from "./i18n";
+import { openDesktopVocals } from "./desktop-vocals";
 import { chatterboxUnavailable } from "../ai/voice-safety";
 import type { Project } from "../model";
 interface Context {
@@ -322,6 +323,9 @@ export function setupLocalVoice(ctx: Context) {
             ×
           </button>
         </header>
+        <p><button id="desktopVocalsFromSpeech" onClick={() => { close(); openDesktopVocals(); }}>
+          {L("For singing: desktop vocal engines", "Para cantar: motores vocales de escritorio")}
+        </button></p>
         <p>
           {L(
             "Speech is generated in your browser. Kokoro: q8 ≈90 MB or FP32 ≈330 MB; Chatterbox ≈570 MB, plus runtime and voices. Downloads are explicit. Audition Spanish pronunciation before inserting.",

@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "releasePage": "https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0",
+  "assets": [
+    {
+      "platform": "linux-x64",
+      "label": "Linux · AppImage · Arch / Ubuntu",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.0/KiberVengance-Companion-1.0.0-x86_64.AppImage",
+      "available": false
+    },
+    {
+      "platform": "macos-arm64",
+      "label": "macOS · Apple Silicon",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.0/KiberVengance-Companion-1.0.0-arm64.dmg",
+      "available": false
+    },
+    {
+      "platform": "windows-x64",
+      "label": "Windows · x64",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.0/KiberVengance-Companion-1.0.0-x64-setup.exe",
+      "available": false
+    }
+  ],
+  "requiresRepositoryAccess": true
+}
