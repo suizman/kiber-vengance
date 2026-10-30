@@ -1,0 +1,1 @@
+export{t as openDesktopVocals,n as setupDesktopVocals}from"./desktop-vocals-DelgIwPl.js";
