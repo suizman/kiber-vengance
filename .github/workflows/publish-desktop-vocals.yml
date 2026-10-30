@@ -58,6 +58,7 @@ jobs:
             try { release = (await github.rest.repos.getReleaseByTag({...repo,tag})).data; }
             catch (error) { if (error.status !== 404) throw error; }
             if (!release) release = (await github.rest.repos.createRelease({...repo,tag_name:tag,target_commitish:expected,name:'КИБЕР VENGANCE Companion '+version,draft:true,body:[
+              'Studio 6.0.1: voice generation is desktop-only, with no phone/tablet entrypoints or voice model/worker downloads. The illustrated READMEs link a complete 13-page feature manual in docs/wiki.',
               'Native vocal companion for macOS Apple Silicon and Intel, Windows x64 and Linux x86_64 (Arch/Ubuntu AppImage).',
               'DiffSinger CoreML fix: dynamic-length vocoding runs on CPU while the acoustic stage retains its selected provider. Restart the previous companion process after installing the update; models and generated audio are preserved.',
               'Intel: DiffSinger CPU with ONNX Runtime 1.23.2. ACE-Step is unavailable on Intel because its pinned PyTorch has no macOS x86_64 wheel.',
