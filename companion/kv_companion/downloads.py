@@ -24,6 +24,8 @@ def download(url: str, target: Path, job, sha256: str | None = None, maximum: in
     job.check()
     with urllib.request.urlopen(request, timeout=60) as response:
         resumed = position > 0 and response.status == 206
+        if resumed and not response.headers.get("Content-Range", "").startswith(f"bytes {position}-"):
+            raise ValueError("Server returned an invalid download range")
         if not resumed:
             position = 0
         total = int(response.headers.get("Content-Length", 0)) + position
@@ -37,6 +39,8 @@ def download(url: str, target: Path, job, sha256: str | None = None, maximum: in
                     raise ValueError("Download exceeds the model size limit")
                 stream.write(chunk)
                 job.update(f"Downloading {target.name} · {position / 1024**2:.0f}" + (f" / {total / 1024**2:.0f}" if total else "") + " MB")
+    if total and position != total:
+        raise ValueError("Download was interrupted; retry to resume")
     if sha256 and digest(partial) != sha256:
         partial.unlink(missing_ok=True)
         raise ValueError("Download checksum mismatch")

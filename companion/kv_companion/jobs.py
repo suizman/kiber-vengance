@@ -138,6 +138,15 @@ class Jobs:
             self.condition.notify_all()
             return job
 
+    def public(self):
+        with self.condition:
+            return [job.public() for job in self.items.values()][-30:]
+
+    def cancel(self, job):
+        job.cancel()
+        from .store import atomic_json
+        atomic_json(self.root / "jobs" / f"{job.id}.json", job.public())
+
     def _work(self):
         while True:
             with self.condition:
@@ -168,7 +177,7 @@ class Jobs:
             self.closed = True
             for job in self.items.values():
                 if job.status in {"running", "queued"}:
-                    job.cancel()
+                    self.cancel(job)
             self.condition.notify_all()
         if threading.current_thread() is not self.thread:
             self.thread.join(timeout=10)

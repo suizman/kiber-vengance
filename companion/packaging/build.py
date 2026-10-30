@@ -145,7 +145,22 @@ def main():
         subprocess.run([str(resources / "python/bin/python3"), "-m", "kv_companion", "--self-test"], env={**os.environ, "PYTHONPATH": str(resources / "lib")}, check=True)
         subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
         output = out / f"KiberVengance-Companion-{VERSION}-arm64.dmg"
-        subprocess.run(["hdiutil", "create", "-volname", "Kiber Vengance Companion", "-srcfolder", str(app), "-ov", "-format", "UDZO", str(output)], check=True)
+        payload = COMPANION / "build/dmg-payload"
+        if payload.exists():
+            shutil.rmtree(payload)
+        payload.mkdir()
+        shutil.copytree(app, payload / app.name, symlinks=True)
+        (payload / "Applications").symlink_to("/Applications", target_is_directory=True)
+        subprocess.run(["hdiutil", "create", "-volname", "Kiber Vengance Companion", "-srcfolder", str(payload), "-ov", "-format", "UDZO", str(output)], check=True)
+        mounted = COMPANION / "build/dmg-smoke"
+        mounted.mkdir(exist_ok=True)
+        subprocess.run(["hdiutil", "attach", "-nobrowse", "-readonly", "-mountpoint", str(mounted), str(output)], check=True)
+        try:
+            installed = mounted / app.name / "Contents/Resources"
+            subprocess.run([str(installed / "python/bin/python3"), "-m", "kv_companion", "--self-test"], env={**os.environ, "PYTHONPATH": str(installed / "lib")}, check=True)
+            subprocess.run(["codesign", "--verify", "--deep", str(mounted / app.name)], check=True)
+        finally:
+            subprocess.run(["hdiutil", "detach", str(mounted)], check=True)
         artifacts.append(output)
     else:
         if sys.platform != "win32":
@@ -155,7 +170,14 @@ def main():
         subprocess.run([str(stage / "python/python.exe"), "-m", "kv_companion", "--self-test"], env={**os.environ, "PYTHONPATH": str(lib)}, check=True)
         installer = shutil.which("iscc") or str(Path(os.environ.get("PROGRAMFILES(X86)", "C:/Program Files (x86)")) / "Inno Setup 6/ISCC.exe")
         subprocess.run([installer, str(COMPANION / "packaging/windows.iss")], check=True)
-        artifacts.append(out / f"KiberVengance-Companion-{VERSION}-x64-setup.exe")
+        output = out / f"KiberVengance-Companion-{VERSION}-x64-setup.exe"
+        installed = COMPANION / "build/installed-smoke"
+        subprocess.run([str(output), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=" + str(installed)], check=True)
+        try:
+            subprocess.run([str(installed / "python/python.exe"), "-m", "kv_companion", "--self-test"], env={**os.environ, "PYTHONPATH": str(installed / "lib")}, check=True)
+        finally:
+            subprocess.run([str(installed / "unins000.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"], check=True)
+        artifacts.append(output)
     for artifact in artifacts:
         checksum = sha(artifact)
         artifact.with_name(artifact.name + ".sha256").write_text(checksum + "  " + artifact.name + "\n")

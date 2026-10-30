@@ -134,13 +134,18 @@ def install_runtime(root: Path, engine: str, profile: str, job, repair=False):
         dependencies = [requirement for requirement in upstream if re.split(r"[<>=!~;\[]", requirement)[0].strip() not in excluded]
         job.run_process(pip + ["--constraint", str(constraints)] + dependencies, env=env)
         job.run_process(pip + ["--no-deps", str(source)], env=env)
+    probe_runtime(root, engine, profile, job)
+
+
+def probe_runtime(root, engine, profile, job):
+    destination = environment(root, engine, profile)
     probe = "import json;" + (
         "import onnxruntime as o;print(json.dumps({'providers':o.get_available_providers()}))"
         if engine == "diffsinger" else
         "import torch as t;print(json.dumps({'cuda':t.cuda.is_available(),'hip':t.version.hip,'mps':t.backends.mps.is_available()}))"
     )
     job.update("Checking installed runtime")
-    result = subprocess.run([python, "-c", probe], env=env, capture_output=True, text=True, timeout=90)
+    result = subprocess.run([str(executable(destination)), "-c", probe], env=child_environment(), capture_output=True, text=True, timeout=90)
     if result.returncode:
         raise RuntimeError("Runtime probe failed: " + result.stderr[-1500:])
     details = json.loads(result.stdout.strip().splitlines()[-1])

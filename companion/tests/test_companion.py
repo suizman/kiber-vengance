@@ -176,7 +176,7 @@ class DownloadTests(unittest.TestCase):
     def test_interrupted_download_resumes_and_checksum_mismatch_is_not_installed(self):
         class Response(io.BytesIO):
             status = 206
-            headers = {"Content-Length": "3"}
+            headers = {"Content-Length": "3", "Content-Range": "bytes 3-5/6"}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "weights.bin"; path.with_suffix(".bin.part").write_bytes(b"abc")
             expected = hashlib.sha256(b"abcdef").hexdigest(); job = Job("test", {})

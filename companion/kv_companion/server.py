@@ -133,7 +133,7 @@ class Handler(BaseHTTPRequestHandler):
             self.auth()
             if not post and path == "/api/status":
                 self.json({**self.server.engines.status(), "version": VERSION, "protocol": PROTOCOL,
-                           "jobs": [j.public() for j in self.server.jobs.items.values()][-30:]})
+                           "jobs": self.server.jobs.public()})
             elif not post and path == "/api/pairing":
                 self.auth(owner=True)
                 self.json({"code": self.server.pairing.code, "expiresIn": max(0, round(self.server.pairing.expires - time.monotonic()))})
@@ -172,7 +172,7 @@ class Handler(BaseHTTPRequestHandler):
                 job = self.server.jobs.items.get(path.split("/")[3])
                 if not job:
                     raise ValueError("Job not found")
-                job.cancel()
+                self.server.jobs.cancel(job)
                 self.json(job.public())
             elif post and path == "/api/upload":
                 size = int(self.headers.get("Content-Length", "0"))

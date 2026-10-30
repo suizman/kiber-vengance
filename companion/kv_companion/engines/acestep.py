@@ -33,6 +33,8 @@ def validate(payload):
 def render(request: dict, root: Path, output: Path):
     """Run inside the selected ACE runtime; process termination is cancellation."""
     import os
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
     import torch
     from acestep.handler import AceStepHandler
     from acestep.llm_inference import LLMHandler
@@ -61,9 +63,21 @@ def render(request: dict, root: Path, output: Path):
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     print("Loading ACE-Step · " + device, flush=True)
-    handler = AceStepHandler()
+    class LocalModelsHandler(AceStepHandler):
+        def _ensure_models_present(self, *, checkpoint_path, config_path, prefer_source, vae_variant=None):
+            # Upstream's default precheck also requires the optional 1.7B LM and
+            # otherwise starts an unpinned full-repository download. This adapter
+            # uses DiT-only generation and installs its complete, pinned manifest
+            # explicitly. Missing files must fail here, never fetch during inference.
+            manifest = json.loads((Path(__file__).parents[1] / "resources/ace-model.json").read_text())
+            for entry in manifest["files"]:
+                path = Path(checkpoint_path) / entry["path"]
+                if not path.is_file() or path.stat().st_size != entry["size"]:
+                    return "Model file missing/incomplete. Reinstall the model from the companion.", False
+            return None
+    handler = LocalModelsHandler()
     message, ok = handler.initialize_service(
-        project_root=str(project), config_path=str(checkpoints / "acestep-v15-turbo"),
+        project_root=str(project), config_path="acestep-v15-turbo",
         device=device, use_flash_attention=False, compile_model=False,
         offload_to_cpu=device != "cpu", offload_dit_to_cpu=False,
     )

@@ -13,7 +13,7 @@ import wave
 from .downloads import download, digest, extract_zip
 from .engines import acestep, diffsinger
 from .hardware import hardware
-from .install import install_runtime, environment, executable, runtime_status, child_environment
+from .install import install_runtime, probe_runtime, environment, executable, runtime_status, child_environment
 from .store import atomic_json, read_json
 
 VOICE_CATALOG = [{
@@ -176,5 +176,6 @@ class Engines:
             engine = data.get("engine")
             profile = self._profile(data, engine)
             install_runtime(self.root, engine, profile, job)
+            probe_runtime(self.root, engine, profile, job)
             return {"hardware": hardware(self.root), "runtime": read_json(environment(self.root, engine, profile) / "installed.json")}
         raise ValueError("Unknown job operation")
