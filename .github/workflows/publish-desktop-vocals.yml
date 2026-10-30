@@ -1,33 +1,38 @@
 name: Publish verified desktop vocal packages
 on:
+  workflow_run:
+    workflows: [Desktop vocal companion]
+    types: [completed]
   workflow_dispatch:
     inputs:
       build_run_id:
         description: Successful Desktop vocal companion workflow run
         required: true
-        default: '41038652221'
       engine_source:
         description: Exact source commit of that build
         required: true
-        default: '54902dae599c0639ce155e0a941e07c1b9ae4805'
-      release_id:
-        description: Existing draft release ID; uploading does not publish it
+      release_tag:
+        description: Version tag to publish after verifying the successful build
         required: true
-        default: '428879555'
 permissions:
   actions: read
   contents: write
 jobs:
   attach:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'desktop-vocals-v'))
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
-      - name: Verify build and attach checksum-verified packages to the draft
+      - name: Verify build and publish checksum-verified versioned packages
         uses: actions/github-script@v7
         env:
-          BUILD_RUN_ID: ${{ inputs.build_run_id }}
-          ENGINE_SOURCE: ${{ inputs.engine_source }}
-          RELEASE_ID: ${{ inputs.release_id }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id || github.event.workflow_run.id }}
+          ENGINE_SOURCE: ${{ inputs.engine_source || github.event.workflow_run.head_sha }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.workflow_run.head_branch }}
         with:
           script: |
             const fs = require('node:fs');
@@ -36,18 +41,37 @@ jobs:
             const {execFileSync} = require('node:child_process');
             const repo = context.repo;
             const run_id = Number(process.env.BUILD_RUN_ID);
-            const release_id = Number(process.env.RELEASE_ID);
+            const tag = process.env.RELEASE_TAG;
             const expected = process.env.ENGINE_SOURCE;
-            if (!Number.isSafeInteger(run_id) || !Number.isSafeInteger(release_id) || !/^[a-f0-9]{40}$/.test(expected)) throw Error('Invalid release inputs');
+            if (!Number.isSafeInteger(run_id) || !/^desktop-vocals-v\d+\.\d+\.\d+$/.test(tag) || !/^[a-f0-9]{40}$/.test(expected)) throw Error('Invalid release inputs');
             const {data:run} = await github.rest.actions.getWorkflowRun({...repo,run_id});
             if (run.name !== 'Desktop vocal companion' || run.conclusion !== 'success' || run.head_sha !== expected) throw Error('Build has not passed for the requested source');
-            const {data:release} = await github.rest.repos.getRelease({...repo,release_id});
-            if (!release.draft || release.tag_name !== 'desktop-vocals-v1.0.0' || release.target_commitish !== expected) throw Error('Expected the reviewed 1.0.0 draft for this engine source');
-            const {data:listing} = await github.rest.actions.listWorkflowRunArtifacts({...repo,run_id});
-            const names = ['companion-linux-x64','companion-macos-arm64','companion-windows-x64'];
+            const {data:ref} = await github.rest.git.getRef({...repo,ref:'tags/'+tag});
+            const tagCommit = ref.object.type === 'tag'
+              ? (await github.rest.git.getTag({...repo,tag_sha:ref.object.sha})).data.object.sha
+              : ref.object.sha;
+            if (tagCommit !== expected) throw Error('Release tag does not identify the verified build');
+            const {data:versionFile} = await github.rest.repos.getContent({...repo,path:'companion/kv_companion/__init__.py',ref:expected});
+            const version = Buffer.from(versionFile.content,'base64').toString('utf8').match(/^VERSION = "([0-9.]+)"$/m)?.[1];
+            if (tag !== 'desktop-vocals-v'+version) throw Error('Tag and package version differ');
+            let release;
+            try { release = (await github.rest.repos.getReleaseByTag({...repo,tag})).data; }
+            catch (error) { if (error.status !== 404) throw error; }
+            if (!release) release = (await github.rest.repos.createRelease({...repo,tag_name:tag,target_commitish:expected,name:'КИБЕР VENGANCE Companion '+version,draft:true,body:[
+              'Native vocal companion for macOS Apple Silicon and Intel, Windows x64 and Linux x86_64 (Arch/Ubuntu AppImage).',
+              'Intel: DiffSinger CPU with ONNX Runtime 1.23.2. ACE-Step is unavailable on Intel because its pinned PyTorch has no macOS x86_64 wheel.',
+              'Models are separate opt-in downloads. macOS is ad-hoc signed, without Developer ID/notarization; Windows has no publisher certificate.',
+              'All four native packages passed bundled-runtime checks. macOS DMGs were mounted and signatures verified; Windows installer was installed/tested/uninstalled. These checks do not establish model inference or listening quality on Intel.',
+              'Every package includes a SHA-256 sidecar. Downloads require access to this private repository.',
+              'Source: '+expected+' · Build: '+run.html_url
+            ].join('\n\n')})).data;
+            if (release.target_commitish !== expected) throw Error('Release source differs');
+            const release_id = release.id;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts,{...repo,run_id});
+            const names = ['companion-linux-x64','companion-macos-arm64','companion-macos-x64','companion-windows-x64'];
             const uploaded = await github.paginate(github.rest.repos.listReleaseAssets,{...repo,release_id});
             for (const name of names) {
-              const artifact = listing.artifacts.find(a=>a.name===name&&!a.expired);
+              const artifact = artifacts.find(a=>a.name===name&&!a.expired);
               if (!artifact) throw Error('Missing package: '+name);
               const {data} = await github.rest.actions.downloadArtifact({...repo,artifact_id:artifact.id,archive_format:'zip'});
               const folder = path.join(process.env.RUNNER_TEMP,name);
@@ -73,4 +97,5 @@ jobs:
                 core.info('Attached '+filename+' (SHA-256 verified)');
               }
             }
-            core.info('All three packages attached. Release remains a draft for explicit publication.');
+            if (release.draft) await github.rest.repos.updateRelease({...repo,release_id,draft:false,make_latest:'true'});
+            core.info('Published '+tag+' with all four checksum-verified packages.');
