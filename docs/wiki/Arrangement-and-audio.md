@@ -1,5 +1,7 @@
 # Arrangement and audio
 
+[English](Arrangement-and-audio.md) | [Español](ES-Arrangement-and-audio.md)
+
 ## Build a song
 
 In **Arrange → Arrangement**, each section assigns one clip per track and a repeat count. Add, rename, reorder with buttons/drag, multi-select, copy, paste, duplicate, delete and make fills. **Load to Compose** opens its five clips together.

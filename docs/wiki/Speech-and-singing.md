@@ -1,5 +1,7 @@
 # Speech and singing on desktop
 
+[English](Speech-and-singing.md) | [Español](ES-Speech-and-singing.md)
+
 ## Browser speech
 
 In **Arrange → Audio & sampler → VOICE · ES/EN**, choose text, language, voice and speed; explicitly load a model, generate, audition/download WAV and insert a new region.

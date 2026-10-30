@@ -1,5 +1,7 @@
 # КИБЕР VENGANCE manual
 
+[English](Home.md) | [Español](ES-Home.md)
+
 A browser studio for electro-rock, industrial, synthwave and cinematic composition. Four workspaces, five instruments, audio tracks and local export.
 
 ![Compose on desktop](assets/compose.png)
@@ -28,3 +30,5 @@ A browser studio for electro-rock, industrial, synthwave and cinematic compositi
 **Compose, Arrange, Live and Mix** are the current workspaces. Forge, Audio and Perform are internal panel names, not extra workspaces. Guides and screenshots use the English interface; the app also supports Spanish.
 
 This directory is the versioned manual source and works without a wiki. Publish the same pages to GitHub Wiki with `node scripts/publish-wiki.mjs --publish` after enabling and initializing the native wiki. [Maintenance and prerequisites](Development.md).
+
+English is the default edition. Every guide links to its Spanish counterpart; both editions share actual English UI screenshots.

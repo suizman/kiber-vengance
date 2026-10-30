@@ -1,5 +1,7 @@
 # Sound and presets
 
+[English](Sound-and-presets.md) | [Español](ES-Sound-and-presets.md)
+
 ## Instruments and character
 
 | Instrument | Controls and uses |

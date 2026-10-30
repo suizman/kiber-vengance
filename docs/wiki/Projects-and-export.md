@@ -1,5 +1,7 @@
 # Projects and export
 
+[English](Projects-and-export.md) | [Español](ES-Projects-and-export.md)
+
 ## Save and recover
 
 The current format is **v6**, with v2–v5 import compatibility. Project provides cinematic/minimal/performance/hybrid-audio templates, project duplication, named snapshots, automatic recovery and JSON/Project Package import/export.

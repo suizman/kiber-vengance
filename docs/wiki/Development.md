@@ -1,5 +1,7 @@
 # Development, testing and publishing
 
+[English](Development.md) | [Español](ES-Development.md)
+
 ## Run the studio
 
 Node.js **22.12+** and npm. Production serves a static application and does not require Node.

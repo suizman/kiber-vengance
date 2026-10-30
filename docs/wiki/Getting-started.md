@@ -1,5 +1,7 @@
 # Getting started
 
+[English](Getting-started.md) | [Español](ES-Getting-started.md)
+
 ## Open and play
 
 1. Open [the studio](https://studio.suizman.org). The companion is optional.

@@ -2,11 +2,11 @@
 
 **Local singing for the studio, with separately downloaded models.**
 
-[Download an installer](https://github.com/suizman/kiber-vengance/releases/latest) · [Speech and singing manual](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/Speech-and-singing.md)
+[Download an installer](https://github.com/suizman/kiber-vengance/releases/latest) · Manual: [English (default)](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/Speech-and-singing.md) / [Español](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/ES-Speech-and-singing.md)
 
 ![The studio's desktop singing dialog](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/assets/desktop-vocals.png?raw=true)
 
-*Actual interface with an HTTP protocol fixture; this is not evidence of model-generated audio.*
+*Actual interface with an HTTP protocol fixture; this is not evidence of model-generated audio. Both manual editions share English-language screenshots.*
 
 ## Install and connect
 

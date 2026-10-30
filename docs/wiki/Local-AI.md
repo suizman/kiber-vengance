@@ -1,5 +1,7 @@
 # Local AI: editable melodies
 
+[English](Local-AI.md) | [Español](ES-Local-AI.md)
+
 ![A/B/C comparison and selected-bar regeneration](assets/ai-composer.png)
 
 *Actual interface capture with a test fixture. Visible notes are not presented as model inference evidence.*

@@ -1,5 +1,7 @@
 # Compatibility, privacy and licenses
 
+[English](Compatibility-and-licenses.md) | [Español](ES-Compatibility-and-licenses.md)
+
 ## Connections and permissions
 
 The static app processes music locally: no studio account is required and projects/prompts/audio are not sent to an inference service. Initial app loading, URL catalogs and explicit model downloads do contact their servers. This repository and its installers require an authorized GitHub account.

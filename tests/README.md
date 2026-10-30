@@ -1,5 +1,7 @@
 # Validating КИБЕР VENGANCE
 
+Manual: [English (default)](../docs/wiki/Development.md) / [Español](../docs/wiki/ES-Development.md). Shared screenshots and diagrams use English labels in both editions.
+
 ![Validation layers](../docs/wiki/assets/validation.svg)
 
 ## Run

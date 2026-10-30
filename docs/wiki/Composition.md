@@ -1,5 +1,7 @@
 # Composition
 
+[English](Composition.md) | [Español](ES-Composition.md)
+
 ## Clips and notes
 
 Each of the five tracks keeps at least one clip. Clips support 1, 2, 4 or 8 bars and a 1/64–1/4 grid. Creating, duplicating, renaming, varying and deleting clips integrates with Undo/Redo. Deleting a used clip identifies its sections and reassigns references to another clip after confirmation.

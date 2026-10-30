@@ -1,5 +1,7 @@
 # Mixing
 
+[English](Mixing.md) | [Español](ES-Mixing.md)
+
 ## Channels and buses
 
 Mix combines instrumental tracks and audio lanes. Set pre-gain, dB fader, pan, color, Solo/Mute, groups and pre/post sends. **Solo is exclusive**; disabling it restores the mix. Changes affect sustained voices/regions and exported renders.

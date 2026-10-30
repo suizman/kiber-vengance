@@ -1,5 +1,7 @@
 # Live performance
 
+[English](Live-performance.md) | [Español](ES-Live-performance.md)
+
 ## Clip launcher
 
 **Live → Clip launcher** provides a five-track matrix. Queue clips on beats/bars, stop tracks separately and use MIDI notes **36–63** for visible cells. **Capture** records the launch sequence; **Commit to Arrange** makes editable sections.

@@ -19,6 +19,13 @@ function check() {
   for (const name of ['Home.md', '_Sidebar.md', '_Footer.md']) {
     if (!pages.includes(name)) throw Error(`Missing wiki navigation: ${name}`);
   }
+  for (const name of pages.filter(name => !name.startsWith('_') && !name.startsWith('ES-'))) {
+    if (!pages.includes('ES-' + name)) throw Error(`Missing Spanish counterpart: ${name}`);
+    const body = readFileSync(resolve(source, name), 'utf8');
+    if (!body.includes(`](ES-${name})`)) throw Error(`Missing language switch: ${name}`);
+    const spanish = readFileSync(resolve(source, 'ES-' + name), 'utf8');
+    if (!spanish.includes(`](${name})`)) throw Error(`Missing English return link: ES-${name}`);
+  }
   let count = 0;
   for (const file of entries) {
     const body = readFileSync(file, 'utf8');

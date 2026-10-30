@@ -1,5 +1,7 @@
 # Shortcuts, settings and help
 
+[English](Shortcuts-and-settings.md) | [Español](ES-Shortcuts-and-settings.md)
+
 ## Keyboard
 
 | Action | Shortcut |

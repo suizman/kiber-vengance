@@ -4,4 +4,6 @@ The PNGs are actual application screenshots captured with the repository's Chrom
 
 `validation.svg` is a source-authored vector diagram of the validation layers, not a screenshot. All visible labels and image descriptions are English.
 
+English is the default manual language. Spanish translations intentionally reuse the same English-language screenshots and diagram; the images are not edited to simulate translated UI.
+
 These assets are software documentation under the repository's license. They contain no model weights or generated audio recordings.
