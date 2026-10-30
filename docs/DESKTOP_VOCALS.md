@@ -4,7 +4,7 @@
 
 ## Install and use
 
-Download a package from the [versioned companion release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0). The repository remains private, so GitHub sign-in and repository access are required for these downloads.
+Download a package from the [versioned companion release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.1). The repository remains private, so GitHub sign-in and repository access are required for these downloads.
 
 - Linux x86_64: AppImage, including Arch Linux and Ubuntu LTS. Mark executable; if FUSE is absent use `--appimage-extract-and-run`. The management page can install a desktop launcher and the `kibervengance://open` handler. The registered launcher uses extraction mode and a persistent application copy.
 - macOS Apple Silicon or Intel, macOS 13+: separate ARM64 / x86_64 DMGs, drag the application to Applications. It is ad-hoc signed, without Developer ID/notarization; macOS may require **Open Anyway**.
@@ -75,7 +75,7 @@ It uses the real loopback server and real engines, auditions PCM, inserts both o
 
 Release gate: `npm run check:full` passed with 59 unit tests and 51 browser workflows, no skips; all 14 companion tests passed. Focused browser tests additionally cover cancellation retaining the prior result and non-destructive inserted effects.
 
-Published installers: [desktop-vocals-v1.0.0](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0), native build [41038652221](https://github.com/suizman/kiber-vengance/actions/runs/41038652221). Package attachment checks hashes before upload and retains an existing differing asset instead of replacing it.
+Published installers: [desktop-vocals-v1.0.0](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.1), native build [41038652221](https://github.com/suizman/kiber-vengance/actions/runs/41038652221). Package attachment checks hashes before upload and retains an existing differing asset instead of replacing it.
 
 
 ## Intel packaging extension — 2026-10-30
@@ -85,3 +85,5 @@ Published installers: [desktop-vocals-v1.0.0](https://github.com/suizman/kiber-v
 Dependency evidence: [ONNX Runtime 1.23.2 files](https://pypi.org/project/onnxruntime/1.23.2/#files), [1.24.4 files](https://pypi.org/project/onnxruntime/1.24.4/#files) and [PyTorch 2.9.1 files](https://pypi.org/project/torch/2.9.1/#files). The Intel packaged dependency installation/probe passed locally on macOS 13.6.4; no Intel model inference/listening test has been performed.
 
 Release 1.0.1 preparation: companion version fields are synchronized. Publication is chained from a successful version-tag build, verifies source/tag/version and every SHA-256 sidecar, then publishes the completed draft. Ordinary branch builds do not publish releases. Outcomes will be recorded after CI completes.
+
+Published companion 1.0.1: [release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.1), [four-platform build](https://github.com/suizman/kiber-vengance/actions/runs/41075759348), [publication](https://github.com/suizman/kiber-vengance/actions/runs/41076017201). Both workflows succeeded; all four installers and four SHA-256 sidecars are attached. Release tag source is `1454e1b`; latest native runtime source is `4102e96`. The repository download manifest now includes Intel and verified 1.0.1 asset hashes. The existing live Site is unchanged by this GitHub release.

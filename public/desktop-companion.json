@@ -1,29 +1,36 @@
 {
-  "version": "1.0.0",
-  "releasePage": "https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0",
+  "version": "1.0.1",
+  "releasePage": "https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.1",
   "assets": [
     {
       "platform": "linux-x64",
       "label": "Linux · AppImage · Arch / Ubuntu",
-      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.0/KiberVengance-Companion-1.0.0-x86_64.AppImage",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.1/KiberVengance-Companion-1.0.1-x86_64.AppImage",
       "available": true,
-      "sha256": "9736390ca1fedd8b7b48300389ac6e77eeb87a55c590c14057c5d9e8b9652985"
+      "sha256": "fb8e4728eb1f5b423f8b946a967c290878e4e06c0d32ae3af9a858b35a0c9a45"
     },
     {
       "platform": "macos-arm64",
       "label": "macOS · Apple Silicon",
-      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.0/KiberVengance-Companion-1.0.0-arm64.dmg",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.1/KiberVengance-Companion-1.0.1-arm64.dmg",
       "available": true,
-      "sha256": "1ce3eb0678fcd478e06dc9d793ca204f5baf10b658ec5b7d2b4edc8691c4bb7f"
+      "sha256": "cbba2b80c73254c00f2444a5a5c855118f4d9d989709f492c6cbdb7ecfc9402e"
+    },
+    {
+      "platform": "macos-x64",
+      "label": "macOS · Intel",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.1/KiberVengance-Companion-1.0.1-x86_64.dmg",
+      "available": true,
+      "sha256": "43e7b5d00c7142b30a57291fdc96db51a916c1bf05c4ea799f074fde5b19b44c"
     },
     {
       "platform": "windows-x64",
       "label": "Windows · x64",
-      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.0/KiberVengance-Companion-1.0.0-x64-setup.exe",
+      "url": "https://github.com/suizman/kiber-vengance/releases/download/desktop-vocals-v1.0.1/KiberVengance-Companion-1.0.1-x64-setup.exe",
       "available": true,
-      "sha256": "5a522acb542b4cdf7653ae3f56a08358dd949b51dce9757dd221a3361d32d88f"
+      "sha256": "0663d11ac40e4dde6f8cba8011ac2ac1d5ecaa138df50e3cd7f10dd9d9d5228a"
     }
   ],
   "requiresRepositoryAccess": true,
-  "sourceCommit": "54902dae599c0639ce155e0a941e07c1b9ae4805"
+  "sourceCommit": "1454e1b633eb9a190d48ce1a8c68beb5b4b4446b"
 }

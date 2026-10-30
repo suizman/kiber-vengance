@@ -10,7 +10,9 @@ Last updated: 2026-10-30.
 
 - User explicitly authorized committing/pushing the Intel work, executing CI and publishing a new GitHub release. Preserve repository visibility and existing Site settings. Site deployment is outside this request.
 - Companion version advances to 1.0.1 across runtime, packaging and Windows installer. The publication workflow now accepts arbitrary matching version tags and automatically follows successful version-tag builds. It checks exact source/tag/version and four SHA-256 sidecars, refuses replacement of differing assets, and publishes only after all attachments succeed. Branch pushes remain build-only.
-- Publication and validation outcomes are recorded below after their terminal results.
+- Published GitHub release `desktop-vocals-v1.0.1` (ID 429156326), tag/source `1454e1b633eb9a190d48ce1a8c68beb5b4b4446b`; latest companion runtime source `4102e96`. Four-platform build `41075759348` and publication `41076017201` succeeded. All four native jobs passed tests/runtime smokes; both DMGs mounted/signature-verified, Windows installed/tested/uninstalled. The published release was re-read: four binaries plus four SHA-256 sidecars, draft=false. Intel DMG SHA-256 `43e7b5d00c7142b30a57291fdc96db51a916c1bf05c4ea799f074fde5b19b44c`.
+- Repository download manifest updated to verified 1.0.1 URLs/hashes with a distinct Intel option. Existing live Site remains unchanged; no Site deployment was requested.
+- Portable verified Node 22.23.4 restored local checks without changing system Node. Typecheck/build/lint and 59 unit tests passed. First configured browser run passed 50/51; only desktop loopback fixture failed before starting because `python` was absent. Final verification uses explicit bundled Python 3.12; terminal result follows. Publication script local scenarios passed for success, corrupt checksum, missing package and mismatched tag.
 
 ## macOS Intel companion extension (2026-10-30)
 
