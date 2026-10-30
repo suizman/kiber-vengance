@@ -195,6 +195,18 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
       .map((v) => v.id),
   );
   assert.deepEqual(ownerViolations, []);
+  const download = await owner
+    .getByRole("button", { name: "WAV", exact: true })
+    .first()
+    .elementHandle();
+  await download.focus();
+  await owner.waitForTimeout(2400);
+  assert.equal(
+    await download.evaluate(
+      (element) => element === document.activeElement && element.isConnected,
+    ),
+    true,
+  );
 });
 
 test("desktop singing explains mobile compatibility without probing or downloading a local engine", async (t) => {
