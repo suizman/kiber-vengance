@@ -16,7 +16,7 @@
 | Windows x64 | Per-user installer, uninstaller and URL handler |
 | Linux x86_64 | AppImage for Arch/Ubuntu; use `--appimage-extract-and-run` without FUSE |
 
-Installers are in a private repository: GitHub access is required. Python is included. Mac packages are ad-hoc signed without notarization; Windows has no publisher certificate.
+Installers are available from the public GitHub release; sign-in is not required. Python is included. Mac packages are ad-hoc signed without notarization; Windows has no publisher certificate.
 
 1. Open the companion and install your chosen runtime/model or voicebank after reviewing its licenses.
 2. In the studio, open **Arrange → Audio & sampler → Singing · Desktop**.

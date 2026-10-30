@@ -37,7 +37,7 @@ Instrument/character fields use the application's native model. Missing values r
 
 ## Official online collection and other sources
 
-The configured canonical collection URL is `https://raw.githubusercontent.com/suizman/kiber-vengance/master/public/presets/catalog-v1.json`. The source and JSON were pushed in commit `4f65d83`, but anonymous requests still returned HTTP 404, including a revision-qualified query to avoid a previously cached failure. That GitHub endpoint needs anonymous repository access. The application reports failures and retains its bundled collection. Sites version 28 also ships the JSON at `/presets/catalog-v1.json` on the deployed Site; that HTTPS URL can be loaded through the URL importer while the repository remains private.
+The canonical collection URL is `https://raw.githubusercontent.com/suizman/kiber-vengance/master/public/presets/catalog-v1.json`. After the user made the repository public, an anonymous request succeeded and validated all 15 entries. Earlier HTTP 404 reports describe the previous private-repository state. The bundled collection still works independently of network access; the deployed Site also serves `/presets/catalog-v1.json` for explicit URL imports.
 
 Online official refresh validates the same format. An arbitrary imported catalog cannot label itself official or replace included IDs. Third-party URLs remain externally sourced even if their JSON says otherwise.
 

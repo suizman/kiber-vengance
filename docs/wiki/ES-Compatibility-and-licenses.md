@@ -4,7 +4,7 @@
 
 ## Qué necesita conexión o permiso
 
-La aplicación es estática y procesa música localmente: no requiere cuenta del estudio ni envía proyectos/prompts/audio a un servicio de inferencia. La primera carga, catálogos por URL y descargas explícitas de modelos sí contactan sus servidores. El acceso a este repositorio y a sus instaladores requiere una cuenta GitHub autorizada.
+La aplicación es estática y procesa música localmente: no requiere cuenta del estudio ni envía proyectos/prompts/audio a un servicio de inferencia. La primera carga, catálogos por URL y descargas explícitas de modelos sí contactan sus servidores. El repositorio, su manual y los instaladores publicados son públicos; consultarlos o descargarlos no requiere iniciar sesión en GitHub.
 
 La PWA puede instalarse y funcionar offline después de la primera carga. Los modelos opcionales tienen sus propias cachés; no se descargan como parte del arranque normal. Audio, proyectos y modelos se pueden perder por separado al limpiar almacenamiento.
 

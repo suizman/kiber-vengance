@@ -20,7 +20,7 @@ Melody and speech share an inference lock. Cancel terminates the worker and reta
 
 *Actual UI in an HTTP protocol test; fixture audio is not model output.*
 
-Download the [published companion](https://github.com/suizman/kiber-vengance/releases/latest), open it, install a runtime/model and pair **Singing · Desktop** using its six-digit code. Browser local-network permission may be needed. Installers require private-repository access.
+Download the [published companion](https://github.com/suizman/kiber-vengance/releases/latest), open it, install a runtime/model and pair **Singing · Desktop** using its six-digit code. Browser local-network permission may be needed. Installers are available from the public GitHub release without sign-in.
 
 | Engine | Inputs and output |
 | --- | --- |

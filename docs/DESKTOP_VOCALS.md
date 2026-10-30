@@ -4,7 +4,7 @@
 
 ## Install and use
 
-Download a package from the [latest companion release](https://github.com/suizman/kiber-vengance/releases/latest). The repository remains private, so GitHub sign-in and repository access are required for these downloads.
+Download a package from the [latest companion release](https://github.com/suizman/kiber-vengance/releases/latest). The user has made the repository public; published installers are available without GitHub sign-in.
 
 - Linux x86_64: AppImage, including Arch Linux and Ubuntu LTS. Mark executable; if FUSE is absent use `--appimage-extract-and-run`. The management page can install a desktop launcher and the `kibervengance://open` handler. The registered launcher uses extraction mode and a persistent application copy.
 - macOS Apple Silicon or Intel, macOS 13+: separate ARM64 / x86_64 DMGs, drag the application to Applications. It is ad-hoc signed, without Developer ID/notarization; macOS may require **Open Anyway**.

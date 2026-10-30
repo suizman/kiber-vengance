@@ -20,7 +20,7 @@ Melodía y voz comparten bloqueo de inferencia. Cancelar termina el worker y con
 
 *Interfaz real en una prueba de protocolo HTTP; el fixture no es audio de un modelo.*
 
-Descarga el [companion publicado](https://github.com/suizman/kiber-vengance/releases/latest), ábrelo, instala runtime/modelo y conecta **Singing · Desktop** con su código de seis cifras. El navegador puede pedir permiso de red local. Los instaladores requieren acceso al repositorio privado.
+Descarga el [companion publicado](https://github.com/suizman/kiber-vengance/releases/latest), ábrelo, instala runtime/modelo y conecta **Singing · Desktop** con su código de seis cifras. El navegador puede pedir permiso de red local. Los instaladores están disponibles en la release pública de GitHub, sin iniciar sesión.
 
 | Motor | Entrada y resultado |
 | --- | --- |

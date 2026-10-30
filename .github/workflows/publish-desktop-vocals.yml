@@ -67,7 +67,7 @@ jobs:
               'Intel: DiffSinger CPU with ONNX Runtime 1.23.2. ACE-Step is unavailable on Intel because its pinned PyTorch has no macOS x86_64 wheel.',
               'Models are separate opt-in downloads. macOS is ad-hoc signed, without Developer ID/notarization; Windows has no publisher certificate.',
               'All four native packages passed bundled-runtime checks. macOS DMGs were mounted and signatures verified; Windows installer was installed/tested/uninstalled. These checks do not establish model inference or listening quality on Intel.',
-              'Every package includes a SHA-256 sidecar. Downloads require access to this private repository.',
+              'Every package includes a SHA-256 sidecar. Downloads are available from the public repository without sign-in.',
               'Source: '+expected+' · Build: '+run.html_url
             ].join('\n\n')})).data;
             if (release.target_commitish !== expected) throw Error('Release source differs');

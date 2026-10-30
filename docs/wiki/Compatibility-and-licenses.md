@@ -4,7 +4,7 @@
 
 ## Connections and permissions
 
-The static app processes music locally: no studio account is required and projects/prompts/audio are not sent to an inference service. Initial app loading, URL catalogs and explicit model downloads do contact their servers. This repository and its installers require an authorized GitHub account.
+The static app processes music locally: no studio account is required and projects/prompts/audio are not sent to an inference service. Initial app loading, URL catalogs and explicit model downloads do contact their servers. This repository, its manual and published installers are public; reading/downloading them does not require GitHub sign-in.
 
 The PWA supports installation and offline use after initial loading. Optional models have separate caches and do not download during normal startup. Audio, projects and models can be removed independently when storage is cleared.
 

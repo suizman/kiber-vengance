@@ -20,7 +20,7 @@ Vault supports search, tags, favorites, user sounds and JSON bank import/export.
 
 Import JSON catalogs from disk or HTTPS URLs with CORS: up to **1 MB and 256 entries**. Imported catalogs last for the session; explicitly save sounds in Vault to keep them. AI recipes use a separate library.
 
-**Vital, Surge XT and Serum** patches require those synthesizers. External discovery links do not convert patches or grant redistribution rights. Included presets work without access to the private repository.
+**Vital, Surge XT and Serum** patches require those synthesizers. External discovery links do not convert patches or grant redistribution rights. Included presets work independently of online catalog access.
 
 ## Drum samples and sampler
 
