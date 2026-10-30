@@ -59,6 +59,7 @@ jobs:
             catch (error) { if (error.status !== 404) throw error; }
             if (!release) release = (await github.rest.repos.createRelease({...repo,tag_name:tag,target_commitish:expected,name:'КИБЕР VENGANCE Companion '+version,draft:true,body:[
               'Native vocal companion for macOS Apple Silicon and Intel, Windows x64 and Linux x86_64 (Arch/Ubuntu AppImage).',
+              'DiffSinger CoreML fix: dynamic-length vocoding runs on CPU while the acoustic stage retains its selected provider. Restart the previous companion process after installing the update; models and generated audio are preserved.',
               'Intel: DiffSinger CPU with ONNX Runtime 1.23.2. ACE-Step is unavailable on Intel because its pinned PyTorch has no macOS x86_64 wheel.',
               'Models are separate opt-in downloads. macOS is ad-hoc signed, without Developer ID/notarization; Windows has no publisher certificate.',
               'All four native packages passed bundled-runtime checks. macOS DMGs were mounted and signatures verified; Windows installer was installed/tested/uninstalled. These checks do not establish model inference or listening quality on Intel.',
