@@ -106,3 +106,8 @@ On 2026-10-30, the user requested the corresponding Site update. Version 36 depl
 ## Studio 6.0.1 and companion 1.0.3
 
 The [joint release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.3) contains the illustrated documentation/manual and desktop-only generation policy. Native [build 41089820844](https://github.com/suizman/kiber-vengance/actions/runs/41089820844) and [publication 41090189401](https://github.com/suizman/kiber-vengance/actions/runs/41090189401) succeeded for all four packages and checksum sidecars. The full studio gate passed with 59 unit tests and 52 browser workflows, plus 17 native tests. These admission/documentation changes do not constitute new model inference or physical-device certification. The complete user guide is [Speech and singing](wiki/Speech-and-singing.md); installer links are maintained in the versioned manifest.
+
+
+## Final public documentation release — 1.0.5
+
+[Studio 6.0.1 · Companion 1.0.5](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.5) packages the English/public README and final publication correction. The manual is published in [English](https://github.com/suizman/kiber-vengance/wiki) and [Spanish](https://github.com/suizman/kiber-vengance/wiki/ES-Home), English by default, sharing actual English UI captures. The repository is public by user choice and installers do not require sign-in. Native build 41093653185 and publication 41093891755 succeeded; the existing tag was verified independently of GitHub target_commitish metadata. The 1.0.4 build was retained, but its release was not published after an API permission failure. No model/hardware claims were added by the documentation update. See the [redacted data audit](SECURITY_AUDIT.md).
