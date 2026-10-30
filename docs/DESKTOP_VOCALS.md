@@ -111,3 +111,6 @@ The [joint release](https://github.com/suizman/kiber-vengance/releases/tag/deskt
 ## Final public documentation release — 1.0.5
 
 [Studio 6.0.1 · Companion 1.0.5](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.5) packages the English/public README and final publication correction. The manual is published in [English](https://github.com/suizman/kiber-vengance/wiki) and [Spanish](https://github.com/suizman/kiber-vengance/wiki/ES-Home), English by default, sharing actual English UI captures. The repository is public by user choice and installers do not require sign-in. Native build 41093653185 and publication 41093891755 succeeded; the existing tag was verified independently of GitHub target_commitish metadata. The 1.0.4 build was retained, but its release was not published after an API permission failure. No model/hardware claims were added by the documentation update. See the [redacted data audit](SECURITY_AUDIT.md).
+
+
+Site version **37** subsequently deployed successfully on 2026-10-30 at https://studio.suizman.org with the verified 1.0.5 installer manifest and runtime footer `f53c94f`. Native Site/domain reads confirmed public access and active SSL. This completes the joint release; installing and restarting the companion remains necessary to update its local executable.
