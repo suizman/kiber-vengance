@@ -6,6 +6,14 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-30.
 
+## Published Site update — version 36 (2026-10-30)
+
+- User explicitly requested updating the existing ChatGPT Site to the latest source after companion 1.0.2 publication. Preserved the same Site project identity, public audience and https://studio.suizman.org custom domain.
+- Synchronized all 204 tracked files from GitHub source `2c04d0ede2807f4b20133867bea68066f2a41140` byte-for-byte into the isolated Site checkout. Preserved Site-only assets, untracked dependencies and byte-identical `.openai/hosting.json`; did not merge the separate source histories. Existing verified tracked distribution retained footer runtime source `33a0ce1` and verified 1.0.2 installer URLs/hashes, including separate macOS Intel and Apple Silicon downloads.
+- Official Site source helper pushed source `fc6257a8022fd91f816e79c84202788de7c58cee` and packaged the unchanged verified distribution. Saved Site version **36**, version ID `appgprj_6adbe6a2b5648191a5ae75b3ff523e5e~appgver_a1415e542a7c8191b375402e04a8df77`. Deployment `appgdep_6ae4c10ef30881919ff8a21b3c54bbb9` returned native terminal **succeeded**. Returned generated URL: `https://kiber-vengance.baltar88.chatgpt.site`.
+- Post-deployment native Site/domain reads confirmed version 36, public audience, active Site and https://studio.suizman.org with active SSL. No DNS/access/domain settings changed. The prior full typecheck/build/lint, 59 unit / 51 browser workflows, 17 native tests, real CoreML inference regression and final two companion browser checks remain the validation evidence; no runtime inputs changed during source synchronization or packaging.
+- This documentation-only follow-up records the successful deployment; it does not alter the verified runtime or require another Site version. Users still need companion 1.0.2 installed/restarted to receive its native CoreML correction; updating the Site only updates the studio and installer links.
+
 ## Published CoreML DiffSinger vocoder correction — 1.0.2 (2026-10-30)
 
 - User reported an actual CoreML vocoder failure: “Failure dynamically resizing for sequence length.” Reproduced exactly with existing Kaiz files on macOS 13.6.4 Intel / ONNX Runtime 1.23.2. User model/data files were not modified; inference outputs stayed in /private/tmp.
