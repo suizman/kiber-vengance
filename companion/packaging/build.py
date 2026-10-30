@@ -18,7 +18,7 @@ import zipfile
 
 COMPANION = Path(__file__).resolve().parents[1]
 REPOSITORY = COMPANION.parent
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 
 
 def sha(path):

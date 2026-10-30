@@ -4,7 +4,7 @@ Optional native CPU/GPU singing for the browser studio. Model weights are downlo
 
 ## Install and connect
 
-- **Linux x86_64 (Arch / Ubuntu LTS):** download the AppImage, mark it executable in your file manager and open it. If FUSE is unavailable, run `./KiberVengance-Companion-1.0.1-x86_64.AppImage --appimage-extract-and-run`. System Python is not required. The graphics driver remains a host dependency.
+- **Linux x86_64 (Arch / Ubuntu LTS):** download the AppImage, mark it executable in your file manager and open it. If FUSE is unavailable, run `./KiberVengance-Companion-1.0.2-x86_64.AppImage --appimage-extract-and-run`. System Python is not required. The graphics driver remains a host dependency.
 - **macOS 13+ · Apple Silicon or Intel:** choose `arm64.dmg` for Apple Silicon or `x86_64.dmg` for Intel, open the DMG, copy the application to Applications and open it. Packages without an owner Developer ID certificate/notarization are unsigned for distribution; macOS may require its Open Anyway action. Ad-hoc signing is not notarization.
 - **Windows x64:** run the per-user installer. It installs the application and URL handler without removing model/user data. Unsigned installers may show a publisher warning.
 

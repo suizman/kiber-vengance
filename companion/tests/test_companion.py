@@ -22,7 +22,7 @@ from kv_companion.jobs import Job, Jobs, Cancelled
 from kv_companion.hardware import hardware
 from kv_companion.store import atomic_json, child_path
 from kv_companion.downloads import download, extract_zip
-from kv_companion.engines.diffsinger import validate, spanish_phones, providers, resolve_phone
+from kv_companion.engines.diffsinger import validate, spanish_phones, providers, resolve_phone, vocoder_providers
 from kv_companion.engines.acestep import validate as validate_ace
 from kv_companion.install import environment, child_environment, install_runtime
 
@@ -159,6 +159,16 @@ class ModelContractTests(unittest.TestCase):
         self.assertEqual(providers("cpu", ["CoreMLExecutionProvider", "CPUExecutionProvider"]), ["CPUExecutionProvider"])
         with self.assertRaises(RuntimeError): providers("gpu", ["CPUExecutionProvider"])
         self.assertEqual(providers("auto", ["CPUExecutionProvider"]), ["CPUExecutionProvider"])
+
+    def test_dynamic_vocoder_avoids_coreml_without_disabling_acoustic_acceleration(self):
+        selected = providers("auto", ["CoreMLExecutionProvider", "CPUExecutionProvider"])
+        self.assertEqual(selected[0], "CoreMLExecutionProvider")
+        self.assertEqual(vocoder_providers(selected), ["CPUExecutionProvider"])
+        self.assertEqual(selected, ["CoreMLExecutionProvider", "CPUExecutionProvider"])
+        self.assertEqual(vocoder_providers(["CPUExecutionProvider"]), ["CPUExecutionProvider"])
+        cuda = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        self.assertEqual(vocoder_providers(cuda), cuda)
+        self.assertEqual(vocoder_providers(cuda, True), ["CPUExecutionProvider"])
 
     def test_second_ace_generation_accepts_pinned_source_code_sync_but_not_missing_weights(self):
         from kv_companion.engines.acestep import local_models_ready

@@ -165,6 +165,14 @@ def providers(device: str, available: list[str]):
     return ([accelerators[0]] if device != "cpu" and accelerators else []) + ["CPUExecutionProvider"]
 
 
+def vocoder_providers(selected: list[str], force_on_cpu: bool = False):
+    # CoreML's sequence resizing fails on dynamic-length HiFi-GAN vocoders.
+    # Keep the acoustic provider independent and report both actual devices.
+    if force_on_cpu or "CoreMLExecutionProvider" in selected:
+        return ["CPUExecutionProvider"]
+    return selected
+
+
 def render(request: dict, root: Path, output: Path):
     import numpy as np
     import onnxruntime as ort
@@ -248,7 +256,9 @@ def render(request: dict, root: Path, output: Path):
     del acoustic
     if config.get("mel_base", "10") != vocoder_config.get("mel_base", "10"):
         mel *= math.log(10) if vocoder_config.get("mel_base") == "e" else 1 / math.log(10)
-    vocoder = ort.InferenceSession(str(child_path(vocoder_dir, vocoder_config.get("model", "model.onnx"))), sess_options=options, providers=["CPUExecutionProvider"] if vocoder_config.get("force_on_cpu") else selected)
+    vocoder_selected = vocoder_providers(selected, vocoder_config.get("force_on_cpu", False))
+    print("Loading vocoder · " + vocoder_selected[0], flush=True)
+    vocoder = ort.InferenceSession(str(child_path(vocoder_dir, vocoder_config.get("model", "model.onnx"))), sess_options=options, providers=vocoder_selected)
     actual_vocoder = vocoder.get_providers()[0]
     samples = vocoder.run(None, {"mel": mel, "f0": f0[None, :]})[0].reshape(-1)
     samples = samples[head * hop:]
