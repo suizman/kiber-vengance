@@ -4,7 +4,18 @@ This file is the operational memory for КИБЕР VENGANCE. It must be read alo
 
 Keep this versioned memory focused on shared project decisions, verified behavior and known limitations. Personal details, credentials and machine-specific identity settings belong in local configuration, not in this document.
 
-Last updated: 2026-10-28.
+Last updated: 2026-10-30.
+
+## Native desktop singing (2026-10-30)
+
+- User explicitly approved a complete native desktop singing implementation: Apple Silicon Mac, Windows x64 and Linux AppImage, including Arch. It extends the static studio through an optional loopback companion; it does not change repository visibility, Site audience/domain, existing speech behavior or unrelated DNS.
+- `docs/DESKTOP_VOCALS_PLAN.md` records the approved plan; `docs/DESKTOP_VOCALS.md` records installation, licenses, exact inputs/evidence and limits. `companion/` owns isolated runtimes, pinned explicit model downloads, native packaging, single-use pairing, origin-bound tokens, one heavy job, cancellation, persistent history, repair and model removal. Python is bundled; engine/model data survives application updates.
+- DiffSinger sings captured monophonic score/lyrics with phonemes, melisma, rests, vibrato/portamento and bank-supported expressions. ACE-Step creates a lyrics/style-driven musical proposal; accompaniment and score divergence are explicit. Studio prelisten/original/processed WAV, effects, new audio-region insertion and additive singing provenance use existing v6/history/IndexedDB/package paths. Mobile opens a compatibility message before localhost/model requests.
+- Actual CPU inference passed for both engines. Real browser-to-native generation, audition, insertion and reload passed for both. DiffSinger melisma/rest regression measured pitch errors within 8 cents at four voiced centers; rest RMS zero. These do not establish broad intelligibility, human musical preference or physical hardware output.
+- Optional creator-downloaded Kaiz voicebank includes a CC-BY-NC 4.0 vocoder and is not cleared for commercial music. Terms are visible before opt-in; user-supplied compatible banks/vocoders can be imported. No weights are bundled or uploaded to the studio/repository.
+- Native CI builds Linux AppImage, macOS ARM64 DMG and Windows x64 installer, with actual runtime smokes; DMG mount/signature verification and Windows silent install/uninstall are included. macOS is ad-hoc signed without Developer ID/notarization; Windows has no publisher certificate. Physical M3/7900 XTX GPU speed/memory and desktop driver integration remain unverified. Arch container launch succeeded without network/system Python/FUSE.
+- Release functional gate passed: typecheck/build/lint, 59 unit tests and 51 Chromium/Firefox workflows, no skips. All 14 companion tests passed. AppImage CPU runtime installation survived closing/reopening under a new temporary mount.
+- Browser protocol fixtures stay distinct from real-model evidence. Full release validation/publication results are appended after their terminal results. Native model downloads use the pinned manifest; ACE inference must not silently download its optional LM. Upstream may synchronize Python model adapters from pinned source after initial installation; repeated generation must continue working.
 
 ## Published reliability, AI and voice release (2026-10-28, Sites 32)
 

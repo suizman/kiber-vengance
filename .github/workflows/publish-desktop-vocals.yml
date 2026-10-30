@@ -1,0 +1,76 @@
+name: Publish verified desktop vocal packages
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Desktop vocal companion workflow run
+        required: true
+        default: '41038652221'
+      engine_source:
+        description: Exact source commit of that build
+        required: true
+        default: '54902dae599c0639ce155e0a941e07c1b9ae4805'
+      release_id:
+        description: Existing draft release ID; uploading does not publish it
+        required: true
+        default: '428879555'
+permissions:
+  actions: read
+  contents: write
+jobs:
+  attach:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Verify build and attach checksum-verified packages to the draft
+        uses: actions/github-script@v7
+        env:
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          ENGINE_SOURCE: ${{ inputs.engine_source }}
+          RELEASE_ID: ${{ inputs.release_id }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const crypto = require('node:crypto');
+            const {execFileSync} = require('node:child_process');
+            const repo = context.repo;
+            const run_id = Number(process.env.BUILD_RUN_ID);
+            const release_id = Number(process.env.RELEASE_ID);
+            const expected = process.env.ENGINE_SOURCE;
+            if (!Number.isSafeInteger(run_id) || !Number.isSafeInteger(release_id) || !/^[a-f0-9]{40}$/.test(expected)) throw Error('Invalid release inputs');
+            const {data:run} = await github.rest.actions.getWorkflowRun({...repo,run_id});
+            if (run.name !== 'Desktop vocal companion' || run.conclusion !== 'success' || run.head_sha !== expected) throw Error('Build has not passed for the requested source');
+            const {data:release} = await github.rest.repos.getRelease({...repo,release_id});
+            if (!release.draft || release.tag_name !== 'desktop-vocals-v1.0.0' || release.target_commitish !== expected) throw Error('Expected the reviewed 1.0.0 draft for this engine source');
+            const {data:listing} = await github.rest.actions.listWorkflowRunArtifacts({...repo,run_id});
+            const names = ['companion-linux-x64','companion-macos-arm64','companion-windows-x64'];
+            const uploaded = await github.paginate(github.rest.repos.listReleaseAssets,{...repo,release_id});
+            for (const name of names) {
+              const artifact = listing.artifacts.find(a=>a.name===name&&!a.expired);
+              if (!artifact) throw Error('Missing package: '+name);
+              const {data} = await github.rest.actions.downloadArtifact({...repo,artifact_id:artifact.id,archive_format:'zip'});
+              const folder = path.join(process.env.RUNNER_TEMP,name);
+              fs.mkdirSync(folder,{recursive:true});
+              const zip = folder+'.zip';fs.writeFileSync(zip,Buffer.from(data));
+              execFileSync('unzip',['-q',zip,'-d',folder]);
+              const files = fs.readdirSync(folder);
+              const checksum = files.find(f=>f.endsWith('.sha256'));
+              if (files.length!==2 || !checksum) throw Error('Unexpected package contents');
+              const binary = checksum.slice(0,-7);
+              const bytes = fs.readFileSync(path.join(folder,binary));
+              const sha = crypto.createHash('sha256').update(bytes).digest('hex');
+              if (fs.readFileSync(path.join(folder,checksum),'utf8').trim()!==sha+'  '+binary) throw Error('Package checksum mismatch');
+              for (const filename of [binary,checksum]) {
+                const content = fs.readFileSync(path.join(folder,filename));
+                const existing = uploaded.find(a=>a.name===filename);
+                if (existing) {
+                  const {data:old} = await github.rest.repos.getReleaseAsset({...repo,asset_id:existing.id,headers:{accept:'application/octet-stream'}});
+                  if (crypto.createHash('sha256').update(Buffer.from(old)).digest('hex')!==crypto.createHash('sha256').update(content).digest('hex')) throw Error('Existing asset differs; refusing to replace it');
+                  continue;
+                }
+                await github.rest.repos.uploadReleaseAsset({...repo,release_id,name:filename,data:content,headers:{'content-type':'application/octet-stream','content-length':content.length}});
+                core.info('Attached '+filename+' (SHA-256 verified)');
+              }
+            }
+            core.info('All three packages attached. Release remains a draft for explicit publication.');

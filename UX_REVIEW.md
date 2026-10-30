@@ -63,3 +63,8 @@ Publication confirmed: Sites version 32 returned native `succeeded` on 2026-10-2
 ## Volume, audio FX and voice — 2026-10-28
 
 Shared logarithmic controls distinguish silence, unity, fader dB and signal dBFS, with numeric/reset/fine controls and one history snapshot per gesture. The compact header Master, Mix output controls and Live deck levels share persisted state. Instrumental and audio tracks coexist in Mix. Audio Studio exposes Clip/Track treatment, individual on/off and Original/Processed comparison; generated voice copies treatment on insertion while retaining its source WAV. Speech pacing is separate from emotional interpretation. Optional heavy models require explicit downloads, visible progress and cancellation; unsupported free-form instructions are not exposed. Physical-device and listening acceptance remain separate from the automated release checks.
+
+
+## Native desktop singing — 2026-10-30
+
+The approved desktop approach supersedes earlier “no singing control / research pending” statements above. An optional local companion now exposes DiffSinger score singing and ACE-Step musical proposals through the existing studio audio workflow, with native Mac/Windows/Linux packages, AppImage for Arch/Ubuntu, explicit model downloads/licenses, CPU/GPU profiles, pairing, cancellation, recovery and non-destructive effects/insertion. The browser remains static, mobile avoids loading these engines, and v6 assets/history/packages stay compatible. See [implementation, actual evidence and remaining physical-device/listening limits](docs/DESKTOP_VOCALS.md). Existing browser-only DiffSinger feasibility and perceptual preference are not inferred from the native implementation.

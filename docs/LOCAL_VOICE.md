@@ -26,13 +26,11 @@ The user auditioned the Spanish q8/Dora sample and confirmed that it is intellig
 
 Successful waveform generation does not certify intelligibility or superior quality. q8 is the smaller preview default; it has not won a blind listening comparison. Both precisions remain selectable for that comparison. No perceptual winner, majority listening preference or native Safari/Orion/physical-speaker result is claimed.
 
-## Singing: research pending, no product control
+## Desktop singing (2026-10-30)
 
-The [official DiffSinger deployment guide](https://github.com/openvpi/DiffSinger/blob/main/docs/GettingStarted.md#deployment) exports variance/acoustic models and an NSF-HiFiGAN vocoder to ONNX. It does not provide proof that a complete voicebank, phoneme pipeline and vocoder run in ONNX Runtime Web with acceptable memory and alignment. The [official community vocoder page](https://openvpi.github.io/vocoders/) also carries separate distribution terms. An acoustic model license cannot be assumed to license every voicebank and vocoder.
+The user approved a native desktop approach in place of heavy browser singing. **Singing · Desktop** connects to the optional loopback companion: DiffSinger renders captured monophonic notes/lyrics; ACE-Step creates a musical interpretation from lyrics and style. Linux AppImage (Arch/Ubuntu), Apple Silicon DMG and Windows x64 installer include Python but download models separately. Mobile retains speech and audio editing without loading these engines.
 
-No suitable ES/EN bank plus vocoder has been verified in this browser workflow. No real DiffSinger inference, sung samples, melisma/alignment score or browser-memory measurement was produced in this delivery. Consequently singing is not exposed in the UI and must not be described as implemented or as a completed feasibility experiment. No local plugin, server or external inference service was substituted.
-
-The next experiment needs an explicitly permitted bank/vocoder with exact model revisions and input/output signatures. Test one short monophonic phrase with syllable-to-note mapping, a held syllable over multiple notes, silence and tempo changes; measure real browser load/peak memory, duration error and pitch error, and audition ES/EN intelligibility. Retain WAV/phoneme/score evidence. Publish only after that gate passes. The existing speech result (PCM/sample rate/generation metadata → persisted WAV region) supplies the intended insertion contract, but does not establish singing feasibility.
+Real CPU inference with both engines and their exact pinned inputs is documented in [Desktop vocals](DESKTOP_VOCALS.md), together with installation, bank/vocoder restrictions, device limitations and browser integration evidence. Native acceleration still requires real M3/7900 XTX acceptance; the prior browser-only DiffSinger feasibility experiment is not claimed as completed by this architectural change.
 
 ## Sources and third-party code
 

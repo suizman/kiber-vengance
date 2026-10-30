@@ -200,3 +200,8 @@ Implement shared dB level controls across instruments, audio lanes, sampler, gro
 ### Mobile voice compatibility (2026-10-28)
 
 Reported mobile Chatterbox page restarts are addressed by blocking this heavy experimental engine on phones/tablets and reported <=4 GB devices before downloads, with a text-preserving Kokoro q8 alternative. Large model caching avoids unread cloned responses. Chatterbox mobile inference remains unsupported; actual device/peak-memory validation is still open.
+
+
+## Native desktop singing — 2026-10-30
+
+The approved desktop approach supersedes earlier “no singing control / research pending” statements above. An optional local companion now exposes DiffSinger score singing and ACE-Step musical proposals through the existing studio audio workflow, with native Mac/Windows/Linux packages, AppImage for Arch/Ubuntu, explicit model downloads/licenses, CPU/GPU profiles, pairing, cancellation, recovery and non-destructive effects/insertion. The browser remains static, mobile avoids loading these engines, and v6 assets/history/packages stay compatible. See [implementation, actual evidence and remaining physical-device/listening limits](docs/DESKTOP_VOCALS.md). Existing browser-only DiffSinger feasibility and perceptual preference are not inferred from the native implementation.
