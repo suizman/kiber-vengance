@@ -1,4 +1,4 @@
-#define AppVersion "1.0.4"
+#define AppVersion "1.0.5"
 [Setup]
 AppId=KiberVenganceCompanion
 AppName=КИБЕР VENGANCE Companion

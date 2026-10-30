@@ -17,7 +17,7 @@ Last updated: 2026-10-30.
 ## User-enabled public repository and wiki access (2026-10-30)
 
 - User explicitly reported making the repository public to enable the wiki. A native GitHub repository read confirmed private=false and has_wiki=true. Preserve this newly user-selected public visibility; older private-release notes below describe historical state, not current access.
-- The wiki SSH remote still returned Repository not found: GitHub has not yet initialized its backing Git repository. User was asked to create an initial Home page; all 26 EN/ES pages are ready for automatic publication afterward. No missing wiki publication is claimed as complete.
+- The wiki initially had no backing Git repository; the user subsequently created Home and authorized automatic population. All 26 EN/ES pages are ready. Publication results follow after Git push verification.
 - Anonymous HTTP checks confirmed installer download status 200 and a valid 15-entry catalog at the canonical raw GitHub URL. Historical anonymous catalog-404 limitations are superseded by the public repository. Current installer manifest no longer requires repository access, and maintained user guides no longer claim sign-in is necessary. English READMEs and shared English UI images remain the default; Spanish manual counterparts retain paired language navigation.
 
 ## Documentation and desktop-only voice update (2026-10-30)
@@ -552,3 +552,10 @@ The historical reliability gate passed with 59 unit tests and 49 browser workflo
 Publication completed: GitHub source `48a9c54` and distribution `7a52900` pushed with requested suizman authorship. Isolated Sites source `69407a8f14daa49d9098dc644f94d4a18cfd8576` saved as **version 34** and deployed with native terminal **succeeded** on 2026-10-28T08:51:39Z. Deployment `appgdep_6ae1b78b8e8c8191ae5949dbf9d888b1`; existing public audience and `https://studio.suizman.org` configuration preserved. Only 17 release paths were copied additively, no Site files deleted, hosting manifest unchanged, current GitHub tracked tree verified byte-for-byte. Footer source `48a9c54`. No DNS operation. This follow-up records publication only and does not require rebuilding the identical runtime.
 
 Companion 1.0.1 distribution closure: tracked studio distribution rebuilt with footer source `e778deb`, verified 1.0.1 installer URLs/hashes and the Intel download option. The GitHub native release and repository visibility were re-read after publication. No Site deployment or physical Intel singing/listening claim is made.
+
+
+## Final public-release automation correction (2026-10-30)
+
+- The 1.0.4 native four-platform build passed, but publication run `41091792374` failed with GitHub HTTP 403 Resource not accessible by integration at createRelease. Supplying target_commitish for an already existing tag unnecessarily invokes workflow-write checks when workflow files differ from the advanced default branch. No 1.0.4 release was published; its tag/build are retained unchanged.
+- The publisher now uses the pre-verified existing tag without target_commitish, as documented by GitHub, and rechecks the tag's exact SHA after draft creation and immediately before publication. It retains source/build/version checks and all SHA-256 guards; no broader token permissions are requested. Nine new offline contract tests exercise annotated/lightweight tags, default-branch metadata, tag movement, bad checksums and rejected builds. They do not establish real API permissions; successful publication must still be observed.
+- Companion 1.0.5 packages the final English/public README and release-automation correction; Studio remains 6.0.1. This follows the user's public-repository change and bilingual/English-default documentation clarification. Final native/publication/Site results follow.
