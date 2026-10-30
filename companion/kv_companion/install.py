@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -75,6 +76,11 @@ def stable_python(root: Path, job):
 
 
 def install_runtime(root: Path, engine: str, profile: str, job, repair=False):
+    intel_mac = sys.platform == "darwin" and platform.machine().lower() == "x86_64"
+    if intel_mac and engine == "acestep":
+        raise ValueError("ACE-Step requires a newer PyTorch than macOS Intel supports. Use DiffSinger CPU on this Mac.")
+    if intel_mac and profile != "cpu":
+        raise ValueError("macOS Intel supports the CPU runtime profile only")
     if engine == "diffsinger" and profile not in {"cpu", "apple", "directml", "cuda", "rocm"}:
         raise ValueError("Unsupported DiffSinger profile")
     if profile == "apple" and sys.platform != "darwin":
@@ -97,7 +103,7 @@ def install_runtime(root: Path, engine: str, profile: str, job, repair=False):
     python = str(executable(destination))
     pip = [uv, "pip", "install", "--python", python] + (["--reinstall", "--no-cache"] if repair else [])
     if engine == "diffsinger":
-        ort = "onnxruntime-directml==1.24.4" if profile == "directml" else "onnxruntime-gpu==1.24.4" if profile == "cuda" else "onnxruntime-migraphx==1.27.1" if profile == "rocm" else "onnxruntime==1.24.4"
+        ort = "onnxruntime-directml==1.24.4" if profile == "directml" else "onnxruntime-gpu==1.24.4" if profile == "cuda" else "onnxruntime-migraphx==1.27.1" if profile == "rocm" else "onnxruntime==1.23.2" if intel_mac else "onnxruntime==1.24.4"
         job.run_process(pip + ["numpy==2.3.5", "PyYAML==6.0.3", "cmudict==1.1.3", ort], env=env)
     else:
         install_ace_source(root, job)

@@ -6,6 +6,20 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-10-30.
 
+## Companion 1.0.1 release preparation (2026-10-30)
+
+- User explicitly authorized committing/pushing the Intel work, executing CI and publishing a new GitHub release. Preserve repository visibility and existing Site settings. Site deployment is outside this request.
+- Companion version advances to 1.0.1 across runtime, packaging and Windows installer. The publication workflow now accepts arbitrary matching version tags and automatically follows successful version-tag builds. It checks exact source/tag/version and four SHA-256 sidecars, refuses replacement of differing assets, and publishes only after all attachments succeed. Branch pushes remain build-only.
+- Publication and validation outcomes are recorded below after their terminal results.
+
+## macOS Intel companion extension (2026-10-30)
+
+- User requested native Intel packaging in addition to Apple Silicon. Added `macos-x64`, pinned x86_64 CPython 3.12.16/uv 0.13.6 artifacts, architecture detection, explicit launcher architecture and a separate `x86_64.dmg`/SHA-256 sidecar. Existing ARM64 output is retained.
+- CI adds `macos-15-intel` with the same runtime/mounted-DMG/signature smokes. Draft attachment now requires four packages. Existing published assets/download manifest remain unchanged until an Intel release is actually available.
+- Intel supports DiffSinger CPU through ONNX Runtime 1.23.2 (1.24.4 has ARM64-only macOS wheels). ACE-Step's pinned PyTorch 2.9.1 has no Intel Mac wheel; unsupported engine/accelerator requests fail before downloads. Mac Radeon detection no longer recommends the unsupported ROCm profile. No inference/listening certification follows from a packaging smoke.
+- Local macOS 13.6.4 x86_64: actual DMG build, bundled CPython 3.12.16 loopback self-test, mounted-image runtime self-test and ad-hoc signature verification passed. Native launcher is Mach-O x86_64. Real installation/probe of the packaged DiffSinger CPU dependencies passed in disposable user data (ONNX Runtime 1.23.2); no model weights or singing inference were exercised. The local artifact includes uncommitted changes; build metadata sourceCommit still names the last committed companion source and is not a new release revision.
+- All 16 native tests passed. `npm run check:full` could not start: host Node 21.6.2 fails in dyld because `libicui18n.73.dylib` is missing. No web runtime changed. Intel package is a local artifact only; no GitHub/Sites publication was performed.
+
 ## Native desktop singing (2026-10-30)
 
 - **Published:** Sites version **35**, deployment succeeded at the existing live domain `https://studio.suizman.org`. Native deployment ID `appgdep_6ae46f42d90481918f12eec765f2803f`; saved version `appgprj_6adbe6a2b5648191a5ae75b3ff523e5e~appgver_eaa84f66d2b481919be702e551e14058`. Post-publication Site/domain reads confirmed public audience, active custom domain/SSL and the same project identity. No DNS or access settings were changed.

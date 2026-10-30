@@ -18,7 +18,7 @@ import zipfile
 
 COMPANION = Path(__file__).resolve().parents[1]
 REPOSITORY = COMPANION.parent
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 
 def sha(path):
@@ -57,10 +57,10 @@ def unpack(archive, destination):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--platform", choices=["linux-x64", "macos-arm64", "windows-x64"])
+    parser.add_argument("--platform", choices=["linux-x64", "macos-arm64", "macos-x64", "windows-x64"])
     parser.add_argument("--stage-only", action="store_true")
     args = parser.parse_args()
-    selected = args.platform or {"linux": "linux-x64", "darwin": "macos-arm64", "win32": "windows-x64"}[sys.platform]
+    selected = args.platform or {"linux": "linux-x64", "darwin": "macos-arm64" if platform.machine().lower() in {"arm64", "aarch64"} else "macos-x64", "win32": "windows-x64"}[sys.platform]
     lock = json.loads((COMPANION / "packaging/artifacts.json").read_text())
     cache = COMPANION / "build/downloads"
     stage = COMPANION / "build" / selected
@@ -128,9 +128,10 @@ def main():
         subprocess.run([str(tool), "--runtime-file", str(runtime), str(appdir), str(output)], env=env, check=True)
         subprocess.run([str(output), "--appimage-extract-and-run", "--self-test"], env=env, check=True)
         artifacts.append(output)
-    elif selected == "macos-arm64":
-        if sys.platform != "darwin" or platform.machine() != "arm64":
-            raise RuntimeError("Build the Mac package on an Apple Silicon macOS runner")
+    elif selected in {"macos-arm64", "macos-x64"}:
+        architecture = "arm64" if selected == "macos-arm64" else "x86_64"
+        if sys.platform != "darwin" or platform.machine() != architecture:
+            raise RuntimeError(f"Build {selected} on a native {architecture} macOS runner")
         app = COMPANION / "build/Kiber Vengance Companion.app"
         if app.exists():
             shutil.rmtree(app)
@@ -139,12 +140,12 @@ def main():
         shutil.move(stage, resources)
         binary = app / "Contents/MacOS/KiberVengance"
         binary.parent.mkdir()
-        subprocess.run(["clang", "-fobjc-arc", "-framework", "AppKit", str(COMPANION / "packaging/launcher.m"), "-o", str(binary)], check=True)
+        subprocess.run(["clang", "-arch", architecture, "-mmacosx-version-min=13.0", "-fobjc-arc", "-framework", "AppKit", str(COMPANION / "packaging/launcher.m"), "-o", str(binary)], check=True)
         with (app / "Contents/Info.plist").open("wb") as stream:
             plistlib.dump({"CFBundleExecutable": "KiberVengance", "CFBundleIdentifier": "org.suizman.kiber-vengance.companion", "CFBundleName": "КИБЕР VENGANCE Companion", "CFBundleVersion": VERSION, "CFBundleShortVersionString": VERSION, "CFBundlePackageType": "APPL", "LSMinimumSystemVersion": "13.0", "LSUIElement": True, "CFBundleURLTypes": [{"CFBundleURLName": "KiberVengance", "CFBundleURLSchemes": ["kibervengance"]}]}, stream)
         subprocess.run([str(resources / "python/bin/python3"), "-m", "kv_companion", "--self-test"], env={**os.environ, "PYTHONPATH": str(resources / "lib")}, check=True)
         subprocess.run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
-        output = out / f"KiberVengance-Companion-{VERSION}-arm64.dmg"
+        output = out / f"KiberVengance-Companion-{VERSION}-{architecture}.dmg"
         payload = COMPANION / "build/dmg-payload"
         if payload.exists():
             shutil.rmtree(payload)

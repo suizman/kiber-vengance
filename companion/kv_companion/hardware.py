@@ -41,7 +41,7 @@ def hardware(root):
     profiles = ["cpu"]
     if apple:
         profiles.append("apple")
-    if amd:
+    if amd and sys.platform != "darwin":
         profiles.append("rocm")
     if nvidia and sys.platform != "darwin":
         profiles.append("cuda")
@@ -53,6 +53,6 @@ def hardware(root):
         "memoryGB": round(ram / 1024**3, 1), "freeDiskGB": round(shutil.disk_usage(root).free / 1024**3, 1),
         "gpuDetected": "Apple Silicon" if apple else "AMD Radeon" if amd else "NVIDIA" if nvidia else "Not detected",
         "profiles": profiles,
-        "recommended": "apple" if apple else "rocm" if amd else "cuda" if nvidia else "cpu",
+        "recommended": "apple" if apple else "rocm" if amd and sys.platform != "darwin" else "cuda" if nvidia and sys.platform != "darwin" else "cpu",
         "note": "GPU availability is verified in the installed runtime before generation; detection alone is not a benchmark.",
     }

@@ -1,6 +1,6 @@
 # Desktop vocal production — implementation plan
 
-Approved scope: native local singing on macOS Apple Silicon, Windows x64 and Linux x64; AppImage for Linux, including Arch Linux. The studio remains a static web application. The companion is optional and never uploads lyrics/audio to an inference service.
+Approved scope: native local singing on macOS Apple Silicon and Intel, Windows x64 and Linux x64; AppImage for Linux, including Arch Linux. The studio remains a static web application. The companion is optional and never uploads lyrics/audio to an inference service.
 
 ## Architecture and acceptance
 
@@ -22,3 +22,5 @@ Approved scope: native local singing on macOS Apple Silicon, Windows x64 and Lin
 ## Delivery record
 
 Implementation and actual validation results are recorded in `DESKTOP_VOCALS.md` and `PROJECT_MEMORY.md`. A feature is not marked verified solely because an installer or a worker-protocol fixture succeeds.
+
+Intel extension: build a separate native x86_64 DMG on `macos-15-intel`, including bundled-runtime/mounted-DMG/signature checks and checksum sidecars. DiffSinger uses the compatible CPU ONNX runtime; ACE-Step remains unavailable on Intel because its pinned framework has no compatible wheel.

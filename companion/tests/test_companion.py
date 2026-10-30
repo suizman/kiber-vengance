@@ -19,11 +19,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from kv_companion.security import Pairing, loopback_url
 from kv_companion.server import CompanionServer
 from kv_companion.jobs import Job, Jobs, Cancelled
+from kv_companion.hardware import hardware
 from kv_companion.store import atomic_json, child_path
 from kv_companion.downloads import download, extract_zip
 from kv_companion.engines.diffsinger import validate, spanish_phones, providers, resolve_phone
 from kv_companion.engines.acestep import validate as validate_ace
-from kv_companion.install import environment, child_environment
+from kv_companion.install import environment, child_environment, install_runtime
 
 
 class PairingTests(unittest.TestCase):
@@ -183,6 +184,28 @@ class ModelContractTests(unittest.TestCase):
         with self.assertRaises(ValueError): environment(Path("/models"), "diffsinger", "../outside")
         with patch.dict(os.environ, {"PYTHONHOME": "/temporary/appimage", "PYTHONPATH": "/external"}):
             env = child_environment(); self.assertNotIn("PYTHONHOME", env); self.assertNotIn("PYTHONPATH", env)
+
+
+class IntelMacTests(unittest.TestCase):
+    @patch("kv_companion.hardware.sys.platform", "darwin")
+    @patch("kv_companion.hardware.platform.machine", return_value="x86_64")
+    def test_mac_discrete_gpu_does_not_recommend_an_unsupported_profile(self, _machine):
+        with tempfile.TemporaryDirectory() as directory:
+            for gpu in ["AMD Radeon", "NVIDIA"]:
+                with patch("kv_companion.hardware.command", side_effect=["17179869184", gpu]):
+                    result = hardware(Path(directory))
+                self.assertEqual(result["profiles"], ["cpu"])
+                self.assertEqual(result["recommended"], "cpu")
+
+    @patch("kv_companion.install.sys.platform", "darwin")
+    @patch("kv_companion.install.platform.machine", return_value="x86_64")
+    def test_unsupported_engines_and_accelerators_fail_before_installation(self, _machine):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for engine, profile in [("acestep", "cpu"), ("diffsinger", "apple"), ("diffsinger", "rocm")]:
+                with self.assertRaises(ValueError):
+                    install_runtime(root, engine, profile, Job("test", {}))
+            self.assertEqual(list(root.iterdir()), [])
 
 
 class DownloadTests(unittest.TestCase):

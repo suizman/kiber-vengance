@@ -7,7 +7,7 @@
 Download a package from the [versioned companion release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0). The repository remains private, so GitHub sign-in and repository access are required for these downloads.
 
 - Linux x86_64: AppImage, including Arch Linux and Ubuntu LTS. Mark executable; if FUSE is absent use `--appimage-extract-and-run`. The management page can install a desktop launcher and the `kibervengance://open` handler. The registered launcher uses extraction mode and a persistent application copy.
-- macOS Apple Silicon, macOS 13+: DMG, drag the application to Applications. It is ad-hoc signed, without Developer ID/notarization; macOS may require **Open Anyway**.
+- macOS Apple Silicon or Intel, macOS 13+: separate ARM64 / x86_64 DMGs, drag the application to Applications. It is ad-hoc signed, without Developer ID/notarization; macOS may require **Open Anyway**.
 - Windows x64: per-user installer with URL handler and uninstaller. It is not publisher-signed; a system warning may appear.
 
 Python and the dependency manager are bundled. Models and engine dependencies are installed separately, explicitly, in persistent user data. Application updates preserve downloaded voices, models and completed audio. See the [companion guide](../companion/README.md) for data paths, runtime repair and dependency requirements.
@@ -32,6 +32,7 @@ Both outputs enter the existing non-destructive audio-effects rack. Generation p
 
 | System | DiffSinger | ACE-Step |
 | --- | --- | --- |
+| Mac Intel | CPU (ONNX Runtime 1.23.2) | Unavailable: pinned PyTorch 2.9.1 has no macOS Intel wheel |
 | Mac Apple Silicon | CPU / ONNX CoreML | CPU / PyTorch MPS, Apple runtime |
 | Windows x64 | CPU / DirectML; CUDA profile | CPU / CUDA; AMD ROCm SDK profile |
 | Linux x64 | CPU / CUDA; AMD MIGraphX with host ROCm libraries | CPU / CUDA / ROCm |
@@ -75,3 +76,12 @@ It uses the real loopback server and real engines, auditions PCM, inserts both o
 Release gate: `npm run check:full` passed with 59 unit tests and 51 browser workflows, no skips; all 14 companion tests passed. Focused browser tests additionally cover cancellation retaining the prior result and non-destructive inserted effects.
 
 Published installers: [desktop-vocals-v1.0.0](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0), native build [41038652221](https://github.com/suizman/kiber-vengance/actions/runs/41038652221). Package attachment checks hashes before upload and retains an existing differing asset instead of replacing it.
+
+
+## Intel packaging extension — 2026-10-30
+
+`macos-x64` adds pinned x86_64 Python/uv, an explicitly targeted native launcher and an `x86_64.dmg` plus SHA-256 sidecar. CI uses `macos-15-intel`, alongside the existing Apple Silicon task, and runs the same bundled-runtime, mounted-DMG and ad-hoc-signature checks. The draft attachment workflow now requires all four packages. Intel is CPU-only; unsupported ACE-Step/accelerator installations fail before downloads. No new Intel release download is advertised until its artifact is published. Local validation results are recorded in PROJECT_MEMORY.md; packaging checks do not establish real-model inference or listening quality on Intel.
+
+Dependency evidence: [ONNX Runtime 1.23.2 files](https://pypi.org/project/onnxruntime/1.23.2/#files), [1.24.4 files](https://pypi.org/project/onnxruntime/1.24.4/#files) and [PyTorch 2.9.1 files](https://pypi.org/project/torch/2.9.1/#files). The Intel packaged dependency installation/probe passed locally on macOS 13.6.4; no Intel model inference/listening test has been performed.
+
+Release 1.0.1 preparation: companion version fields are synchronized. Publication is chained from a successful version-tag build, verifies source/tag/version and every SHA-256 sidecar, then publishes the completed draft. Ordinary branch builds do not publish releases. Outcomes will be recorded after CI completes.
