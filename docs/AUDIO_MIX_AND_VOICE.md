@@ -24,9 +24,9 @@ Audio Studio's shared Clip/Track effect editor applies filter, brightness, compr
 
 Generated voices preserve the original WAV. Inserting copies the selected treatment to the region; download offers original and processed WAV separately. Settings, bypass and routing travel in JSON/history/autosave/Project Package; weights never do.
 
-## Local voice engines
+## Desktop local voice engines
 
-Kokoro remains the lightweight WASM/CPU option. Its revision is pinned at `1939ad2a8e416c0acfeecc08a694d14ef25f2231`. One text line is one fragment; each fragment has independent speed and following silence. The existing 500-character/500-token safeguards and ES/EN phonemizer remain. This is pacing control, not native emotional instruction following.
+Desktop voice controls are loaded on demand. Kokoro is the lightweight WASM/CPU option. Its revision is pinned at `1939ad2a8e416c0acfeecc08a694d14ef25f2231`. One text line is one fragment; each fragment has independent speed and following silence. The existing 500-character/500-token safeguards and ES/EN phonemizer remain. This is pacing control, not native emotional instruction following.
 
 The optional Chatterbox experiment uses the MIT ONNX tensor protocol, independently implemented without copying the differently licensed Quick Inference application:
 
@@ -43,15 +43,15 @@ Qwen3-TTS 1.7B CustomVoice supports natural-language style direction in its offi
 
 ## Verification
 
-The tests distinguish DSP/reference signals, browser protocol fixtures and genuine model runs. `tests/mixing-browser.test.js` checks neutral processing, effect changes/tails, persisted mobile levels/effects, actual deck silence under final Master and exclusion of preview from the recorded mix. `scripts/test-local-voice.mjs` remains opt-in for real Kokoro.
+The tests distinguish DSP/reference signals, browser protocol fixtures and genuine model runs. `tests/mixing-browser.test.js` checks neutral processing, effect changes/tails, persisted audio levels/effects across desktop and compact layouts, actual deck silence under final Master and exclusion of preview from the recorded mix. `scripts/test-local-voice.mjs` remains opt-in for real Kokoro.
 
 `VOICE_MODEL_MIRROR` optionally supplies byte-for-byte downloaded model files for real tests; it never supplies generated outputs. Files retain `<model>/<revision>/<file>` layout. Browser inference still runs the real model. Audition samples and measured generation times are session artifacts, not product demos or a claim of superior pronunciation. Genuine CPU outputs for the same Spanish sentence at intensities 0.3/0.8 have different audio hashes and durations (2.48/2.28 seconds); the English sample is 1.56 seconds. These establish working generation and parameter influence, not human preference or a certified emotion.
 
-Physical iPhone/Safari, speakers/headphones and microphone hardware need separate validation. CPU/WebGPU availability is not a promise of equal speed, low memory or cold-offline startup on every device. Successful PCM generation does not certify naturalness or emotional interpretation.
+Physical desktop Safari/Orion, speakers/headphones and microphone hardware need separate validation. CPU/WebGPU availability is not a promise of equal speed, low memory or cold-offline startup on every device. Successful PCM generation does not certify naturalness or emotional interpretation.
 
 Primary references: [Kokoro voices](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md), [Chatterbox ONNX protocol](https://huggingface.co/onnx-community/chatterbox-multilingual-ONNX), [WebGPU decoder](https://huggingface.co/danyalmalik/Chatterbox-ONNX-WebGPU), [multilingual voice vector](https://huggingface.co/danyalmalik/Chatterbox-Multilingual-ONNX-WebGPU), [Qwen instructions](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice).
 
 
-### Mobile compatibility correction
+### Desktop memory policy
 
-After a reported mobile page restart, Chatterbox is restricted to desktop devices that do not report 4 GB RAM or less. Phones/tablets, including iPad desktop mode, are blocked before download, with a text-preserving Kokoro q8 action. Large-file caching now avoids unread Response.clone branches; runtime blob URLs are released. This prevents starting the unsupported heavy mobile workflow; it does not certify Chatterbox mobile inference or measure physical-device memory. See LOCAL_VOICE.md.
+Chatterbox requires a desktop computer that does not report 4 GB RAM or less. A lower-memory computer can select Kokoro q8 while keeping its text. Large-file caching avoids unread cloned responses, runtime blob URLs are released, and cancellation terminates the worker. The policy does not establish available free memory or certify physical-device performance.

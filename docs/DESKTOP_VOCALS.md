@@ -18,7 +18,7 @@ Python and the dependency manager are bundled. Models and engine dependencies ar
 4. Choose **DiffSinger · Sing my notes** or **ACE-Step · Musical proposal**, the installed runtime, Automatic/CPU/GPU and the destination audio lane.
 5. Generate, audition the original or processed result, optionally download WAV, and insert. Insertion retains the existing asset, audio-effects, history, autosave and portable-package contracts. Original clips and earlier takes are preserved. Completed companion jobs can be recovered after reconnecting.
 
-Mobile shows a compatibility explanation before any localhost request or model download. Generated/imported audio remains playable and editable on mobile.
+Generation is available on desktop. Imported and previously generated audio remains editable through the ordinary audio workflow.
 
 ## Musical controls
 
@@ -55,7 +55,7 @@ Loopback only, explicit Host/Origin allowlists, expiring single-use pairing code
 ## Observed validation
 
 - 14 native unit/HTTP integration tests: pairing, origin/auth/Host checks, unsafe archives, resumed download integrity, queue serialization, process cancellation, history recovery and engine validation.
-- Browser protocol fixtures exercise pairing with the real HTTP server, score/lyrics, processed preview controls, insertion, provenance, Undo/Redo, reload, reconnection, desktop accessibility and mobile admission. Fixture PCM is deliberately not represented as model output.
+- Browser protocol fixtures exercise pairing with the real HTTP server, score/lyrics, processed preview controls, insertion, provenance, Undo/Redo, reload, reconnection and desktop accessibility. Fixture PCM is deliberately not represented as model output.
 - Genuine CPU DiffSinger inference: Spanish “Ho la mun do”, notes C4/E4/G4/F4, 0.8 seconds each, produced 3.4017 seconds of WAV in 8.72 seconds. Actual provider `CPUExecutionProvider`; SHA-256 `f9a82bf057ca45a967f0a851cc07e80ca25df2873f1009b60411254d065fef3e`.
 - Genuine CPU ACE-Step: 10-second Spanish industrial/electro-rock request, BPM 120, seed 24680, produced 10 seconds of WAV in 45.34 seconds; SHA-256 `48d61512e486eaef0a00bb42c30743a623ec57e674db5452a66cd80225b22d3f`.
 - A second genuine DiffSinger run sustained “la” across C4/E4/G4 with `+`, inserted a silent note, then F4: 4.2028 seconds of audio. Autocorrelation at voiced note centers measured −4.5/−2.7/+7.7/+3.8 cents (200–500 Hz analysis range); rest RMS was zero. This is a small score/pitch regression, not an intelligibility or broad quality study. WAV SHA-256 `6767a37374b9972b44ff2d73907fa9a1dd0da0cf2f43554cf5e5cbe4751e768d`.

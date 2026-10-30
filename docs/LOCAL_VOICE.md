@@ -1,10 +1,10 @@
-# Local voice — implementation and research status
+# Desktop local voice — implementation and evidence
 
 Implementation and browser evidence, 2026-10-28. Actual publication status and the deployed version are recorded in PROJECT_MEMORY.md.
 
-## Speech workflow
+## Desktop speech workflow
 
-Arrange → Audio & sampler → **VOICE · ES/EN** opens Kokoro speech. Select language, voice, speed (0.6–1.5), q8 or FP32, then explicitly load/download. The current voice choices are English Heart/Michael and Spanish Dora/Alex. Enter up to 500 characters; overlong tokenized phrases fail visibly instead of being silently truncated. Listen or download WAV before choosing **Insert as audio region**.
+On desktop, Arrange → Audio & sampler → **VOICE · ES/EN** opens Kokoro speech. Select language, voice, speed (0.6–1.5), q8 or FP32, then explicitly load/download. The current voice choices are English Heart/Michael and Spanish Dora/Alex. Enter up to 500 characters; overlong tokenized phrases fail visibly instead of being silently truncated. Listen or download WAV before choosing **Insert as audio region**.
 
 Generation captures the selected audio lane and song locator/playhead when it starts. Insertion checks that the same project/lane still exists. New-lane insertion and each subsequent insertion create new region IDs; they never replace an earlier version. PCM is stored as WAV in IndexedDB. The v6 region retains model ID, text, language, voice, speed, precision, phonemes and creation time under additive `generation` metadata. Undo/Redo, autosave, reload and Project Package use the existing region/asset path. Moving through a song's final audio-only tail does not restart instrumental clips.
 
@@ -28,7 +28,7 @@ Successful waveform generation does not certify intelligibility or superior qual
 
 ## Desktop singing (2026-10-30)
 
-The user approved a native desktop approach in place of heavy browser singing. **Singing · Desktop** connects to the optional loopback companion: DiffSinger renders captured monophonic notes/lyrics; ACE-Step creates a musical interpretation from lyrics and style. Linux AppImage (Arch/Ubuntu), Apple Silicon DMG and Windows x64 installer include Python but download models separately. Mobile retains speech and audio editing without loading these engines.
+The user approved a native desktop approach in place of heavy browser singing. **Singing · Desktop** connects to the optional loopback companion: DiffSinger renders captured monophonic notes/lyrics; ACE-Step creates a musical interpretation from lyrics and style. Linux AppImage (Arch/Ubuntu), macOS Intel/Apple Silicon DMGs and Windows x64 installer include Python but download models separately. Existing audio regions remain editable independently of generation-engine availability.
 
 Real CPU inference with both engines and their exact pinned inputs is documented in [Desktop vocals](DESKTOP_VOCALS.md), together with installation, bank/vocoder restrictions, device limitations and browser integration evidence. Native acceleration still requires real M3/7900 XTX acceptance; the prior browser-only DiffSinger feasibility experiment is not claimed as completed by this architectural change.
 
@@ -43,10 +43,8 @@ Real CPU inference with both engines and their exact pinned inputs is documented
 See [Audio mixing and voice](AUDIO_MIX_AND_VOICE.md) for the additive audio-effect/provenance contracts, pinned Kokoro revision, per-line speed/pauses, original/processed WAV workflow and optional Chatterbox experiment. The numeric template correction and actual inference evidence must be kept separate from UI worker fixtures. Qwen free-form style direction remains unvalidated in this browser integration and has no product control.
 
 
-## Mobile Chatterbox restart protection (2026-10-28)
+## Desktop runtime admission and caching
 
-A user reported that loading Chatterbox on mobile restarted the page. Its approximately 570 MB of downloaded weights require additional runtime/session memory; an OS/browser out-of-memory kill cannot reliably be caught in JavaScript. The exact failure on the user's physical device has not been measured.
+Speech and singing generation controls load only on desktop. Kokoro remains the lightweight speech option. Chatterbox is experimental and is blocked on computers reporting 4 GB RAM or less; those computers retain the text-preserving **Use Kokoro q8** action. This is a conservative admission rule, not a measurement or guarantee of available memory. Physical desktop Safari/Orion, peak-memory and speaker-output checks remain separate validation work.
 
-Chatterbox is now unavailable on detected phones/tablets (including iPad desktop user agents) and devices reporting 4 GB RAM or less. The dialog explains this before any download and offers **Use Kokoro q8**, preserving text/language and prior generated audio. The service and worker enforce the same admission policy; shrinking a desktop window alone does not block it. This is a conservative compatibility policy, not a measurement or guarantee of free memory. Desktop Chatterbox remains experimental; no mobile Chatterbox inference capability is claimed.
-
-Large Chatterbox model/runtime downloads no longer await Cache.put on a cloned response while leaving its twin unread. They stream directly into Cache Storage, then read the stored response once. Cache failure triggers a new online request rather than retaining a fallback copy in memory. Download progress reports received MB; runtime blob URLs are revoked after session initialization, and changing engines terminates the previous voice worker. Music assets, DNS and project schema are untouched. Physical iPhone/Safari and peak-memory measurements remain unverified.
+Large Chatterbox model/runtime downloads stream directly into Cache Storage, then read the stored response once. Cache failure triggers a new online request rather than retaining a fallback copy in memory. Download progress reports received MB; runtime blob URLs are revoked after session initialization, and changing engines terminates the previous voice worker. Model downloads, musical assets and project metadata retain separate lifecycles.
