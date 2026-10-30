@@ -1,0 +1,15 @@
+# КИБЕР VENGANCE
+
+- [Home](Home.md)
+- [Primeros pasos](Primeros-pasos.md)
+- [Composicion](Composicion.md)
+- [Sonido y presets](Sonido-y-presets.md)
+- [Arreglo y audio](Arreglo-y-audio.md)
+- [Directo](Directo.md)
+- [Mezcla](Mezcla.md)
+- [IA local](IA-local.md)
+- [Voz y canto](Voz-y-canto.md)
+- [Proyectos y exportacion](Proyectos-y-exportacion.md)
+- [Atajos y ajustes](Atajos-y-ajustes.md)
+- [Compatibilidad y licencias](Compatibilidad-y-licencias.md)
+- [Desarrollo](Desarrollo.md)
