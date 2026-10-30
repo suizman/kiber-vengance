@@ -73,3 +73,5 @@ KV_VOCALS_REAL_DATA=/path/to/acceptance-data node scripts/verify-desktop-vocals.
 It uses the real loopback server and real engines, auditions PCM, inserts both outputs and checks reload/provenance. It is opt-in because model installation is multi-GB. Samples/acceptance data stay outside version control. Waveform generation and automated playback do not establish a blind preference, broad pronunciation/intelligibility, a commercial voice license, physical speaker output or M3/7900 XTX benchmarks.
 
 Release gate: `npm run check:full` passed with 59 unit tests and 51 browser workflows, no skips; all 14 companion tests passed. Focused browser tests additionally cover cancellation retaining the prior result and non-destructive inserted effects.
+
+Published installers: [desktop-vocals-v1.0.0](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.0), native build [41038652221](https://github.com/suizman/kiber-vengance/actions/runs/41038652221). Package attachment checks hashes before upload and retains an existing differing asset instead of replacing it.
