@@ -1,27 +1,27 @@
 # КИБЕР VENGANCE
 
-**Composición electro-rock, industrial, synthwave y cinematográfica, en tu navegador.**
+**Electro-rock, industrial, synthwave and cinematic composition in your browser.**
 
-[Abrir el estudio](https://studio.suizman.org) · [Manual completo](docs/wiki/Home.md) · [Releases](https://github.com/suizman/kiber-vengance/releases/latest)
+[Open the studio](https://studio.suizman.org) · [Complete manual](docs/wiki/Home.md) · [Releases](https://github.com/suizman/kiber-vengance/releases/latest)
 
-![Compose en escritorio](docs/wiki/assets/compose.png)
+![Compose on desktop](docs/wiki/assets/compose.png)
 
-## Cuatro espacios para crear un tema
+## Four workspaces for a complete song
 
-| Espacio | Qué puedes hacer |
+| Workspace | What you can do |
 | --- | --- |
-| **Compose** | Piano roll, cinco instrumentos, sonidos por clip, generadores, IA local, presets, FX y macros |
-| **Arrange** | Secciones, tempo/compás, audio no destructivo, grabación, slicing, sampler, automatización y MIDI Learn |
-| **Live** | Teclado/MIDI, clip launcher, dos Scratch Decks, Cue y grabación de actuaciones |
-| **Mix** | Niveles en dB, Solo/Mute, grupos, sends, sidechain, Master, medidores, mono y A/B |
+| **Compose** | Piano roll, five instruments, per-clip sounds, generators, local AI, presets, FX and macros |
+| **Arrange** | Sections, tempo/meter, non-destructive audio, recording, sampler, automation and MIDI Learn |
+| **Live** | Keyboard/MIDI, clip launcher, two Scratch Decks, Cue and performance recording |
+| **Mix** | dB levels, Solo/Mute, groups, sends, sidechain, Master, meters, mono and A/B |
 
-Autosave, recuperación y snapshots; proyectos v6 con importación v2–v5; JSON, **Project Package con audio**, WAV, MIDI y stems. Voz hablada y canto opcionales en escritorio. [Todas las funciones y sus límites](docs/wiki/Home.md).
+Autosave, recovery and snapshots; v6 projects with v2–v5 imports; JSON, **Project Package with audio**, WAV, MIDI and stems. Optional speech and singing on desktop. [All features and their limits](docs/wiki/Home.md).
 
-## Empieza
+## Get started
 
-Abre el estudio, pulsa Play o una tecla para activar el audio, elige una pista y edita su clip. Combina clips en Arrange, ajusta Mix y guarda un Project Package. No necesitas IA ni companion para componer.
+Open the studio, press Play or a piano key to activate audio, select a track and edit its clip. Combine clips in Arrange, balance Mix and save a Project Package. AI and the companion are optional.
 
-Para ejecutar el código: Node.js **22.12+**.
+To run from source, install Node.js **22.12+**:
 
 ```sh
 npm ci
@@ -29,16 +29,16 @@ npm run dev
 # http://127.0.0.1:4173
 ```
 
-[Desarrollo y pruebas](docs/wiki/Desarrollo.md) · [Guía rápida](docs/wiki/Primeros-pasos.md) · [Atajos](docs/wiki/Atajos-y-ajustes.md).
+[Development and tests](docs/wiki/Development.md) · [Quick start](docs/wiki/Getting-started.md) · [Shortcuts](docs/wiki/Shortcuts-and-settings.md).
 
-## Audio local y modelos opcionales
+## Local audio and optional models
 
-El estudio procesa música localmente. Las descargas de modelos son explícitas; los proyectos, sus binarios y los modelos tienen almacenamiento separado. **JSON no contiene tus samples: usa Project Package.**
+The studio processes music locally. Model downloads are explicit; projects, audio assets and models have separate storage lifecycles. **JSON does not contain your samples: use Project Package.**
 
-El [companion de escritorio](companion/README.md) añade DiffSinger y ACE-Step. Incluye instaladores Mac Intel/Apple Silicon, Windows x64 y Linux AppImage; los modelos se descargan aparte. [Compatibilidad y licencias de voces](docs/wiki/Voz-y-canto.md).
+The [desktop companion](companion/README.md) adds DiffSinger and ACE-Step. Installers cover Intel/Apple Silicon Macs, Windows x64 and Linux AppImage; models download separately. [Voice compatibility and licensing](docs/wiki/Speech-and-singing.md).
 
-## Documentación y licencia
+## Documentation and licensing
 
-El [manual versionado](docs/wiki/Home.md) está organizado como páginas listas para la wiki de GitHub. Mientras se habilita la wiki nativa, esta copia ofrece toda la navegación. [Evidencia técnica](docs/DESKTOP_VOCALS.md), [plan](PRODUCT_PLAN.md) y [memoria del proyecto](PROJECT_MEMORY.md) retienen decisiones y resultados verificables.
+The [versioned manual](docs/wiki/Home.md) is organized as GitHub Wiki pages. This repository copy provides working navigation while the native wiki is being enabled. [Technical evidence](docs/DESKTOP_VOCALS.md), the [product plan](PRODUCT_PLAN.md) and [project memory](PROJECT_MEMORY.md) retain decisions and verified results.
 
-Software: [GPL-3.0-or-later](LICENSE). Composiciones incluidas: [CC BY-NC-ND 4.0](projects/LICENSE.md), con condiciones independientes de los proyectos creados por usuarios. La marca oficial es **КИБЕР VENGANCE**; los slugs históricos se conservan por compatibilidad.
+Software: [GPL-3.0-or-later](LICENSE). Included compositions: [CC BY-NC-ND 4.0](projects/LICENSE.md), independently of music created by users. The official identity is **КИБЕР VENGANCE**; historical slugs remain for compatibility.

@@ -1,7 +1,7 @@
-# Imágenes del manual
+# Manual images
 
-Las capturas son PNG originales de los flujos de navegador del proyecto: Compose, diálogo de composición IA, voz de escritorio y canto de escritorio. Muestran datos de demostración/pruebas y ninguna información de usuarios.
+The PNGs are actual application screenshots captured with the repository's Chromium browser-test harness. Compose and the speech form use a clean desktop context with the interface explicitly set to English; Compose uses the real 80% UI-scale setting so the piano roll remains visible. The speech model was not loaded. The AI composer and desktop singing screenshots use identified protocol fixtures; they illustrate controls, not real model inference, musical quality or physical output. Example text is demonstration/test data, not user information.
 
-Los diálogos IA/voz/canto se capturaron con fixtures identificados en las guías. Ilustran la interfaz: no se usan como prueba de inferencia real, calidad musical o salida física. `validation.svg` es un diagrama vectorial del proceso de validación, no una captura.
+`validation.svg` is a source-authored vector diagram of the validation layers, not a screenshot. All visible labels and image descriptions are English.
 
-Los assets son parte de la documentación del software, bajo la licencia del repositorio. No incluyen modelos ni grabaciones generadas.
+These assets are software documentation under the repository's license. They contain no model weights or generated audio recordings.

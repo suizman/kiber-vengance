@@ -1,42 +1,42 @@
 # КИБЕР VENGANCE · Companion
 
-**Canto local para el estudio, con modelos descargados por separado.**
+**Local singing for the studio, with separately downloaded models.**
 
-[Descargar instalador](https://github.com/suizman/kiber-vengance/releases/latest) · [Manual de voz y canto](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/Voz-y-canto.md)
+[Download an installer](https://github.com/suizman/kiber-vengance/releases/latest) · [Speech and singing manual](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/Speech-and-singing.md)
 
-![Diálogo de canto del estudio](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/assets/desktop-vocals.png?raw=true)
+![The studio's desktop singing dialog](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/assets/desktop-vocals.png?raw=true)
 
-*Captura de interfaz con fixture HTTP; no es evidencia de audio generado por un modelo.*
+*Actual interface with an HTTP protocol fixture; this is not evidence of model-generated audio.*
 
-## Instalar y conectar
+## Install and connect
 
-| Sistema | Paquete |
+| System | Package |
 | --- | --- |
-| macOS 13+ | DMG `arm64` para Apple Silicon o `x86_64` para Intel; copiar a Applications |
-| Windows x64 | Instalador por usuario, con desinstalador y manejador de URL |
-| Linux x86_64 | AppImage, Arch/Ubuntu; sin FUSE usa `--appimage-extract-and-run` |
+| macOS 13+ | `arm64` DMG for Apple Silicon or `x86_64` for Intel; copy to Applications |
+| Windows x64 | Per-user installer, uninstaller and URL handler |
+| Linux x86_64 | AppImage for Arch/Ubuntu; use `--appimage-extract-and-run` without FUSE |
 
-Los instaladores están en el repositorio privado: necesitas acceso GitHub. Python está incluido. Mac usa firma ad-hoc, sin notarización; Windows no tiene certificado de editor.
+Installers are in a private repository: GitHub access is required. Python is included. Mac packages are ad-hoc signed without notarization; Windows has no publisher certificate.
 
-1. Abre el companion e instala el runtime y modelo/banco elegido, tras revisar sus licencias.
-2. En el estudio, abre **Arrange → Audio & sampler → Singing · Desktop**.
-3. Introduce el código de seis cifras y permite red local si el navegador lo solicita.
-4. Genera, escucha Original/Processed y descarga WAV o inserta una nueva región.
+1. Open the companion and install your chosen runtime/model or voicebank after reviewing its licenses.
+2. In the studio, open **Arrange → Audio & sampler → Singing · Desktop**.
+3. Enter the six-digit code; allow local-network access if your browser asks.
+4. Generate, audition Original/Processed, then download WAV or insert a new audio region.
 
-## Motores
+## Engines
 
-**DiffSinger** sigue notas monofónicas y sílabas: `+` prolonga una vocal, `_` crea silencio. Ofrece fonemas, vibrato, portamento y controles compatibles con el banco. Necesita banco y vocoder ONNX compatibles.
+**DiffSinger** follows monophonic notes and syllables: `+` extends a vowel; `_` inserts silence. Phonemes, vibrato, portamento and bank-supported expression are available. A compatible ONNX voicebank and vocoder are required.
 
-**ACE-Step** propone música desde letra, estilo, BPM, duración y semilla. Puede incluir acompañamiento: no garantiza notas exactas ni voz aislada. No está disponible en Mac Intel por la dependencia PyTorch.
+**ACE-Step** proposes music from lyrics, style, BPM, duration and seed. It may include accompaniment; exact notes and isolated vocals are not guaranteed. It is unavailable on Intel Macs because of its PyTorch dependency.
 
-CPU es la base; Apple/CoreML, DirectML, CUDA o AMD dependen del motor, runtime y drivers. En 1.0.2+, el vocoder usa CPU cuando el acústico usa CoreML. El perfil instalado y el dispositivo de generación son controles distintos. No se prometen benchmarks de GPU sin medir el hardware.
+CPU is the baseline; Apple/CoreML, DirectML, CUDA and AMD support depend on engine, runtime and drivers. Since 1.0.2, CoreML acoustic generation uses a CPU vocoder. Installed profile and generation device are separate controls. No GPU benchmark is promised without testing the hardware.
 
-## Datos y mantenimiento
+## Data and maintenance
 
-Un solo trabajo pesado a la vez; Cancel termina su proceso y los trabajos completados se pueden recuperar. Actualizar la aplicación conserva modelos y WAVs. **Reinicia el proceso anterior al instalar una actualización.** Repair y Delete model gestionan runtime/pesos por separado del proyecto.
+One heavy job runs at a time. Cancel terminates its process; completed jobs can be recovered. App updates preserve models and WAVs. **Restart the previous companion process after installing an update.** Repair and Delete model manage runtime/weights separately from the musical project.
 
-Datos: Linux `$XDG_DATA_HOME/kiber-vengance` o `~/.local/share/kiber-vengance`; Mac `~/Library/Application Support/KiberVengance`; Windows `%LOCALAPPDATA%/KiberVengance`. Project Package respalda audio insertado, no pesos.
+Data locations: Linux `$XDG_DATA_HOME/kiber-vengance` or `~/.local/share/kiber-vengance`; Mac `~/Library/Application Support/KiberVengance`; Windows `%LOCALAPPDATA%/KiberVengance`. Project Package backs up inserted audio, not model weights.
 
-Kaiz incluye un vocoder **CC-BY-NC 4.0**: no se presenta como autorizado para música comercial. Software GPL-3.0-or-later; [avisos de terceros](https://github.com/suizman/kiber-vengance/blob/master/companion/THIRD_PARTY.md).
+Kaiz includes a **CC-BY-NC 4.0** vocoder and is not presented as cleared for commercial music. Software is GPL-3.0-or-later; see [third-party notices](https://github.com/suizman/kiber-vengance/blob/master/companion/THIRD_PARTY.md).
 
-[Desarrollo, packaging y publicación](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/Desarrollo.md) · [Licencias, hashes y evidencia](https://github.com/suizman/kiber-vengance/blob/master/docs/DESKTOP_VOCALS.md).
+[Development, packaging and releases](https://github.com/suizman/kiber-vengance/blob/master/docs/wiki/Development.md) · [Licenses, hashes and evidence](https://github.com/suizman/kiber-vengance/blob/master/docs/DESKTOP_VOCALS.md).

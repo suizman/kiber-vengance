@@ -1,10 +1,10 @@
-# Validación de КИБЕР VENGANCE
+# Validating КИБЕР VENGANCE
 
-![Capas de validación](../docs/wiki/assets/validation.svg)
+![Validation layers](../docs/wiki/assets/validation.svg)
 
-## Ejecutar
+## Run
 
-Node.js **22.12+**; Python **3.12+** para pruebas del companion.
+Node.js **22.12+**; Python **3.12+** for companion tests.
 
 ```sh
 npm ci
@@ -14,19 +14,19 @@ python -m unittest discover -s companion/tests -v
 node scripts/publish-wiki.mjs --check
 ```
 
-| Comando | Comprueba |
+| Command | Checks |
 | --- | --- |
-| `npm run check` | Tipado estricto, distribución estática, lint y unitarias |
-| `npm run test:e2e` | Flujos Chromium/Firefox, audio, persistencia, exportación, accesibilidad y responsive |
-| `python -m unittest discover -s companion/tests -v` | Seguridad HTTP, instalación, jobs, cancelación y contratos nativos |
-| `node scripts/publish-wiki.mjs --check` | Páginas, enlaces e imágenes del manual |
+| `npm run check` | Strict types, static distribution, lint and unit tests |
+| `npm run test:e2e` | Chromium/Firefox workflows, audio, persistence, export, accessibility and responsive layouts |
+| `python -m unittest discover -s companion/tests -v` | HTTP security, installation, jobs, cancellation and native contracts |
+| `node scripts/publish-wiki.mjs --check` | Manual pages, links and images |
 
-No se omiten navegadores ausentes. Configura `CHROMIUM_EXECUTABLE_PATH`, `FIREFOX_EXECUTABLE_PATH`, `FIREFOX_PLAYWRIGHT_MODULE` o `PYTHON_EXECUTABLE` si no usas los valores predeterminados.
+Missing browsers are not skipped. Set `CHROMIUM_EXECUTABLE_PATH`, `FIREFOX_EXECUTABLE_PATH`, `FIREFOX_PLAYWRIGHT_MODULE` or `PYTHON_EXECUTABLE` when defaults do not fit your environment.
 
-En Linux sin dispositivo de audio: `node scripts/with-null-audio.mjs npm run check:full`. Los fixtures HTTP usan puerto libre y datos temporales, y los de workers bloquean Service Workers.
+On headless Linux: `node scripts/with-null-audio.mjs npm run check:full`. HTTP fixtures use a free port and temporary data; worker fixtures block Service Workers.
 
-## Evidencia
+## Evidence
 
-Los fixtures de UI/protocolo no son inferencia real. Las pruebas de modelos son optativas por sus descargas/memoria. Ni PCM válido ni un null sink certifican calidad percibida, altavoces, Safari físico o rendimiento de GPU.
+UI/protocol fixtures are not real inference. Model tests are opt-in because of downloads and memory use. Valid PCM and a null sink do not certify perceived quality, physical speakers, native Safari or GPU performance.
 
-[Scripts reales, variables, arquitectura y releases](../docs/wiki/Desarrollo.md) · [Límites de compatibilidad](../docs/wiki/Compatibilidad-y-licencias.md).
+[Real-model scripts, environment variables, architecture and releases](../docs/wiki/Development.md) · [Compatibility limits](../docs/wiki/Compatibility-and-licenses.md).

@@ -1,3 +1,3 @@
-[Inicio](Home.md) · [Estudio](https://studio.suizman.org) · [Código y releases](https://github.com/suizman/kiber-vengance)
+[Home](Home.md) · [Studio](https://studio.suizman.org) · [Source and releases](https://github.com/suizman/kiber-vengance)
 
-Manual del producto. La evidencia técnica y los resultados de publicación se conservan en el repositorio.
+Product manual. Technical evidence and publication records stay in the source repository.

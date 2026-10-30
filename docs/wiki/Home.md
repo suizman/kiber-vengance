@@ -1,30 +1,30 @@
-# Manual de КИБЕР VENGANCE
+# КИБЕР VENGANCE manual
 
-Un estudio de composición electro-rock, industrial, synthwave y música cinematográfica. Cuatro espacios, cinco instrumentos, pistas de audio y exportación local.
+A browser studio for electro-rock, industrial, synthwave and cinematic composition. Four workspaces, five instruments, audio tracks and local export.
 
-![Compose en escritorio](assets/compose.png)
+![Compose on desktop](assets/compose.png)
 
-**[Abrir el estudio](https://studio.suizman.org)** · [Empezar](Primeros-pasos.md) · [Atajos](Atajos-y-ajustes.md) · [Descargar companion](https://github.com/suizman/kiber-vengance/releases/latest)
+**[Open the studio](https://studio.suizman.org)** · [Get started](Getting-started.md) · [Shortcuts](Shortcuts-and-settings.md) · [Download companion](https://github.com/suizman/kiber-vengance/releases/latest)
 
-## Encuentra una función
+## Find a feature
 
-| Quiero… | Guía y funciones |
+| I want to… | Guide and features |
 | --- | --- |
-| Tocar y crear un primer tema | [Primeros pasos](Primeros-pasos.md): transporte, pistas, clips, cuatro espacios |
-| Escribir y transformar notas | [Composición](Composicion.md): piano roll, selección, grabación, armonía, Backing, cuantización, variaciones |
-| Diseñar sonidos | [Sonido y presets](Sonido-y-presets.md): síntesis, guitarra, batería, ADSR, filtros, arp/LFO, macros, FX, Vault, samples y catálogos |
-| Construir la canción y editar audio | [Arreglo y audio](Arreglo-y-audio.md): secciones, tempo/compás, marcadores, loop/punch, regiones, micrófono, Prism Keys, slicing, automatización y MIDI Learn |
-| Improvisar y grabar una actuación | [Directo](Directo.md): launcher, dos Scratch Decks, crossfader, Cue y tomas |
-| Equilibrar y terminar la mezcla | [Mezcla](Mezcla.md): dB, Solo/Mute, grupos, sends, sidechain, Master, LUFS, mono y A/B |
-| Generar melodías editables | [IA local](IA-local.md): contexto, modos, A/B/C, Calidad, regeneración parcial y recetas |
-| Generar voz en escritorio | [Voz y canto](Voz-y-canto.md): Kokoro, Chatterbox, DiffSinger, ACE-Step y companion |
-| Guardar, recuperar o exportar | [Proyectos y exportación](Proyectos-y-exportacion.md): v6, autosave, snapshots, JSON, Package, WAV, MIDI y stems |
-| Personalizar el estudio | [Atajos y ajustes](Atajos-y-ajustes.md): teclado, MIDI, apariencia, idiomas, guía y accesibilidad |
-| Entender compatibilidad y licencias | [Compatibilidad](Compatibilidad-y-licencias.md): navegadores, offline, formatos y límites reales |
-| Desarrollar, probar o publicar | [Desarrollo](Desarrollo.md): arquitectura, comandos, pruebas, paquetes nativos, wiki y Sites |
+| Play and make a first song | [Getting started](Getting-started.md): transport, tracks, clips and workspaces |
+| Write and transform notes | [Composition](Composition.md): piano roll, selection, recording, harmony, Backing, quantization and variations |
+| Design sounds | [Sound and presets](Sound-and-presets.md): synthesis, guitar, drums, ADSR, filters, arp/LFO, macros, FX, Vault, samples, slicing and catalogs |
+| Arrange a song and edit audio | [Arrangement and audio](Arrangement-and-audio.md): sections, tempo/meter, markers, loop/punch, regions, microphone, Prism Keys, automation and MIDI Learn |
+| Perform and capture a session | [Live performance](Live-performance.md): launcher, two Scratch Decks, crossfader, Cue and takes |
+| Balance and finish a mix | [Mixing](Mixing.md): dB, Solo/Mute, groups, sends, sidechain, Master, LUFS, mono and A/B |
+| Generate editable melodies | [Local AI](Local-AI.md): context, modes, A/B/C, Quality, partial regeneration and recipes |
+| Generate vocals on desktop | [Speech and singing](Speech-and-singing.md): Kokoro, Chatterbox, DiffSinger, ACE-Step and companion |
+| Save, recover or export | [Projects and export](Projects-and-export.md): v6, autosave, snapshots, JSON, Package, WAV, MIDI and stems |
+| Customize the studio | [Shortcuts and settings](Shortcuts-and-settings.md): keyboard, MIDI, appearance, languages, guide and accessibility |
+| Check compatibility and licenses | [Compatibility](Compatibility-and-licenses.md): browsers, offline operation, formats and practical limits |
+| Develop, test or publish | [Development](Development.md): architecture, commands, tests, native packages, wiki and Sites |
 
-## Cómo leer este manual
+## Reading the manual
 
-Los nombres **Compose, Arrange, Live y Mix** son los espacios actuales; Forge, Audio y Perform son nombres internos de paneles, no espacios adicionales. Las guías usan los nombres de los controles en inglés; la aplicación también tiene español.
+**Compose, Arrange, Live and Mix** are the current workspaces. Forge, Audio and Perform are internal panel names, not extra workspaces. Guides and screenshots use the English interface; the app also supports Spanish.
 
-Esta carpeta es la fuente versionada del manual y puede leerse sin wiki. La wiki nativa se publica desde los mismos archivos con `node scripts/publish-wiki.mjs --publish`, cuando GitHub la tenga habilitada e inicializada. [Estado y mantenimiento](Desarrollo.md).
+This directory is the versioned manual source and works without a wiki. Publish the same pages to GitHub Wiki with `node scripts/publish-wiki.mjs --publish` after enabling and initializing the native wiki. [Maintenance and prerequisites](Development.md).
