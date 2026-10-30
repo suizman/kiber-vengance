@@ -4,7 +4,7 @@
 
 ## Install and use
 
-Download a package from the [versioned companion release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.1). The repository remains private, so GitHub sign-in and repository access are required for these downloads.
+Download a package from the [versioned companion release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.2). The repository remains private, so GitHub sign-in and repository access are required for these downloads.
 
 - Linux x86_64: AppImage, including Arch Linux and Ubuntu LTS. Mark executable; if FUSE is absent use `--appimage-extract-and-run`. The management page can install a desktop launcher and the `kibervengance://open` handler. The registered launcher uses extraction mode and a persistent application copy.
 - macOS Apple Silicon or Intel, macOS 13+: separate ARM64 / x86_64 DMGs, drag the application to Applications. It is ad-hoc signed, without Developer ID/notarization; macOS may require **Open Anyway**.
@@ -89,8 +89,10 @@ Release 1.0.1 preparation: companion version fields are synchronized. Publicatio
 Published companion 1.0.1: [release](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.1), [four-platform build](https://github.com/suizman/kiber-vengance/actions/runs/41075759348), [publication](https://github.com/suizman/kiber-vengance/actions/runs/41076017201). Both workflows succeeded; all four installers and four SHA-256 sidecars are attached. Release tag source is `1454e1b`; latest native runtime source is `4102e96`. The repository download manifest now includes Intel and verified 1.0.1 asset hashes. The existing live Site is unchanged by this GitHub release.
 
 
-## CoreML dynamic vocoder correction — 1.0.2 preparation
+## CoreML dynamic vocoder correction — 1.0.2
 
 A real macOS Intel report exposed a CoreML sequence-length resizing failure in the HiFi-GAN vocoder. The CPU installation profile still includes CoreML; it is separate from the generation device selector. Selecting CPU already requests CPU for both stages. Automatic/CoreML generation now uses CPU for the vocoder while retaining the acoustic provider. Logs and generated provenance distinguish actual providers; other accelerator providers and bank-requested CPU vocoders retain their existing selection.
 
 The exact pre-fix error was reproduced with Kaiz on macOS 13.6.4 / ONNX Runtime 1.23.2. Corrected real Spanish four-note inference passed in Automatic at 0.55 and 0.8 seconds per note and explicit CPU at 0.55 seconds. Result durations: 2.392 / 3.402 / 2.392 seconds; RMS 0.128 / 0.121 / 0.128. This establishes the regression's waveform/inference result, not broad intelligibility or physical Apple Silicon performance. See PROJECT_MEMORY.md for hashes and packaging results. Until upgrading, select the generation device CPU. Restart the existing companion process after installing the update; opening another copy while the old server runs reopens the existing server. Models/audio remain in persistent user data. The user has now explicitly approved the 1.0.2 release following the initial automatic approval-review rejection. Publication results are recorded after CI completes.
+
+Published [companion 1.0.2](https://github.com/suizman/kiber-vengance/releases/tag/desktop-vocals-v1.0.2): native source `636017b`, tag source `ce02b00`, [four-platform build](https://github.com/suizman/kiber-vengance/actions/runs/41086244602) and [publication](https://github.com/suizman/kiber-vengance/actions/runs/41086531213) both succeeded. All four installers and SHA-256 sidecars were confirmed in the published release. Full local validation passed: typecheck/build/lint, 59 unit tests, 51 browser workflows, plus 17 native tests and the genuine before/after inference regression above. GitHub release publication does not update the live ChatGPT Site; the status check still reports public version 35.
