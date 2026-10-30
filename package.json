@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js tests/refactor.test.js",
+    "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js tests/refactor.test.js tests/release.test.js",
     "test:e2e": "node --test tests/e2e.test.js tests/browser.test.js tests/ai-browser.test.js tests/mixing-browser.test.js tests/desktop-vocals-browser.test.js",
     "test:companion": "python -m unittest discover -s companion/tests -v",
     "typecheck": "tsc -p tsconfig.json",

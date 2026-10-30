@@ -60,7 +60,7 @@ jobs:
             let release;
             try { release = (await github.rest.repos.getReleaseByTag({...repo,tag})).data; }
             catch (error) { if (error.status !== 404) throw error; }
-            if (!release) release = (await github.rest.repos.createRelease({...repo,tag_name:tag,target_commitish:expected,name:'КИБЕР VENGANCE Studio '+studioVersion+' · Companion '+version,draft:true,body:[
+            if (!release) release = (await github.rest.repos.createRelease({...repo,tag_name:tag,name:'КИБЕР VENGANCE Studio '+studioVersion+' · Companion '+version,draft:true,body:[
               'Studio '+studioVersion+': voice generation is desktop-only, with no phone/tablet entrypoints or voice model/worker downloads. The concise English READMEs link a bilingual feature manual in docs/wiki: 13 English pages and 13 Spanish counterparts, English by default, with shared real English UI images.',
               'Native vocal companion for macOS Apple Silicon and Intel, Windows x64 and Linux x86_64 (Arch/Ubuntu AppImage).',
               'DiffSinger CoreML fix: dynamic-length vocoding runs on CPU while the acoustic stage retains its selected provider. Restart the previous companion process after installing the update; models and generated audio are preserved.',
@@ -70,7 +70,17 @@ jobs:
               'Every package includes a SHA-256 sidecar. Downloads are available from the public repository without sign-in.',
               'Source: '+expected+' · Build: '+run.html_url
             ].join('\n\n')})).data;
-            if (release.target_commitish !== expected) throw Error('Release source differs');
+            // The existing, independently verified tag determines the release source.
+            // target_commitish is irrelevant for an existing tag and can demand
+            // workflow-write permissions when the default branch advances.
+            async function verifyReleaseTag() {
+              const {data:current} = await github.rest.git.getRef({...repo,ref:'tags/'+tag});
+              const sha = current.object.type === 'tag'
+                ? (await github.rest.git.getTag({...repo,tag_sha:current.object.sha})).data.object.sha
+                : current.object.sha;
+              if (release.tag_name !== tag || sha !== expected) throw Error('Release tag source changed');
+            }
+            await verifyReleaseTag();
             const release_id = release.id;
             const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts,{...repo,run_id});
             const names = ['companion-linux-x64','companion-macos-arm64','companion-macos-x64','companion-windows-x64'];
@@ -102,5 +112,6 @@ jobs:
                 core.info('Attached '+filename+' (SHA-256 verified)');
               }
             }
+            await verifyReleaseTag();
             if (release.draft) await github.rest.repos.updateRelease({...repo,release_id,draft:false,make_latest:'true'});
             core.info('Published '+tag+' with all four checksum-verified packages.');
