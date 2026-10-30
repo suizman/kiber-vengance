@@ -2,7 +2,7 @@
 
 **Electro-rock, industrial, synthwave and cinematic composition in your browser.**
 
-[Open the studio](https://studio.suizman.org) · Manual: [English (default)](docs/wiki/Home.md) / [Español](docs/wiki/ES-Home.md) · [Releases](https://github.com/suizman/kiber-vengance/releases/latest)
+[Open the studio](https://studio.suizman.org) · Manual: [English (default)](https://github.com/suizman/kiber-vengance/wiki/Home) / [Español](https://github.com/suizman/kiber-vengance/wiki/ES-Home) · [Releases](https://github.com/suizman/kiber-vengance/releases/latest)
 
 ![Compose on desktop](docs/wiki/assets/compose.png)
 
@@ -39,6 +39,6 @@ The [desktop companion](companion/README.md) adds DiffSinger and ACE-Step. Insta
 
 ## Documentation and licensing
 
-The [versioned manual](docs/wiki/Home.md) defaults to English and includes a [Spanish edition](docs/wiki/ES-Home.md). Both editions share real English-language screenshots. It is organized as GitHub Wiki pages. This repository copy provides working navigation while the native wiki is being enabled. [Technical evidence](docs/DESKTOP_VOCALS.md), the [product plan](PRODUCT_PLAN.md) and [project memory](PROJECT_MEMORY.md) retain decisions and verified results.
+The [versioned manual](docs/wiki/Home.md) defaults to English and includes a [Spanish edition](docs/wiki/ES-Home.md). Both editions share real English-language screenshots. The [GitHub Wiki](https://github.com/suizman/kiber-vengance/wiki/Home) is published; this repository copy remains its versioned source. [Technical evidence](docs/DESKTOP_VOCALS.md), the [public data audit](docs/SECURITY_AUDIT.md), the [product plan](PRODUCT_PLAN.md) and [project memory](PROJECT_MEMORY.md) retain decisions and verified results.
 
 Software: [GPL-3.0-or-later](LICENSE). Included compositions: [CC BY-NC-ND 4.0](projects/LICENSE.md), independently of music created by users. The official identity is **КИБЕР VENGANCE**; historical slugs remain for compatibility.
