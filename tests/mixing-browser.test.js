@@ -40,31 +40,41 @@ test('final Master controls deck audio and excludes preview while Cue stays inde
   source.stop();project.outputMix.master=1;engine.setProject(project);const preview=engine.ctx.createOscillator();preview.connect(engine.previewGain);preview.start();await wait();const previewExcluded=rms();preview.stop();await engine.ctx.close();return {deck,silent,cue,previewExcluded,boot};
  });assert.equal(result.boot.master,0);assert.equal(result.boot.sampler,.25);assert.ok(result.deck>.1,JSON.stringify(result));assert.ok(result.silent<.001,JSON.stringify(result));assert.equal(result.cue,1);assert.ok(result.previewExcluded<.001,JSON.stringify(result));
 });
-test('mobile and low-memory voice loading is blocked before any expressive download, with a working q8 fallback (protocol fixture)',async t=>{
+test('mobile devices have no voice generation UI or voice-engine requests',async t=>{
  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());
  for(const device of [
   {userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1'},
   {userAgent:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36'},
   {userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Safari/605.1.15',touch:5},
-  {userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0',memory:4},
  ]){
   const context=await browser.newContext({viewport:{width:390,height:844},userAgent:device.userAgent,serviceWorkers:'block'});
-  await context.addInitScript(({touch,memory})=>{
+  await context.addInitScript(({touch})=>{
    if(touch!==undefined)Object.defineProperty(navigator,'maxTouchPoints',{value:touch});
-   if(memory!==undefined)Object.defineProperty(navigator,'deviceMemory',{value:memory});
   },device);
-  let expressiveRequests=0;
-  await context.route(/chatterbox-worker-|huggingface\.co|cdn\.jsdelivr\.net/,route=>{expressiveRequests++;return route.abort()});
-  await context.route('**/voice-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:`self.onmessage=({data})=>{if(data.kind==='load')self.postMessage({kind:'loaded'});if(data.kind==='generate')self.postMessage({kind:'audio',pcm:new Float32Array(2400),sampleRate:24000,phonemes:''});}`}));
-  const page=await context.newPage();await page.goto(server.url+'/?qa=1');await goToView(page,'audio');await page.locator('#localVoiceBtn').click();await page.locator('#voiceText').fill('Conserva este texto.');await page.locator('#voiceEngine').selectOption('chatterbox');
-  assert.equal(await page.locator('#loadLocalVoice').isDisabled(),true);assert.equal(await page.locator('#generateLocalVoice').isDisabled(),true);
-  await page.locator('#voiceDeviceNotice').waitFor();assert.match(await page.locator('#voiceDeviceNotice').innerText(),/restart/);
-  assert.equal(expressiveRequests,0);
-  await page.locator('#useLightweightVoice').click();assert.equal(await page.locator('#voiceEngine').inputValue(),'kokoro');assert.equal(await page.locator('#voicePrecision').inputValue(),'q8');assert.equal(await page.locator('#voiceText').inputValue(),'Conserva este texto.');
-  await page.locator('#loadLocalVoice').click();await page.waitForFunction(()=>!document.querySelector('#generateLocalVoice').disabled);await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();assert.equal(expressiveRequests,0);
+  const requests=[];
+  context.on('request',request=>{if(/local-voice-|desktop-vocals-|chatterbox-worker-|voice-worker-|huggingface\.co|cdn\.jsdelivr\.net|127\.0\.0\.1:19738/.test(request.url()))requests.push(request.url());});
+  const page=await context.newPage();await page.goto(server.url+'/?qa=1');await goToView(page,'audio');
+  await page.evaluate(()=>globalThis.dispatchEvent(new globalThis.Event('kv-open-desktop-vocals')));
+  await page.waitForTimeout(300);
+  for(const selector of ['#localVoiceBtn','#desktopVocalsBtn','#localVoiceDialog','#desktopVocalsDialog','#useLightweightVoice'])assert.equal(await page.locator(selector).count(),0,selector);
+  assert.equal(await page.locator('#audioImport').count(),1);assert.equal(await page.locator('#audioLaneBtn').count(),1);assert.equal(await page.locator('#samplerLab').count(),1);
+  assert.deepEqual(requests,[]);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=globalThis.innerWidth),true);
   await context.close();
  }
+});
+test('low-memory desktop retains Kokoro while blocking the expressive engine before download',async t=>{
+ await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());
+ const context=await browser.newContext({viewport:{width:1366,height:1000},serviceWorkers:'block'});
+ await context.addInitScript(()=>Object.defineProperty(navigator,'deviceMemory',{value:4}));
+ const requests=[];context.on('request',request=>{if(/chatterbox-worker-|huggingface\.co|cdn\.jsdelivr\.net/.test(request.url()))requests.push(request.url());});
+ await context.route('**/voice-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:`self.onmessage=({data})=>{if(data.kind==='load')self.postMessage({kind:'loaded'});if(data.kind==='generate')self.postMessage({kind:'audio',pcm:new Float32Array(2400),sampleRate:24000,phonemes:''});}`}));
+ const page=await context.newPage();await page.goto(server.url+'/?qa=1');await goToView(page,'audio');await page.locator('#localVoiceBtn').click();await page.locator('#voiceText').fill('Conserva este texto.');await page.locator('#voiceEngine').selectOption('chatterbox');
+ assert.equal(await page.locator('#loadLocalVoice').isDisabled(),true);assert.equal(await page.locator('#generateLocalVoice').isDisabled(),true);
+ await page.locator('#voiceDeviceNotice').waitFor();assert.match(await page.locator('#voiceDeviceNotice').innerText(),/4 GB/);assert.deepEqual(requests,[]);
+ await page.locator('#useLightweightVoice').click();assert.equal(await page.locator('#voiceEngine').inputValue(),'kokoro');assert.equal(await page.locator('#voicePrecision').inputValue(),'q8');assert.equal(await page.locator('#voiceText').inputValue(),'Conserva este texto.');
+ await page.locator('#loadLocalVoice').click();await page.waitForFunction(()=>!document.querySelector('#generateLocalVoice').disabled);await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();assert.deepEqual(requests,[]);
+ await context.close();
 });
 test('expressive speech settings and selected treatment survive insertion and reload (protocol fixture)',async t=>{
  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});const page=await context.newPage();

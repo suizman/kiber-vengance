@@ -1,5 +1,8 @@
 import { VOICE_ENGINES } from "./voice-engines";
-import { chatterboxUnavailable } from "./voice-safety";
+import {
+  chatterboxUnavailable,
+  voiceGenerationUnavailable,
+} from "./voice-safety";
 import expressiveWorkerUrl from "./chatterbox-worker.ts?worker&url";
 import workerUrl from "./voice-worker.ts?worker&url";
 import { acquireInference } from "./inference-lock";
@@ -83,9 +86,11 @@ export async function loadVoice(
   settings: SpeechSettings,
   progress: (text: string) => void,
 ) {
+  if (voiceGenerationUnavailable(navigator))
+    throw new Error("Voice generation requires a desktop computer.");
   if (settings.engine === "chatterbox" && chatterboxUnavailable(navigator))
     throw new Error(
-      "Chatterbox is unavailable on mobile/tablets and low-memory devices to prevent page restarts. Use Kokoro q8.",
+      "Chatterbox requires more than 4 GB of reported device memory. Use Kokoro q8.",
     );
   freeVoice();
   const token = epoch,
@@ -134,6 +139,8 @@ export async function generateSpeech(
   settings: SpeechSettings,
   progress: (text: string) => void,
 ): Promise<SpeechResult> {
+  if (voiceGenerationUnavailable(navigator))
+    throw new Error("Voice generation requires a desktop computer.");
   if (
     loaded !==
     `${settings.engine ?? "kokoro"}:${settings.dtype}:${settings.device ?? "wasm"}`

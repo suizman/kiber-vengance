@@ -22,7 +22,10 @@ import {
 } from "../ai/voice";
 import { getLanguage } from "./i18n";
 import { openDesktopVocals } from "./desktop-vocals";
-import { chatterboxUnavailable } from "../ai/voice-safety";
+import {
+  chatterboxUnavailable,
+  voiceGenerationUnavailable,
+} from "../ai/voice-safety";
 import type { Project } from "../model";
 interface Context {
   project: Project;
@@ -37,6 +40,7 @@ interface Context {
   toast(text: string, undo?: boolean): void;
 }
 export function setupLocalVoice(ctx: Context) {
+  if (voiceGenerationUnavailable(navigator)) return;
   const host = document.createElement("div");
   document.body.append(host);
   const launcher = document.createElement("button");
@@ -323,9 +327,20 @@ export function setupLocalVoice(ctx: Context) {
             ×
           </button>
         </header>
-        <p><button id="desktopVocalsFromSpeech" onClick={() => { close(); openDesktopVocals(); }}>
-          {L("For singing: desktop vocal engines", "Para cantar: motores vocales de escritorio")}
-        </button></p>
+        <p>
+          <button
+            id="desktopVocalsFromSpeech"
+            onClick={() => {
+              close();
+              openDesktopVocals();
+            }}
+          >
+            {L(
+              "For singing: desktop vocal engines",
+              "Para cantar: motores vocales de escritorio",
+            )}
+          </button>
+        </p>
         <p>
           {L(
             "Speech is generated in your browser. Kokoro: q8 ≈90 MB or FP32 ≈330 MB; Chatterbox ≈570 MB, plus runtime and voices. Downloads are explicit. Audition Spanish pronunciation before inserting.",
@@ -412,8 +427,8 @@ export function setupLocalVoice(ctx: Context) {
             <section id="voiceDeviceNotice" role="note">
               <p>
                 {L(
-                  "Chatterbox is unavailable on mobile, tablets and devices reporting 4 GB RAM or less. Its ≈570 MB download expands further in memory and can cause the browser to restart the page. Use Kokoro q8 here; Chatterbox remains experimental on desktop.",
-                  "Chatterbox no está disponible en móviles, tablets y equipos que indican 4 GB de RAM o menos. La descarga de ≈570 MB necesita aún más memoria al cargar y puede hacer que el navegador reinicie la página. Usa Kokoro q8 aquí; Chatterbox sigue siendo experimental en escritorio.",
+                  "Chatterbox requires more than 4 GB of reported device memory. Use Kokoro q8 on this computer; Chatterbox remains experimental.",
+                  "Chatterbox requiere más de 4 GB de memoria indicada por el equipo. Usa Kokoro q8 en este ordenador; Chatterbox sigue siendo experimental.",
                 )}
               </p>
               <button

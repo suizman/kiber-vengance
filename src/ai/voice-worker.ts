@@ -1,3 +1,4 @@
+import { voiceGenerationUnavailable } from "./voice-safety";
 import {
   env,
   PreTrainedTokenizer,
@@ -57,6 +58,8 @@ async function voiceData(id: string) {
 }
 scope.onmessage = async ({ data }) => {
   try {
+    if (voiceGenerationUnavailable(navigator))
+      throw new Error("Voice generation requires a desktop computer.");
     if (data.kind === "load") {
       model = await StyleTextToSpeech2Model.from_pretrained(MODEL, {
         device: "wasm",

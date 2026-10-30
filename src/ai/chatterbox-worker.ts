@@ -5,7 +5,10 @@ import factoryUrl from "onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs?url";
 import gpuFactoryUrl from "onnxruntime-web/ort-wasm-simd-threaded.jspi.mjs?url";
 import gpuFallbackUrl from "onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url";
 import { modelBytes } from "./model-download";
-import { chatterboxUnavailable } from "./voice-safety";
+import {
+  chatterboxUnavailable,
+  voiceGenerationUnavailable,
+} from "./voice-safety";
 const scope = globalThis as unknown as {
   postMessage(value: unknown): void;
   onmessage: ((event: MessageEvent) => void) | null;
@@ -59,10 +62,12 @@ async function session(
 scope.onmessage = async ({ data }) => {
   let runtimeUrl = "";
   try {
+    if (voiceGenerationUnavailable(navigator))
+      throw new Error("Voice generation requires a desktop computer.");
     if (data.kind === "load") {
       if (chatterboxUnavailable(navigator))
         throw Error(
-          "Chatterbox requires desktop memory. Use Kokoro q8 on mobile.",
+          "Chatterbox requires more than 4 GB of reported device memory. Use Kokoro q8.",
         );
       const device = data.device === "webgpu" ? "webgpu" : "wasm";
       const jspi =

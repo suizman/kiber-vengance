@@ -1,3 +1,4 @@
+import { voiceGenerationUnavailable } from "../ai/voice-safety";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
@@ -14,7 +15,6 @@ import type { AudioEffects, Project, TrackId } from "../model";
 import {
   capturedSingingNotes,
   DesktopVocalsClient,
-  desktopVocalsMobile,
   type CompanionJob,
   type CompanionStatus,
   type SingingNote,
@@ -57,10 +57,12 @@ interface DownloadManifest {
 }
 
 export function openDesktopVocals() {
+  if (voiceGenerationUnavailable(navigator)) return;
   window.dispatchEvent(new Event("kv-open-desktop-vocals"));
 }
 
 export function setupDesktopVocals(ctx: Context) {
+  if (voiceGenerationUnavailable(navigator)) return;
   const host = document.createElement("div");
   document.body.append(host);
   const launcher = document.createElement("button");
@@ -117,7 +119,6 @@ export function setupDesktopVocals(ctx: Context) {
       target = useRef<Target | null>(null),
       sourceClip = useRef(""),
       sourceProject = useRef("");
-    const mobile = desktopVocalsMobile();
     const L = (en: string, spanish: string) => (es ? spanish : en);
     const selectedVoice = status?.voices.find((item) => item.id === voice);
     const selectedRuntime = status?.runtimes.find(
@@ -516,15 +517,7 @@ export function setupDesktopVocals(ctx: Context) {
             "El canto se genera con un asistente local opcional. Tus letras y audio permanecen en tu ordenador. Los modelos se descargan por separado del proyecto musical.",
           )}
         </p>
-        {mobile ? (
-          <p role="note">
-            {L(
-              "Open this feature on a Mac, Windows or Linux computer. Imported/generated audio can still be used on mobile.",
-              "Abre esta función en un ordenador Mac, Windows o Linux. El audio importado o generado se puede seguir usando en móvil.",
-            )}
-          </p>
-        ) : (
-          <>
+        <>
             <details class="ai-catalog" open={!status}>
               <summary>
                 {L("1 · Install and connect", "1 · Instalar y conectar")}
@@ -1137,8 +1130,7 @@ export function setupDesktopVocals(ctx: Context) {
                   ))}
               </details>
             )}
-          </>
-        )}
+        </>
         {raw && result && (
           <section class="ai-result">
             <h3>

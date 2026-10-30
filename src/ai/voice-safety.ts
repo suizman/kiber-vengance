@@ -5,12 +5,18 @@ export interface VoiceDevice {
   deviceMemory?: number;
   userAgentData?: { mobile?: boolean };
 }
-export function chatterboxUnavailable(device: VoiceDevice): boolean {
+export function voiceGenerationUnavailable(device: VoiceDevice): boolean {
   return (
     /Android|iPhone|iPad|iPod|Mobile/i.test(device.userAgent) ||
     device.userAgentData?.mobile === true ||
     (/Macintosh|MacIntel/i.test(device.userAgent) &&
-      (device.maxTouchPoints ?? 0) > 1) ||
+      (device.maxTouchPoints ?? 0) > 1)
+  );
+}
+
+export function chatterboxUnavailable(device: VoiceDevice): boolean {
+  return (
+    voiceGenerationUnavailable(device) ||
     (typeof device.deviceMemory === "number" && device.deviceMemory <= 4)
   );
 }

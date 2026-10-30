@@ -1,3 +1,4 @@
+import { voiceGenerationUnavailable } from "./voice-safety";
 import type { Project, Clip } from "../model";
 import { projectSeconds } from "../core";
 
@@ -113,13 +114,6 @@ export function capturedSingingNotes(
   });
 }
 
-export function desktopVocalsMobile(): boolean {
-  return (
-    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-    (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
-  );
-}
-
 export class DesktopVocalsClient {
   port = 19738;
   token = "";
@@ -145,6 +139,8 @@ export class DesktopVocalsClient {
     body?: unknown,
     signal?: AbortSignal,
   ): Promise<T> {
+    if (voiceGenerationUnavailable(navigator))
+      throw new Error("Voice generation requires a desktop computer.");
     const response = await fetch(`http://127.0.0.1:${this.port}/api/${path}`, {
       ...(body === undefined
         ? {}

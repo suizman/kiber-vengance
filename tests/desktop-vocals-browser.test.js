@@ -216,7 +216,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
   );
 });
 
-test("desktop singing explains mobile compatibility without probing or downloading a local engine", async (t) => {
+test("desktop singing is absent on phones without probing or downloading a local engine", async (t) => {
   await server.ready();
   const browser = await launchBrowser();
   t.after(() => browser.close());
@@ -232,13 +232,10 @@ test("desktop singing explains mobile compatibility without probing or downloadi
   });
   await page.goto(server.url + "/?qa=1");
   await goToView(page, "audio");
-  await page.locator("#desktopVocalsBtn").click();
-  await page
-    .getByText("Open this feature on a Mac, Windows or Linux computer.", {
-      exact: false,
-    })
-    .waitFor();
-  assert.equal(await page.locator("#generateDesktopVocals").count(), 0);
+  await page.evaluate(() => globalThis.dispatchEvent(new globalThis.Event("kv-open-desktop-vocals")));
+  assert.equal(await page.locator("#desktopVocalsBtn").count(), 0);
+  assert.equal(await page.locator("#desktopVocalsDialog").count(), 0);
+  assert.equal(await page.locator("#localVoiceBtn").count(), 0);
   assert.equal(localRequests, 0);
   assert.equal(
     await page.evaluate(

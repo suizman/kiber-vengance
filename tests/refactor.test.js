@@ -8,22 +8,23 @@ const load = async path => {
 };
 const {DeckProcessor}=await load('../src/audio/deck.ts');
 const {ProjectSession}=await load('../src/state/project-session.ts');
-const {chatterboxUnavailable}=await load('../src/ai/voice-safety.ts');
+const {chatterboxUnavailable,voiceGenerationUnavailable}=await load('../src/ai/voice-safety.ts');
 const {modelBytes}=await load('../src/ai/model-download.ts');
 
-test('expressive voice blocks phones, iPad desktop mode and reported low memory without confusing touch laptops with tablets',()=>{
+test('voice generation is desktop-only without treating touch laptops as tablets',()=>{
  for(const device of [
   {userAgent:'Mozilla iPhone Safari'}, {userAgent:'Mozilla Android Chrome'},
   {userAgent:'Mozilla Macintosh Safari',maxTouchPoints:5},
   {userAgent:'desktop',userAgentData:{mobile:true}},
-  {userAgent:'Windows Chrome',deviceMemory:4},
-  {userAgent:'Linux Chrome',deviceMemory:2},
- ])assert.equal(chatterboxUnavailable(device),true,JSON.stringify(device));
+ ])assert.equal(voiceGenerationUnavailable(device),true,JSON.stringify(device));
  for(const device of [
   {userAgent:'Macintosh Safari',maxTouchPoints:0},
   {userAgent:'Windows Chrome',maxTouchPoints:10,deviceMemory:8},
   {userAgent:'Linux Firefox'},
- ])assert.equal(chatterboxUnavailable(device),false,JSON.stringify(device));
+  {userAgent:'Windows Chrome',deviceMemory:4},
+ ])assert.equal(voiceGenerationUnavailable(device),false,JSON.stringify(device));
+ assert.equal(chatterboxUnavailable({userAgent:'Windows Chrome',deviceMemory:4}),true);
+ assert.equal(chatterboxUnavailable({userAgent:'Windows Chrome',deviceMemory:8}),false);
 });
 
 test('large voice downloads are consumed into cache before reading and recover from unavailable storage',async()=>{
