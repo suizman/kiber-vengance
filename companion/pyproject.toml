@@ -1,0 +1,17 @@
+[project]
+name = "kiber-vengance-companion"
+version = "1.0.0"
+description = "Local desktop vocal engines for КИБЕР VENGANCE"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+dependencies = []
+
+[project.scripts]
+kiber-vengance-companion = "kv_companion.__main__:main"
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+kv_companion = ["web/*", "resources/*", "engines/*"]
