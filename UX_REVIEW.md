@@ -1,5 +1,9 @@
 # UX consistency review
 
+## Mobile error feedback and keyboard holds — 2026-11-03
+
+The shared Compose/Live/sampler/drum playing surface now suppresses native long-press menus and text callouts, while preserving sustained notes, release cleanup and editing menus outside the keyboard. Browser-injected Playlist errors and source-redacted startup events remain in a bounded local compatibility report instead of being mislabeled as audio-engine failures. Actionable application errors remain visible, use localized Studio wording and wrap within mobile toast bounds. The exact native Playlist signature was traced to Brave iOS; the separate generic startup event has no attributable source. Automated browser evidence and physical-device limits are recorded in `PROJECT_MEMORY.md` and `docs/RELIABILITY.md`.
+
 Code review, 2026-10-25. This is a prioritized proposal, not a claim that the whole UI has been standardized.
 
 | Priority | Observed inconsistency | Proposed change |

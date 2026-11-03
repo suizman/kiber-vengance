@@ -531,6 +531,12 @@ dialog :is(button, select, input, label) {
   box-shadow: inset 0 -5px #b4bfcd;
   z-index: 1;
 }
+#app .instrument-keyboard .keyboard-key :is(b, span) {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
 #app .instrument-keyboard .keyboard-key.accidental {
   width: calc(var(--key-width, 54px) * 0.62);
   height: 86px;
@@ -1198,6 +1204,7 @@ dialog {
 }
 #toast {
   pointer-events: none;
+  overflow-wrap: anywhere;
   max-width: min(460px, calc(100vw - 32px));
   right: 24px;
   bottom: 24px;
@@ -1384,6 +1391,9 @@ dialog {
 }
 /* The exact keyboard surface is shared by synth, live and sampler adapters. */
 .instrument-keyboard .keyboard-surface {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   position: relative;
   display: block;
   height: 144px;

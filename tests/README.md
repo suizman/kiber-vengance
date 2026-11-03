@@ -27,6 +27,8 @@ Missing browsers are not skipped. Set `CHROMIUM_EXECUTABLE_PATH`, `FIREFOX_EXECU
 
 On headless Linux: `node scripts/with-null-audio.mjs npm run check:full`. HTTP fixtures use a free port and temporary data; worker fixtures block Service Workers.
 
+`tests/browser-errors.test.js` checks native-script error attribution, retained diagnostics and held/released Compose, Live and sampler keys. The default gate runs Chromium/Firefox. After installing WebKit and its host dependencies, run `TEST_WEBKIT=1 node --test tests/browser-errors.test.js` for the additional two WebKit checks (errors and Compose/Live holds; use the null-audio wrapper on headless Linux). WebKit sampler setup is blocked by the File/IndexedDB limitation documented in `docs/RELIABILITY.md`. This does not run native Brave or a physical iPhone.
+
 ## Evidence
 
 UI/protocol fixtures are not real inference. Model tests are opt-in because of downloads and memory use. Valid PCM and a null sink do not certify perceived quality, physical speakers, native Safari or GPU performance.

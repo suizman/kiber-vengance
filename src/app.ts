@@ -8,6 +8,7 @@ import { ProjectSession } from "./state/project-session";
 import { ProjectRepository } from "./state/project-repository";
 import { captureMusicalContext } from "./ai/composer";
 import { requestConfirmation } from "./ui/dialogs";
+import { recordPageError, type PageErrorInput } from "./ui/page-errors";
 import {
   buildPresetClip,
   commitPresetClip,
@@ -572,9 +573,22 @@ window.__kvErrors = [];
 function reportError(message: unknown): any {
   return workflow.reportError(runtime, message);
 }
-window.addEventListener("error", (e) => reportError(e.message));
-window.addEventListener("unhandledrejection", (e) =>
-  reportError(String(e.reason?.message || e.reason)),
+function reportPageError(input: PageErrorInput) {
+  const diagnostic = recordPageError(input, window.location.href);
+  if (diagnostic.origin === "application") reportError(diagnostic.message);
+}
+window.addEventListener("error", (event) =>
+  reportPageError({
+    kind: "error",
+    message: event.message,
+    source: event.filename,
+    line: event.lineno,
+    column: event.colno,
+    error: event.error,
+  }),
+);
+window.addEventListener("unhandledrejection", (event) =>
+  reportPageError({ kind: "rejection", error: event.reason }),
 );
 
 const $ = (s: string): any => document.querySelector(s),

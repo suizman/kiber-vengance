@@ -3,7 +3,8 @@ import { trackState } from "../state/tracks";
 import { projectTrackIds, trackMeta } from "../state/tracks";
 import { formatDb, levelDb } from "../ui/level-control";
 import { controlIcon } from "../ui/icons";
-import { t as msg, setLanguage, translateDOM } from "../ui/i18n";
+import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
+import { pageErrorDiagnostics } from "../ui/page-errors";
 
 import { studioBridge } from "../ui/bridge";
 
@@ -50,9 +51,10 @@ type CommandAction = {
 
 export function reportError(ctx: WorkflowContext, message: unknown) {
   window.__kvErrors.push(String(message));
+  if (window.__kvErrors.length > 30) window.__kvErrors.shift();
   const el = document.getElementById("toast");
   if (el) {
-    el.textContent = `ENGINE ERROR: ${String(message)}`;
+    el.textContent = `${translate("Studio error", "Error del estudio")}: ${String(message)}`;
     el.classList.add("show");
   }
 }
@@ -1179,6 +1181,7 @@ export function compatibility(ctx: WorkflowContext) {
     platform: navigator.platform || "unknown",
     sampleRate: ctx.engine.ctx?.sampleRate || "not initialized",
     audioState: ctx.engine.ctx?.state || "not initialized",
+    pageErrors: pageErrorDiagnostics(),
   };
 }
 
@@ -1187,7 +1190,7 @@ export function showCompatibility(ctx: WorkflowContext) {
   ctx.$("#compatReport").innerHTML = Object.entries(data)
     .map(
       ([key, value]) =>
-        `<div><span>${ctx.esc(key)}</span><b class="${value === false ? "bad" : "good"}">${ctx.esc(value)}</b></div>`,
+        `<div><span>${ctx.esc(key)}</span><b class="${value === false ? "bad" : "good"}">${ctx.esc(Array.isArray(value) ? value.length : value)}</b></div>`,
     )
     .join("");
   ctx.open("#compatDialog");

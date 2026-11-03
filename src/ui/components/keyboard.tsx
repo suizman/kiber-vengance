@@ -194,6 +194,7 @@ export function InstrumentKeyboard(props: KeyboardProps) {
       >
         <div
           class="keyboard-surface"
+          onContextMenu={(event) => event.preventDefault()}
           style={{
             width: `${Math.max(48, whites * 48)}px`,
             position: "relative",

@@ -120,3 +120,26 @@ const {scoreImageSize}=await load('../src/score/image-size.ts');
 test('image dimensions are bounded before attempting a full bitmap decode',()=>{
  const png=new Uint8Array(24),v=new DataView(png.buffer);v.setUint32(0,0x89504e47);v.setUint32(4,0x0d0a1a0a);v.setUint32(16,16000);v.setUint32(20,16000);assert.deepEqual(scoreImageSize(png),{width:16000,height:16000});assert.throws(()=>scoreImageSize(new Uint8Array([255,216,255,192])),/dimensions/);
 });
+
+const {classifyPageError,recordPageError,pageErrorDiagnostics}=await load('../src/ui/page-errors.ts');
+test('page errors distinguish browser Playlist hooks and redacted events without hiding application failures',()=>{
+ const pageUrl='https://studio.test/',message="TypeError: undefined is not an object (evaluating 'window.__firefox__.playlistLongPressed_210153B2661C4')";
+ assert.equal(classifyPageError({kind:'error',message,source:'user-script:playlist',error:{stack:'global code@user-script:1:1'}},pageUrl),'browser');
+ assert.equal(classifyPageError({kind:'error',message:message.replace('LongPressed','ProcessDocumentLoad')},pageUrl),'browser');
+ assert.equal(classifyPageError({kind:'error',message:'Script error.',source:'',line:0,column:0,error:null},pageUrl),'unattributed');
+ for(const input of [
+  {kind:'error',message:'Script error.',source:'https://studio.test/assets/app.js',line:1},
+  {kind:'error',message:'Script error.',error:Error('Script error.')},
+  {kind:'rejection',error:'Script error.'},
+  {kind:'error',message:'AudioContext initialization failed'},
+  {kind:'error',message,source:'https://studio.test/src/app.ts'},
+  {kind:'rejection',error:{message,stack:'TypeError\n at play (https://studio.test/assets/app.js:48:9)'}},
+  {kind:'error',message:'window.__firefox__ is not defined'},
+ ])assert.equal(classifyPageError(input,pageUrl),'application',JSON.stringify(input));
+});
+test('page diagnostics retain bounded local evidence including opaque errors',()=>{
+ for(let i=0;i<40;i++)recordPageError({kind:'error',message:'Script error.',error:null},'https://studio.test/');
+ recordPageError({kind:'rejection',message:'x'.repeat(2000),error:{stack:'y'.repeat(6000)}},'https://studio.test/');
+ const entries=pageErrorDiagnostics();assert.equal(entries.length,30);assert.equal(entries[0].origin,'unattributed');assert.equal(entries.at(-1).message.length,1000);assert.equal(entries.at(-1).stack.length,4000);assert.ok(!Number.isNaN(Date.parse(entries[0].timestamp)));
+ entries[0].message='edited';assert.equal(pageErrorDiagnostics()[0].message,'Script error.');
+});

@@ -6,6 +6,16 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-11-03.
 
+## Mobile browser errors and held keyboards (2026-11-03)
+
+The iPhone/Brave report showed an opaque `Script error.` on load and an exception mentioning `window.__firefox__.playlistLongPressed_…` on a held key. Brave's pinned upstream iOS code confirms the latter is a native Playlist hook; the opaque startup event alone does not establish its cause. Previously every global error was shown as `ENGINE ERROR`, including injected browser code.
+
+Global errors now retain bounded local diagnostics (30 records, capped message/stack sizes). Only the exact known Playlist callback signatures and genuinely redacted, unsourced error events stay diagnostic-only; sourced application errors and other unhandled rejections remain visible as localized Studio errors. An application script location takes precedence over a matching browser message. Compatibility → Copy report includes the evidence without automatic upload. The legacy application-error list is also bounded to 30 entries.
+
+The shared Compose/Live/sampler/drum keyboard surface suppresses native context menus and text callouts; key labels no longer become separate pointer targets. Held-note release behavior remains intact, other editing menus remain available, and long error text wraps inside the mobile toast. Regression checks exercise masked external errors, the reported Playlist signature, real application exceptions/rejections, and sustained/released notes across Compose, Live and sampler. See `docs/RELIABILITY.md` for the upstream evidence and physical-device limits.
+
+Verification: `npm run check:full` passed typecheck/build/lint, 85 unit tests and 68 Chromium/Firefox workflows. After hardening sampler fixture readiness, the focused six-check Chromium/Firefox/WebKit run and lint passed. Additional WebKit checks cover error handling plus Compose/Live holds. WebKit sampler setup remains unverified because its File/IndexedDB driver path fails with the known Playwright #42795 signature; it was not replaced with mocked persistence. No physical iPhone/Brave claim is made. Runtime publication is recorded separately after deployment succeeds.
+
 ## Development dependency correction (2026-11-03)
 
 The final GitHub push surfaced GHSA-g3hv-75wg-m249 for ESLint's development-only minimatch dependency. The matcher is pinned through a package override to 11.0.1 instead of accepting npm's suggested ESLint downgrade. No application/companion runtime dependency changed. `npm run check` passed with 83 unit tests; `npm audit` reports zero vulnerabilities. Byte comparison confirmed every application bundle and media asset identical to the tested v7 release: only the index footer, service worker cache identity and corresponding-source ZIP changed. See `docs/development-audit-v7.json`.
