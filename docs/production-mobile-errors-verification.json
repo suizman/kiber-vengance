@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-11-03T23:01:36.385Z",
+  "url": "https://studio.suizman.org",
+  "footer": "1587e60",
+  "browser": "Chromium",
+  "viewport": "390x844",
+  "serviceWorkers": "blocked",
+  "opaqueAndPlaylistEvents": "diagnostic-only",
+  "composeAndLiveTouchHolds": "maintained and released",
+  "nativeContextMenuOnKeys": "prevented",
+  "pageErrors": [],
+  "failedResponses": [],
+  "physicalIPhone": "not tested"
+}
