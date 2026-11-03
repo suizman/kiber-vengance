@@ -141,7 +141,7 @@
     ]
   },
   "index.html": {
-    "file": "assets/studio-BmaFfoXv.js",
+    "file": "assets/studio-0VkdPIE8.js",
     "name": "studio",
     "src": "index.html",
     "isEntry": true,
@@ -161,7 +161,7 @@
       "src/app.ts"
     ],
     "css": [
-      "assets/studio-CNjU5WkW.css"
+      "assets/studio-DNSXFti7.css"
     ],
     "assets": [
       "assets/cpu-worker-BtCIVjH1.js",
@@ -233,7 +233,7 @@
     ]
   },
   "src/app.ts": {
-    "file": "assets/app-B-zoucpG.js",
+    "file": "assets/app-DLhQEQNb.js",
     "name": "app",
     "src": "src/app.ts",
     "isDynamicEntry": true,
