@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "program-114",
+  "kind": "program",
+  "number": 114,
+  "name": "steel drums",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1140_FluidR3_GM_sf2_file.js",
+    "sha256": "8d92ddc86a7a7518b93dea55a2e291c4712e1ac333e27a7cf3db4e65a8d20f77",
+    "bytes": 35647
+  },
+  "zones": [
+    {
+      "midi": 114,
+      "originalPitch": 6600,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 66,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 24000,
+      "ahdsr": false,
+      "anchor": 0.03691667,
+      "sample": {
+        "path": "samples/5ae4d44edc00f3f4afbf84b965f182d255302207baa31ba74c273e912b73f6e6.mp3",
+        "sha256": "5ae4d44edc00f3f4afbf84b965f182d255302207baa31ba74c273e912b73f6e6",
+        "bytes": 8661,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 114,
+      "originalPitch": 7200,
+      "keyRangeLow": 67,
+      "keyRangeHigh": 72,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 34000,
+      "ahdsr": false,
+      "anchor": 0.02694118,
+      "sample": {
+        "path": "samples/d111073ae2e88c88cc232ebe03f120683997c228879f2f6d8f138b50cb8561ac.mp3",
+        "sha256": "d111073ae2e88c88cc232ebe03f120683997c228879f2f6d8f138b50cb8561ac",
+        "bytes": 7497,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 114,
+      "originalPitch": 7800,
+      "keyRangeLow": 73,
+      "keyRangeHigh": 78,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.03219955,
+      "sample": {
+        "path": "samples/4cd9b6d5ff43bea905e70e811866da33430e7f5a27ebb0fcabda33274266ddfa.mp3",
+        "sha256": "4cd9b6d5ff43bea905e70e811866da33430e7f5a27ebb0fcabda33274266ddfa",
+        "bytes": 5574,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 114,
+      "originalPitch": 8400,
+      "keyRangeLow": 79,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 34000,
+      "ahdsr": false,
+      "anchor": 0.01461765,
+      "sample": {
+        "path": "samples/51c190c26143f518e607c56ce9bcd67e55112ccb0b9f2ff6c1a7170b535e9bde.mp3",
+        "sha256": "51c190c26143f518e607c56ce9bcd67e55112ccb0b9f2ff6c1a7170b535e9bde",
+        "bytes": 4185,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

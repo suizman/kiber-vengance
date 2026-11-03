@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "program-093",
+  "kind": "program",
+  "number": 93,
+  "name": "pad 6 metallic",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0930_FluidR3_GM_sf2_file.js",
+    "sha256": "a678a6236e5baa954bd83e47f392b5703901ed9dd15001d747d03eae759e2e36",
+    "bytes": 59675
+  },
+  "zones": [
+    {
+      "midi": 93,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 37282,
+      "loopEnd": 73229,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.23877551,
+      "sample": {
+        "path": "samples/cdea66f59e000577e525d85dfb617520a91b0692ae884e5b603d0f620fb05cad.mp3",
+        "sha256": "cdea66f59e000577e525d85dfb617520a91b0692ae884e5b603d0f620fb05cad",
+        "bytes": 27702,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 93,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 20191,
+      "loopEnd": 36539,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04965986,
+      "sample": {
+        "path": "samples/4febed375ca8ec36220e48f6adb1bf7721beaf6b1869c70880720de32c4b398f.mp3",
+        "sha256": "4febed375ca8ec36220e48f6adb1bf7721beaf6b1869c70880720de32c4b398f",
+        "bytes": 16609,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -1,1 +1,0 @@
-var e=null;function t(t){if(e)throw Error(`Local inference busy: ${e}`);return e=t,()=>{e===t&&(e=null)}}export{t};

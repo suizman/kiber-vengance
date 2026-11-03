@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-123",
+  "kind": "program",
+  "number": 123,
+  "name": "bird tweet",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1230_FluidR3_GM_sf2_file.js",
+    "sha256": "05613c6bee2fb231748f32da60bbf878f1df8d93dd34fb3b2c64b6bd24689d1e",
+    "bytes": 31297
+  },
+  "zones": [
+    {
+      "midi": 123,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.32863945,
+      "sample": {
+        "path": "samples/a887b4af4c24343fe432cecb6f31f1ce47e6617a08d612d114e605c3f9557844.mp3",
+        "sha256": "a887b4af4c24343fe432cecb6f31f1ce47e6617a08d612d114e605c3f9557844",
+        "bytes": 23220,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

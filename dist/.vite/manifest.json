@@ -1,0 +1,449 @@
+{
+  "_alphaTab.core-JdO1Izqq.js": {
+    "file": "assets/alphaTab.core-JdO1Izqq.js",
+    "name": "alphaTab.core"
+  },
+  "_audio-BUJhe4JW.js": {
+    "file": "assets/audio-BUJhe4JW.js",
+    "name": "audio",
+    "imports": [
+      "_core-DyZmaIf1.js",
+      "_preload-helper-CRzLMJPS.js",
+      "_gm-bank-BVCu3wsm.js",
+      "_effects-DxXP000d.js"
+    ],
+    "dynamicImports": [
+      "src/audio/ogg.ts"
+    ],
+    "assets": [
+      "assets/wav-worker-BAT2WKfZ.js",
+      "assets/scratch-worklet-BK251jc_.js"
+    ]
+  },
+  "_audio-effects-BhYj-U0L.js": {
+    "file": "assets/audio-effects-BhYj-U0L.js",
+    "name": "audio-effects",
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_core-DyZmaIf1.js"
+    ]
+  },
+  "_bridge-DFDePTGr.js": {
+    "file": "assets/bridge-DFDePTGr.js",
+    "name": "bridge"
+  },
+  "_composer-CJ1lrUuG.js": {
+    "file": "assets/composer-CJ1lrUuG.js",
+    "name": "composer",
+    "imports": [
+      "_core-DyZmaIf1.js"
+    ]
+  },
+  "_core-DyZmaIf1.js": {
+    "file": "assets/core-DyZmaIf1.js",
+    "name": "core"
+  },
+  "_desktop-vocals-B8K6sn-K.css": {
+    "file": "assets/desktop-vocals-B8K6sn-K.css",
+    "src": "_desktop-vocals-B8K6sn-K.css"
+  },
+  "_desktop-vocals-wMplROws.js": {
+    "file": "assets/desktop-vocals-wMplROws.js",
+    "name": "desktop-vocals",
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_hooks-C0sDxArp.js",
+      "_core-DyZmaIf1.js",
+      "_effects-DxXP000d.js",
+      "_audio-effects-BhYj-U0L.js"
+    ],
+    "css": [
+      "assets/desktop-vocals-B8K6sn-K.css"
+    ]
+  },
+  "_dialogs-7ZkGFqZL.js": {
+    "file": "assets/dialogs-7ZkGFqZL.js",
+    "name": "dialogs",
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js"
+    ]
+  },
+  "_effects-DxXP000d.js": {
+    "file": "assets/effects-DxXP000d.js",
+    "name": "effects",
+    "imports": [
+      "_core-DyZmaIf1.js"
+    ]
+  },
+  "_gm-bank-BVCu3wsm.js": {
+    "file": "assets/gm-bank-BVCu3wsm.js",
+    "name": "gm-bank"
+  },
+  "_history-Dy8E5PCB.js": {
+    "file": "assets/history-Dy8E5PCB.js",
+    "name": "history"
+  },
+  "_hooks-C0sDxArp.js": {
+    "file": "assets/hooks-C0sDxArp.js",
+    "name": "hooks",
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js"
+    ]
+  },
+  "_inference-lock-xpwtRe7N.js": {
+    "file": "assets/inference-lock-xpwtRe7N.js",
+    "name": "inference-lock"
+  },
+  "_insert-Dll31GCU.js": {
+    "file": "assets/insert-Dll31GCU.js",
+    "name": "insert",
+    "imports": [
+      "_core-DyZmaIf1.js",
+      "_model-BdfScldI.js"
+    ]
+  },
+  "_jsxRuntime-BX1fm_as.js": {
+    "file": "assets/jsxRuntime-BX1fm_as.js",
+    "name": "jsxRuntime"
+  },
+  "_melody-Bu6WCwFt.js": {
+    "file": "assets/melody-Bu6WCwFt.js",
+    "name": "melody",
+    "imports": [
+      "_core-DyZmaIf1.js"
+    ]
+  },
+  "_model-BdfScldI.js": {
+    "file": "assets/model-BdfScldI.js",
+    "name": "model"
+  },
+  "_musicxml-DYZoJRCs.js": {
+    "file": "assets/musicxml-DYZoJRCs.js",
+    "name": "musicxml"
+  },
+  "_preload-helper-CRzLMJPS.js": {
+    "file": "assets/preload-helper-CRzLMJPS.js",
+    "name": "preload-helper"
+  },
+  "_presets-Cs_NEnvv.js": {
+    "file": "assets/presets-Cs_NEnvv.js",
+    "name": "presets",
+    "imports": [
+      "_core-DyZmaIf1.js"
+    ]
+  },
+  "_recipes-DvzClWH0.js": {
+    "file": "assets/recipes-DvzClWH0.js",
+    "name": "recipes",
+    "imports": [
+      "_presets-Cs_NEnvv.js",
+      "_composer-CJ1lrUuG.js"
+    ]
+  },
+  "index.html": {
+    "file": "assets/studio-BmaFfoXv.js",
+    "name": "studio",
+    "src": "index.html",
+    "isEntry": true,
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_hooks-C0sDxArp.js",
+      "_bridge-DFDePTGr.js",
+      "_inference-lock-xpwtRe7N.js",
+      "_core-DyZmaIf1.js",
+      "_melody-Bu6WCwFt.js",
+      "_presets-Cs_NEnvv.js",
+      "_composer-CJ1lrUuG.js",
+      "_recipes-DvzClWH0.js",
+      "_preload-helper-CRzLMJPS.js"
+    ],
+    "dynamicImports": [
+      "src/app.ts"
+    ],
+    "css": [
+      "assets/studio-CNjU5WkW.css"
+    ],
+    "assets": [
+      "assets/cpu-worker-BtCIVjH1.js",
+      "assets/inference-worker-C5UOFf67.js"
+    ]
+  },
+  "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs": {
+    "file": "assets/ort-wasm-simd-threaded.jsep-BdMRXSUM.mjs",
+    "src": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs"
+  },
+  "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm": {
+    "file": "assets/ort-wasm-simd-threaded.jsep-Dt1SEu-e.wasm",
+    "src": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm"
+  },
+  "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs": {
+    "file": "assets/ort-wasm-simd-threaded-BQJNh0bu.mjs",
+    "src": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs"
+  },
+  "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm": {
+    "file": "assets/ort-wasm-simd-threaded-4byDm7i3.wasm",
+    "src": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm"
+  },
+  "node_modules/onnxruntime-web/dist/ort.wasm.min.mjs": {
+    "file": "assets/ort.wasm.min-BrcXXCoE.mjs",
+    "src": "node_modules/onnxruntime-web/dist/ort.wasm.min.mjs"
+  },
+  "node_modules/onnxruntime-web/dist/ort.webgpu.min.mjs": {
+    "file": "assets/ort.webgpu.min-BvcHVlAM.mjs",
+    "src": "node_modules/onnxruntime-web/dist/ort.webgpu.min.mjs"
+  },
+  "node_modules/pdfjs-dist/build/pdf.worker.min.mjs": {
+    "file": "assets/pdf.worker.min-CIqJB0yW.mjs",
+    "src": "node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
+  },
+  "src/ai/composer.ts": {
+    "file": "composer.js",
+    "name": "composer",
+    "src": "src/ai/composer.ts",
+    "isEntry": true,
+    "imports": [
+      "_composer-CJ1lrUuG.js"
+    ]
+  },
+  "src/ai/melody.ts": {
+    "file": "melody.js",
+    "name": "melody",
+    "src": "src/ai/melody.ts",
+    "isEntry": true,
+    "imports": [
+      "_melody-Bu6WCwFt.js"
+    ]
+  },
+  "src/ai/presets.ts": {
+    "file": "presets.js",
+    "name": "presets",
+    "src": "src/ai/presets.ts",
+    "isEntry": true,
+    "imports": [
+      "_presets-Cs_NEnvv.js"
+    ]
+  },
+  "src/ai/recipes.ts": {
+    "file": "recipes.js",
+    "name": "recipes",
+    "src": "src/ai/recipes.ts",
+    "isEntry": true,
+    "imports": [
+      "_recipes-DvzClWH0.js"
+    ]
+  },
+  "src/app.ts": {
+    "file": "assets/app-B-zoucpG.js",
+    "name": "app",
+    "src": "src/app.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_hooks-C0sDxArp.js",
+      "_bridge-DFDePTGr.js",
+      "_core-DyZmaIf1.js",
+      "_history-Dy8E5PCB.js",
+      "_presets-Cs_NEnvv.js",
+      "_composer-CJ1lrUuG.js",
+      "_preload-helper-CRzLMJPS.js",
+      "_audio-BUJhe4JW.js",
+      "_audio-effects-BhYj-U0L.js",
+      "_dialogs-7ZkGFqZL.js"
+    ],
+    "dynamicImports": [
+      "src/score/ui.tsx",
+      "src/score/insert.ts",
+      "src/score/musicxml.ts",
+      "src/features/track-management.ts",
+      "src/ui/local-voice.tsx",
+      "src/ui/desktop-vocals.tsx"
+    ],
+    "assets": [
+      "assets/project-store-worker-BAl5phBV.js"
+    ]
+  },
+  "src/audio.ts": {
+    "file": "audio.js",
+    "name": "audio",
+    "src": "src/audio.ts",
+    "isEntry": true,
+    "imports": [
+      "_core-DyZmaIf1.js",
+      "_audio-BUJhe4JW.js",
+      "_effects-DxXP000d.js"
+    ]
+  },
+  "src/audio/ogg.ts": {
+    "file": "assets/ogg-DIEDi_aJ.js",
+    "name": "ogg",
+    "src": "src/audio/ogg.ts",
+    "isDynamicEntry": true,
+    "assets": [
+      "assets/ogg-worker-BomKyl3e.js"
+    ]
+  },
+  "src/core.ts": {
+    "file": "core.js",
+    "name": "core",
+    "src": "src/core.ts",
+    "isEntry": true,
+    "imports": [
+      "_core-DyZmaIf1.js",
+      "_history-Dy8E5PCB.js"
+    ]
+  },
+  "src/features/track-management.ts": {
+    "file": "assets/track-management--fZWvfD8.js",
+    "name": "track-management",
+    "src": "src/features/track-management.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_core-DyZmaIf1.js",
+      "_gm-bank-BVCu3wsm.js",
+      "_dialogs-7ZkGFqZL.js"
+    ]
+  },
+  "src/score/audition.ts": {
+    "file": "assets/audition-ijZp01xo.js",
+    "name": "audition",
+    "src": "src/score/audition.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_core-DyZmaIf1.js",
+      "_insert-Dll31GCU.js",
+      "_audio-BUJhe4JW.js"
+    ]
+  },
+  "src/score/insert.ts": {
+    "file": "assets/insert-aPTMSLkL.js",
+    "name": "insert",
+    "src": "src/score/insert.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_insert-Dll31GCU.js"
+    ]
+  },
+  "src/score/musicxml.ts": {
+    "file": "assets/musicxml-D1qwJqVQ.js",
+    "name": "musicxml",
+    "src": "src/score/musicxml.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_musicxml-DYZoJRCs.js"
+    ]
+  },
+  "src/score/notation.ts": {
+    "file": "assets/notation-COt15ipA.js",
+    "name": "notation",
+    "src": "src/score/notation.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_alphaTab.core-JdO1Izqq.js",
+      "_musicxml-DYZoJRCs.js"
+    ],
+    "assets": [
+      "assets/alphaTab.worker-DDLS8eeZ.js"
+    ]
+  },
+  "src/score/omr.ts": {
+    "file": "assets/omr--e5EteMm.js",
+    "name": "omr",
+    "src": "src/score/omr.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_inference-lock-xpwtRe7N.js"
+    ],
+    "assets": [
+      "assets/ort.wasm.min-BrcXXCoE.mjs",
+      "assets/ort-wasm-simd-threaded-BQJNh0bu.mjs",
+      "assets/ort-wasm-simd-threaded-4byDm7i3.wasm",
+      "assets/ort.webgpu.min-BvcHVlAM.mjs",
+      "assets/ort-wasm-simd-threaded.jsep-BdMRXSUM.mjs",
+      "assets/ort-wasm-simd-threaded.jsep-Dt1SEu-e.wasm"
+    ]
+  },
+  "src/score/pages.ts": {
+    "file": "assets/pages-ClQ_DdNZ.js",
+    "name": "pages",
+    "src": "src/score/pages.ts",
+    "isDynamicEntry": true,
+    "assets": [
+      "assets/pdf.worker.min-CIqJB0yW.mjs"
+    ]
+  },
+  "src/score/parse.ts": {
+    "file": "scores.js",
+    "name": "scores",
+    "src": "src/score/parse.ts",
+    "isEntry": true,
+    "imports": [
+      "_alphaTab.core-JdO1Izqq.js",
+      "_model-BdfScldI.js",
+      "_insert-Dll31GCU.js",
+      "_musicxml-DYZoJRCs.js"
+    ]
+  },
+  "src/score/ui.tsx": {
+    "file": "assets/ui-CP6S92_G.js",
+    "name": "ui",
+    "src": "src/score/ui.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_hooks-C0sDxArp.js",
+      "_history-Dy8E5PCB.js",
+      "_preload-helper-CRzLMJPS.js",
+      "_model-BdfScldI.js",
+      "_musicxml-DYZoJRCs.js",
+      "_gm-bank-BVCu3wsm.js",
+      "_dialogs-7ZkGFqZL.js"
+    ],
+    "dynamicImports": [
+      "src/score/notation.ts",
+      "src/score/pages.ts",
+      "src/score/omr.ts",
+      "src/score/audition.ts"
+    ],
+    "css": [
+      "assets/ui-CpXuwwvY.css"
+    ],
+    "assets": [
+      "assets/parse-worker-DW67Xwcj.js"
+    ]
+  },
+  "src/scratch-worklet.ts": {
+    "file": "scratch-worklet.js",
+    "name": "scratch-worklet",
+    "src": "src/scratch-worklet.ts",
+    "isEntry": true
+  },
+  "src/ui/desktop-vocals.tsx": {
+    "file": "assets/desktop-vocals-BPcWxa6L.js",
+    "name": "desktop-vocals",
+    "src": "src/ui/desktop-vocals.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_desktop-vocals-wMplROws.js"
+    ]
+  },
+  "src/ui/local-voice.tsx": {
+    "file": "assets/local-voice-1MIdofjw.js",
+    "name": "local-voice",
+    "src": "src/ui/local-voice.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_jsxRuntime-BX1fm_as.js",
+      "_hooks-C0sDxArp.js",
+      "_inference-lock-xpwtRe7N.js",
+      "_core-DyZmaIf1.js",
+      "_effects-DxXP000d.js",
+      "_audio-effects-BhYj-U0L.js",
+      "_desktop-vocals-wMplROws.js"
+    ],
+    "assets": [
+      "assets/chatterbox-worker-CZvXs2Vj.js",
+      "assets/voice-worker-BwKeNsUa.js"
+    ]
+  }
+}

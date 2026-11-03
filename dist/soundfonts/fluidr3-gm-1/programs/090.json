@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-090",
+  "kind": "program",
+  "number": 90,
+  "name": "pad 3 polysynth",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0900_FluidR3_GM_sf2_file.js",
+    "sha256": "8825fa1b73e9f149496ed0ea64f123152b3602576cf0a0b36140c87c38338487",
+    "bytes": 29176
+  },
+  "zones": [
+    {
+      "midi": 90,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 19277,
+      "loopEnd": 45867,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.2944898,
+      "sample": {
+        "path": "samples/c0dc7b7a14e97b45f22ae2f34d9af2bc7a114e19491232f47be64db6e59d96e0.mp3",
+        "sha256": "c0dc7b7a14e97b45f22ae2f34d9af2bc7a114e19491232f47be64db6e59d96e0",
+        "bytes": 21620,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

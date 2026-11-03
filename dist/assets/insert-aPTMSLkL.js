@@ -1,0 +1,1 @@
+export{t as insertScore}from"./insert-Dll31GCU.js";

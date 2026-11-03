@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-077",
+  "kind": "program",
+  "number": 77,
+  "name": "shakuhachi",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0770_FluidR3_GM_sf2_file.js",
+    "sha256": "105d4a15a3be813bc2b44464065790b034d07279f1b074a782c98bb5e3c96325",
+    "bytes": 29259
+  },
+  "zones": [
+    {
+      "midi": 77,
+      "originalPitch": 7200,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 27377,
+      "loopEnd": 59881,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 38000,
+      "ahdsr": true,
+      "anchor": 0.10957894,
+      "sample": {
+        "path": "samples/7693e478105eeffa39bd321ea4698292e023f6f02c308b7595257ec404fdbfba.mp3",
+        "sha256": "7693e478105eeffa39bd321ea4698292e023f6f02c308b7595257ec404fdbfba",
+        "bytes": 21681,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

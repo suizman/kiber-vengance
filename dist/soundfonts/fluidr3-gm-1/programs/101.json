@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "program-101",
+  "kind": "program",
+  "number": 101,
+  "name": "fx 6 goblins",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1010_FluidR3_GM_sf2_file.js",
+    "sha256": "e47c54f0c4b06594e56d43e3adecdd5922ba1786cd051d71debf3790cf011390",
+    "bytes": 49680
+  },
+  "zones": [
+    {
+      "midi": 101,
+      "originalPitch": 7600,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 7588,
+      "loopEnd": 10878,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.04621315,
+      "sample": {
+        "path": "samples/ccb5872bb9b348f843dabb29f19ab38585b19278ae957b42c972c6757abb5e2d.mp3",
+        "sha256": "ccb5872bb9b348f843dabb29f19ab38585b19278ae957b42c972c6757abb5e2d",
+        "bytes": 7586,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 101,
+      "originalPitch": 7200,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 28517,
+      "loopEnd": 67578,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.50886619,
+      "sample": {
+        "path": "samples/180b8eb8acde13bafc2dd4a78ec8ad7bae5c28d673ef96041bfb2938a53395da.mp3",
+        "sha256": "180b8eb8acde13bafc2dd4a78ec8ad7bae5c28d673ef96041bfb2938a53395da",
+        "bytes": 29235,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

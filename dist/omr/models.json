@@ -1,0 +1,41 @@
+{
+  "partsongCommit": "e7cbd9112763aa31e45abaea2d1bbe09159a8f1b",
+  "homrRsCommit": "86ac1ae05278f383cb0dc409711943fb4bf70de0",
+  "modelMirrorRevision": "fbe8be58a31a38fc3e110b0c9c874053342b7e3b",
+  "models": [
+    {
+      "name": "segnet_308-3296ccd40960f90ca6ab9c035cca945675d30a0f.onnx",
+      "bytes": 57311361,
+      "sha256": "6ed36640db4ef5d223098b6d5efe4eda97c66b24a2c72faab8a018c749003a8d",
+      "url": "https://huggingface.co/ngbcoder/Homr-onnx/resolve/fbe8be58a31a38fc3e110b0c9c874053342b7e3b/segnet_308-3296ccd40960f90ca6ab9c035cca945675d30a0f.onnx"
+    },
+    {
+      "name": "encoder_pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6.onnx",
+      "bytes": 52861122,
+      "sha256": "92bd18338dc8da3c9b00185008ab14719ff9f912efe785ca42d7b623e06e0c6b",
+      "url": "https://huggingface.co/ngbcoder/Homr-onnx/resolve/fbe8be58a31a38fc3e110b0c9c874053342b7e3b/encoder_pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6.onnx"
+    },
+    {
+      "name": "decoder_pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6.onnx",
+      "bytes": 47309835,
+      "sha256": "18801c1e3657bdea1b031db90b10d66e15accfc1d607780f09a9e059133e886a",
+      "url": "https://huggingface.co/ngbcoder/Homr-onnx/resolve/fbe8be58a31a38fc3e110b0c9c874053342b7e3b/decoder_pytorch_model_465-597144cab54c8f6d0f6c9619df5c5312694eadd6.onnx"
+    }
+  ],
+  "codeLicense": "AGPL-3.0-only",
+  "weightsLicense": "AGPL-3.0 (per upstream LICENSE_FAQ.md)",
+  "browserRuntimeTested": "onnxruntime-web 1.31.0-dev.20260914-8d85527a0",
+  "modelTotalBytes": 157482318,
+  "wasm": [
+    {
+      "path": "omr/partsong_omr.wasm",
+      "sha256": "c749d5cd541a1d3ef9b551537b1a716cad958317e9874ee764f5bb3e63232bde",
+      "bytes": 947883
+    },
+    {
+      "path": "omr/partsong_omr_fused.wasm",
+      "sha256": "6e3257b9dea9db4995aa70e511a9531a0423bfb64218f0a52b8bf4e521c49034",
+      "bytes": 951270
+    }
+  ]
+}

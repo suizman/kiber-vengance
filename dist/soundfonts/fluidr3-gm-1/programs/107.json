@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "program-107",
+  "kind": "program",
+  "number": 107,
+  "name": "koto",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1070_FluidR3_GM_sf2_file.js",
+    "sha256": "bef0bf18fd98a1e48fc44b25e78031d8df5a8cfb59cba8b3f8ae8865b44d77c7",
+    "bytes": 23167
+  },
+  "zones": [
+    {
+      "midi": 107,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 60,
+      "loopStart": 15819,
+      "loopEnd": 16157,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.01879819,
+      "sample": {
+        "path": "samples/4a7638c50b0b7cf57f4d9dd33fcc44a75157eb520f8fbd7ebd8acdc45e1ba484.mp3",
+        "sha256": "4a7638c50b0b7cf57f4d9dd33fcc44a75157eb520f8fbd7ebd8acdc45e1ba484",
+        "bytes": 6641,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 107,
+      "originalPitch": 6600,
+      "keyRangeLow": 61,
+      "keyRangeHigh": 66,
+      "loopStart": 14277,
+      "loopEnd": 14754,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00494331,
+      "sample": {
+        "path": "samples/b441d379c585d00348ca66c4afa9517d5abc4c20e53a94ee36bee0ae48093c3b.mp3",
+        "sha256": "b441d379c585d00348ca66c4afa9517d5abc4c20e53a94ee36bee0ae48093c3b",
+        "bytes": 6380,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 107,
+      "originalPitch": 7800,
+      "keyRangeLow": 67,
+      "keyRangeHigh": 127,
+      "loopStart": 7608,
+      "loopEnd": 7847,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00283447,
+      "sample": {
+        "path": "samples/48e92122cd482bb1c9be5d7c1551f8cff3a1e54d71d538cb91e60158cda5843f.mp3",
+        "sha256": "48e92122cd482bb1c9be5d7c1551f8cff3a1e54d71d538cb91e60158cda5843f",
+        "bytes": 3722,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "drum-077",
+  "kind": "drum",
+  "number": 77,
+  "name": "GM percussion 77",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/12877_0_FluidR3_GM_sf2_file.js",
+    "sha256": "07815dcfd4c651d40360a8239fbb2240c7df57182f1bc351ec90c9707c2ff419",
+    "bytes": 7862
+  },
+  "zones": [
+    {
+      "midi": 128,
+      "loopStart": 0,
+      "loopEnd": 0,
+      "keyRangeLow": 77,
+      "keyRangeHigh": 77,
+      "sampleRate": 44100,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "originalPitch": 7700,
+      "anchor": 0.00401361,
+      "sample": {
+        "path": "samples/6bc522943ce09b21a347adfdf2fd947e49e812a7d9e4e54a733824f2175209b0.mp3",
+        "sha256": "6bc522943ce09b21a347adfdf2fd947e49e812a7d9e4e54a733824f2175209b0",
+        "bytes": 5650,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "id": "program-015",
+  "kind": "program",
+  "number": 15,
+  "name": "dulcimer",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0150_FluidR3_GM_sf2_file.js",
+    "sha256": "681c76bc43cd627693d18aceb89914e2298e9fc544c244f70b45da2910f4ebec",
+    "bytes": 184429
+  },
+  "zones": [
+    {
+      "midi": 15,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 61,
+      "loopStart": 36983,
+      "loopEnd": 47822,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0144375,
+      "sample": {
+        "path": "samples/29d774fc0e69b78bae8604ad5a184bf089c84940de514095fa09420a77e3ef4f.mp3",
+        "sha256": "29d774fc0e69b78bae8604ad5a184bf089c84940de514095fa09420a77e3ef4f",
+        "bytes": 21177,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 15,
+      "originalPitch": 6700,
+      "keyRangeLow": 62,
+      "keyRangeHigh": 70,
+      "loopStart": 57692,
+      "loopEnd": 69284,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.01409375,
+      "sample": {
+        "path": "samples/8b2c0f8038372df95e0c0dd9d4204e9b1cbdc1b908b2fd118b78b1de17f99799.mp3",
+        "sha256": "8b2c0f8038372df95e0c0dd9d4204e9b1cbdc1b908b2fd118b78b1de17f99799",
+        "bytes": 30285,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 15,
+      "originalPitch": 7200,
+      "keyRangeLow": 71,
+      "keyRangeHigh": 73,
+      "loopStart": 46624,
+      "loopEnd": 57663,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0053125,
+      "sample": {
+        "path": "samples/f8472c404280e19b67256414ac52979ab8dbdf3065372b77226a62d08cb7dd3e.mp3",
+        "sha256": "f8472c404280e19b67256414ac52979ab8dbdf3065372b77226a62d08cb7dd3e",
+        "bytes": 25281,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 15,
+      "originalPitch": 7900,
+      "keyRangeLow": 74,
+      "keyRangeHigh": 81,
+      "loopStart": 57680,
+      "loopEnd": 69369,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0140625,
+      "sample": {
+        "path": "samples/59498152421706facfda803ae4ba26f02814dc59473c719ce0b8de3d64de1a8e.mp3",
+        "sha256": "59498152421706facfda803ae4ba26f02814dc59473c719ce0b8de3d64de1a8e",
+        "bytes": 29493,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 15,
+      "originalPitch": 8400,
+      "keyRangeLow": 82,
+      "keyRangeHigh": 88,
+      "loopStart": 20128,
+      "loopEnd": 28984,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0039375,
+      "sample": {
+        "path": "samples/2c0c8962c80eb9b506335455cec0f348907af95a162f8f370b9c99d7ea8eff23.mp3",
+        "sha256": "2c0c8962c80eb9b506335455cec0f348907af95a162f8f370b9c99d7ea8eff23",
+        "bytes": 13833,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 15,
+      "originalPitch": 9600,
+      "keyRangeLow": 89,
+      "keyRangeHigh": 108,
+      "loopStart": 32152,
+      "loopEnd": 40176,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0020625,
+      "sample": {
+        "path": "samples/8e69a5b0dccd4a1d1b37a6ebcc6269fec51955f377014fed581303b80feabbca.mp3",
+        "sha256": "8e69a5b0dccd4a1d1b37a6ebcc6269fec51955f377014fed581303b80feabbca",
+        "bytes": 17073,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

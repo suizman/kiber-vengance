@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "program-096",
+  "kind": "program",
+  "number": 96,
+  "name": "fx 1 rain",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0960_FluidR3_GM_sf2_file.js",
+    "sha256": "81dd2c9e0f4b256e060c3510015c2dd0b977ae7b3d45e70c2c874d919618cfee",
+    "bytes": 11063
+  },
+  "zones": [
+    {
+      "midi": 96,
+      "originalPitch": 4500,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 45,
+      "loopStart": 189,
+      "loopEnd": 590,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00081633,
+      "sample": {
+        "path": "samples/c94d7e52a958414331bd31c63bf990d211169f7d469ad308f783aec3208fcdbd.mp3",
+        "sha256": "c94d7e52a958414331bd31c63bf990d211169f7d469ad308f783aec3208fcdbd",
+        "bytes": 1270,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 96,
+      "originalPitch": 8200,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 3,
+      "loopEnd": 1361,
+      "coarseTune": -26,
+      "fineTune": -47,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00031746,
+      "sample": {
+        "path": "samples/8657d371ecca7b6b5908c505a502ab8ad238821c3c70a59f1ccccfe52e6b7cb1.mp3",
+        "sha256": "8657d371ecca7b6b5908c505a502ab8ad238821c3c70a59f1ccccfe52e6b7cb1",
+        "bytes": 2001,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 96,
+      "originalPitch": 5700,
+      "keyRangeLow": 46,
+      "keyRangeHigh": 57,
+      "loopStart": 93,
+      "loopEnd": 294,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00040816,
+      "sample": {
+        "path": "samples/480656b0494dbbea2300e914af75cf1dd3ebec69e2542919ff5203022cb66b9f.mp3",
+        "sha256": "480656b0494dbbea2300e914af75cf1dd3ebec69e2542919ff5203022cb66b9f",
+        "bytes": 1375,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 96,
+      "originalPitch": 6900,
+      "keyRangeLow": 58,
+      "keyRangeHigh": 69,
+      "loopStart": 8,
+      "loopEnd": 109,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00702948,
+      "sample": {
+        "path": "samples/542f59e877299870fa04a81013dd2e5574ca75c4a6b5b1f1b95af4e3548fdb28.mp3",
+        "sha256": "542f59e877299870fa04a81013dd2e5574ca75c4a6b5b1f1b95af4e3548fdb28",
+        "bytes": 1479,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 96,
+      "originalPitch": 8100,
+      "keyRangeLow": 70,
+      "keyRangeHigh": 96,
+      "loopStart": 125,
+      "loopEnd": 175,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00240363,
+      "sample": {
+        "path": "samples/04ad4f5bf8df43db39f7e90a869f5a39054579646b1d54253438be9237b17d53.mp3",
+        "sha256": "04ad4f5bf8df43db39f7e90a869f5a39054579646b1d54253438be9237b17d53",
+        "bytes": 1192,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

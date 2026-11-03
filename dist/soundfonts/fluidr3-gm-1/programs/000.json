@@ -1,0 +1,415 @@
+{
+  "schemaVersion": 1,
+  "id": "program-000",
+  "kind": "program",
+  "number": 0,
+  "name": "acoustic grand piano",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0000_FluidR3_GM_sf2_file.js",
+    "sha256": "d50ed8e9fe511fe5016841a5355120a903a090374a6624d0a4179bcfda3b3cf5",
+    "bytes": 1238332
+  },
+  "zones": [
+    {
+      "midi": 0,
+      "originalPitch": 2600,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 26,
+      "loopStart": 170893,
+      "loopEnd": 219499,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.36093751,
+      "sample": {
+        "path": "samples/d2c7a34d9ea66c666e259dcb655e1b2268476f15888c6c94a78006e8c1efe577.mp3",
+        "sha256": "d2c7a34d9ea66c666e259dcb655e1b2268476f15888c6c94a78006e8c1efe577",
+        "bytes": 108909,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 3000,
+      "keyRangeLow": 27,
+      "keyRangeHigh": 30,
+      "loopStart": 160113,
+      "loopEnd": 195247,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0476875,
+      "sample": {
+        "path": "samples/ac5d53fcd214658eb0d7104ca1b27cfb90892b75bd368605c3d90c4f4f425348.mp3",
+        "sha256": "ac5d53fcd214658eb0d7104ca1b27cfb90892b75bd368605c3d90c4f4f425348",
+        "bytes": 90297,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 3400,
+      "keyRangeLow": 31,
+      "keyRangeHigh": 34,
+      "loopStart": 129454,
+      "loopEnd": 165045,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.02878125,
+      "sample": {
+        "path": "samples/adc8e3995e2517acdc8267289faabedf904bb73394808bdc44bebe16a7c2b9a2.mp3",
+        "sha256": "adc8e3995e2517acdc8267289faabedf904bb73394808bdc44bebe16a7c2b9a2",
+        "bytes": 79713,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 3800,
+      "keyRangeLow": 35,
+      "keyRangeHigh": 38,
+      "loopStart": 158947,
+      "loopEnd": 193111,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0211875,
+      "sample": {
+        "path": "samples/cb4091d7587645fd6494b88230af6f02af5e9043f530376c60229c8622dc4996.mp3",
+        "sha256": "cb4091d7587645fd6494b88230af6f02af5e9043f530376c60229c8622dc4996",
+        "bytes": 98505,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 4200,
+      "keyRangeLow": 39,
+      "keyRangeHigh": 42,
+      "loopStart": 120490,
+      "loopEnd": 155602,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.02325,
+      "sample": {
+        "path": "samples/4022b2ac8ea9362e6c4035097b56781a04bb0cd678328cea190cf9b322f718c1.mp3",
+        "sha256": "4022b2ac8ea9362e6c4035097b56781a04bb0cd678328cea190cf9b322f718c1",
+        "bytes": 75825,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 4600,
+      "keyRangeLow": 43,
+      "keyRangeHigh": 46,
+      "loopStart": 109152,
+      "loopEnd": 141103,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.1315625,
+      "sample": {
+        "path": "samples/248bf879159911fb0938a21acea26845aeb6a196a3876299164737202a669c35.mp3",
+        "sha256": "248bf879159911fb0938a21acea26845aeb6a196a3876299164737202a669c35",
+        "bytes": 67257,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 5000,
+      "keyRangeLow": 47,
+      "keyRangeHigh": 50,
+      "loopStart": 77368,
+      "loopEnd": 109543,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.03140625,
+      "sample": {
+        "path": "samples/9450a65a8ee64bbb0c8b44f15a0a784979c25f0560393629474a22c3721eeb7f.mp3",
+        "sha256": "9450a65a8ee64bbb0c8b44f15a0a784979c25f0560393629474a22c3721eeb7f",
+        "bytes": 54081,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 5400,
+      "keyRangeLow": 51,
+      "keyRangeHigh": 54,
+      "loopStart": 55019,
+      "loopEnd": 84480,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.10946875,
+      "sample": {
+        "path": "samples/2efef329e5d725aad2d59eedb60c002f9fc54a291563f7dbeeb8d574faa04742.mp3",
+        "sha256": "2efef329e5d725aad2d59eedb60c002f9fc54a291563f7dbeeb8d574faa04742",
+        "bytes": 40653,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 5800,
+      "keyRangeLow": 55,
+      "keyRangeHigh": 58,
+      "loopStart": 52686,
+      "loopEnd": 87542,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.00675,
+      "sample": {
+        "path": "samples/dd8df46e4a8bce8d82671f14b0b68f47e53654749b7ce0695ba217c6528e76cd.mp3",
+        "sha256": "dd8df46e4a8bce8d82671f14b0b68f47e53654749b7ce0695ba217c6528e76cd",
+        "bytes": 39177,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 6200,
+      "keyRangeLow": 59,
+      "keyRangeHigh": 62,
+      "loopStart": 73030,
+      "loopEnd": 103885,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.02125,
+      "sample": {
+        "path": "samples/894f31c8fe202561836f346e1b1a8f3021de004b576c9873ae047dc9e5a2969c.mp3",
+        "sha256": "894f31c8fe202561836f346e1b1a8f3021de004b576c9873ae047dc9e5a2969c",
+        "bytes": 48861,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 6600,
+      "keyRangeLow": 63,
+      "keyRangeHigh": 66,
+      "loopStart": 62381,
+      "loopEnd": 88426,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0038125,
+      "sample": {
+        "path": "samples/3d371f9db4d2a74c2db68c333d2a860d69e9dcbe0b3d8f3340457f6d2fc0b74e.mp3",
+        "sha256": "3d371f9db4d2a74c2db68c333d2a860d69e9dcbe0b3d8f3340457f6d2fc0b74e",
+        "bytes": 38313,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 7000,
+      "keyRangeLow": 67,
+      "keyRangeHigh": 70,
+      "loopStart": 51471,
+      "loopEnd": 71088,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.02209375,
+      "sample": {
+        "path": "samples/6107de2bca19fc99b82a1812594a62833f8981390d57a496b0e47ce3fba72ecd.mp3",
+        "sha256": "6107de2bca19fc99b82a1812594a62833f8981390d57a496b0e47ce3fba72ecd",
+        "bytes": 31113,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 7400,
+      "keyRangeLow": 71,
+      "keyRangeHigh": 74,
+      "loopStart": 44165,
+      "loopEnd": 67047,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.03475,
+      "sample": {
+        "path": "samples/f8e0f7681e94331af65258da209e135ffbbbde8967c22f9e9e1b035546af9895.mp3",
+        "sha256": "f8e0f7681e94331af65258da209e135ffbbbde8967c22f9e9e1b035546af9895",
+        "bytes": 29025,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 7800,
+      "keyRangeLow": 75,
+      "keyRangeHigh": 78,
+      "loopStart": 47507,
+      "loopEnd": 75718,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0226875,
+      "sample": {
+        "path": "samples/1cb518e7880615e8d463a44ed304bd419460fbd2218e74911673fc1f5c2003f0.mp3",
+        "sha256": "1cb518e7880615e8d463a44ed304bd419460fbd2218e74911673fc1f5c2003f0",
+        "bytes": 36585,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 8400,
+      "keyRangeLow": 79,
+      "keyRangeHigh": 84,
+      "loopStart": 43879,
+      "loopEnd": 46535,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.00996875,
+      "sample": {
+        "path": "samples/b4806802c7f3c8dae760fcf5f7d0c089fdf645f17e2d9684cecf52f58024bbee.mp3",
+        "sha256": "b4806802c7f3c8dae760fcf5f7d0c089fdf645f17e2d9684cecf52f58024bbee",
+        "bytes": 20889,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 9000,
+      "keyRangeLow": 85,
+      "keyRangeHigh": 90,
+      "loopStart": 40281,
+      "loopEnd": 60328,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.01971875,
+      "sample": {
+        "path": "samples/8ef40a3a51ddf2d95b11ab87a7b982859200339a8aeadef7c586f3853c33a496.mp3",
+        "sha256": "8ef40a3a51ddf2d95b11ab87a7b982859200339a8aeadef7c586f3853c33a496",
+        "bytes": 25065,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 9400,
+      "keyRangeLow": 91,
+      "keyRangeHigh": 94,
+      "loopStart": 40230,
+      "loopEnd": 41513,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0245,
+      "sample": {
+        "path": "samples/dfa4ac9eea51b7de424a78addcc5da0f7b39133731b0b1d010209fe86fde738d.mp3",
+        "sha256": "dfa4ac9eea51b7de424a78addcc5da0f7b39133731b0b1d010209fe86fde738d",
+        "bytes": 19521,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 9900,
+      "keyRangeLow": 95,
+      "keyRangeHigh": 99,
+      "loopStart": 17820,
+      "loopEnd": 18113,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.00928125,
+      "sample": {
+        "path": "samples/9b92041d2b6f3b01bacdec92c563aecae8f115c1b7bad8fb5ca77ba46b60401c.mp3",
+        "sha256": "9b92041d2b6f3b01bacdec92c563aecae8f115c1b7bad8fb5ca77ba46b60401c",
+        "bytes": 8577,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 10400,
+      "keyRangeLow": 100,
+      "keyRangeHigh": 104,
+      "loopStart": 13695,
+      "loopEnd": 14104,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.0183125,
+      "sample": {
+        "path": "samples/bdbebb0af5228c598ff26abb9358799c77682e9bfeafd06686693b7a4d111958.mp3",
+        "sha256": "bdbebb0af5228c598ff26abb9358799c77682e9bfeafd06686693b7a4d111958",
+        "bytes": 6633,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 0,
+      "originalPitch": 10800,
+      "keyRangeLow": 105,
+      "keyRangeHigh": 108,
+      "loopStart": 12048,
+      "loopEnd": 12733,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.01446875,
+      "sample": {
+        "path": "samples/c1c0fda79aa3d4517093b328ad1ef2dfae36e088853b49807153947d7a277ea2.mp3",
+        "sha256": "c1c0fda79aa3d4517093b328ad1ef2dfae36e088853b49807153947d7a277ea2",
+        "bytes": 5913,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

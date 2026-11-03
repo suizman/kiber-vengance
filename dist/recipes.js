@@ -1,1 +1,1 @@
-export{t as RECIPE_STORAGE,n as parseRecipeLibrary,r as recipeLibrary}from"./assets/recipes-DqM_u6-q.js";
+export{t as RECIPE_STORAGE,n as parseRecipeLibrary,r as recipeLibrary}from"./assets/recipes-DvzClWH0.js";

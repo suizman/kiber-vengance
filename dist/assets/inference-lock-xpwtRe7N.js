@@ -1,0 +1,1 @@
+var e=null,t=new Map,n=new Set;function r(e,n){t.set(e,n)}function i(e){return n.add(e),()=>{n.delete(e)}}function a(r){if(e)throw Error(`Local inference busy: ${e}`);e=r;let i=r.split(` `)[0];try{for(let[e,r]of t)if(e!==i){r();for(let t of n)t(e)}}catch(t){throw e=null,t}return()=>{e===r&&(e=null)}}export{i as n,r,a as t};
