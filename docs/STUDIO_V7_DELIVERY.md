@@ -1,6 +1,6 @@
 # Studio v7 delivery
 
-Status: implemented, verified and published as Studio 7.0.0 / Site version 39 on 2026-11-03.
+Status: implemented, verified and published as Studio 7.0.0 / Site version 40 on 2026-11-03.
 
 ## Accepted scope
 
@@ -56,7 +56,7 @@ The 10,000-note ready time fell about **76%**, with about **91% fewer DOM elemen
 
 Physical iPhone/Safari, microphones/headphone routing, Apple M3 and Radeon GPU execution have not been tested in this cloud run. No human listening-quality verdict or universal recognition accuracy is claimed. Complex/handwritten scans and unsupported articulations require correction; proprietary notation projects should export MusicXML first. Memory budgets can reject a composition too large for the device, with an actionable message. These limits are also visible in the import guide and UI.
 
-## Publication
+## Initial publication — version 39
 
 - GitHub runtime source: `709e0e0`; documentation: `7f25734`; verified distribution: `820ae148a5bc1ef1f619517e9fdb31f9633ef28e`. Commits use the requested **suizman** authorship. The final distribution footer identifies `709e0e0`.
 - After the full 83-unit/64-browser gate, the final mobile header and save-status localization changes passed `npm run check`, three focused accessibility/navigation browser workflows and all 36 responsive/offline checks again. Companion validation remains 17 passing tests.
@@ -71,3 +71,8 @@ This publication record is a documentation-only follow-up and does not require r
 ## Development dependency follow-up
 
 GitHub reported GHSA-g3hv-75wg-m249 while the publication record was pushed. The affected `minimatch@10.2.6` was used only by ESLint; it was absent from browser bundles. A pinned override to **11.0.1** fixes the glob-pattern denial-of-service advisory without downgrading ESLint. The lockfile changes only that matcher and its new development dependency. Lint, type checking and `npm audit` pass with **zero reported vulnerabilities**. A refreshed artifact and publication record follow below so the distributed source offer includes the corrected development environment.
+
+- Correction source `b92e4cec70fd8cdaff28ad2d6e6409762e9f8eec`; refreshed distribution `7354a937e2638534f7e8e196749d3cc77a2bb571`, pushed to GitHub master. `npm run check` passed again with 83 unit tests. Byte comparison confirmed every application JS/CSS/WASM/audio asset unchanged; only `index.html`, `sw.js` and the source archive differ. The earlier 64-browser/17-companion evidence applies to the identical application bundles. See [dependency audit and artifact comparison](development-audit-v7.json).
+- Isolated Site source `33e652c15dc93f95cada0e89b57c27c4af30e320` verified against 2,485 tracked GitHub files, with eight updated/added paths and no deletion. Hosting identity and public audience remained unchanged.
+- Saved **version 40**, ID `appgprj_6adbe6a2b5648191a5ae75b3ff523e5e~appgver_a8d9cc9528208191a8bdca2999e534fa`. Deployment `appgdep_6aea5e1375bc8191a4732d02a6f13fdc` reached terminal **succeeded** at `2026-11-03T22:20:25Z`. Native follow-up confirms active/public version 40 on https://studio.suizman.org. Current build footer: `b92e4ce`.
+- The final public-domain browser check passed again with footer `b92e4ce`: responsive title, two-part score review, acoustic audition, insertion and seven mixer channels; reader/source assets HTTP 200, no page errors or failed same-origin responses. [Final production evidence](production-v7-final-verification.json). This final record changes documentation only.

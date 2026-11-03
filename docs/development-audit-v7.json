@@ -1,0 +1,22 @@
+{
+  "advisory": "GHSA-g3hv-75wg-m249",
+  "scope": "development only; ESLint dependency",
+  "matcher": "minimatch@11.0.1",
+  "npmAudit": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "applicationBundlesUnchanged": true,
+  "changedBuildFiles": [
+    "index.html",
+    "sw.js",
+    "source/studio-source.zip"
+  ],
+  "sourceArchiveSHA256": "c7f36552da469325a46cfe83e4f31610ecca067f5876103f80b83d6fe6639144",
+  "runtimeSource": "b92e4cec70fd8cdaff28ad2d6e6409762e9f8eec",
+  "distribution": "7354a937e2638534f7e8e196749d3cc77a2bb571"
+}
