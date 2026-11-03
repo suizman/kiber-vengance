@@ -1,6 +1,6 @@
 # Studio v7 delivery
 
-Status: implemented and undergoing the final release checks. Publication is recorded below only after the hosting service confirms completion.
+Status: implemented, verified and published as Studio 7.0.0 / Site version 39 on 2026-11-03.
 
 ## Accepted scope
 
@@ -58,4 +58,12 @@ Physical iPhone/Safari, microphones/headphone routing, Apple M3 and Radeon GPU e
 
 ## Publication
 
-Pending the final native hosting operation. The existing public Site, hosting manifest and `studio.suizman.org` domain will be preserved; no DNS or access change is required.
+- GitHub runtime source: `709e0e0`; documentation: `7f25734`; verified distribution: `820ae148a5bc1ef1f619517e9fdb31f9633ef28e`. Commits use the requested **suizman** authorship. The final distribution footer identifies `709e0e0`.
+- After the full 83-unit/64-browser gate, the final mobile header and save-status localization changes passed `npm run check`, three focused accessibility/navigation browser workflows and all 36 responsive/offline checks again. Companion validation remains 17 passing tests.
+- Synchronized all **2,484 GitHub-tracked files** byte-for-byte into the isolated Site checkout; updated/added 2,322 paths and deleted none. Retained Site-only files and the byte-identical `.openai/hosting.json`. Separate GitHub and Site histories remain separate.
+- Site source: `5985fd8694d1d734f54c4dde04d5edf412a6a97b`. Saved **version 39**, ID `appgprj_6adbe6a2b5648191a5ae75b3ff523e5e~appgver_0d9839692d4c8191ab153303e944afb3`. Its 119,777,280-byte static archive contains 1,166 files, all below the hosting file-size limit.
+- Native deployment `appgdep_6aea5b7a6d908191a267f85fca58e579` returned terminal **succeeded** at `2026-11-03T22:09:41Z`. Follow-up confirmed version 39, active status, public audience and [studio.suizman.org](https://studio.suizman.org). Generated hosting URL: https://kiber-vengance.baltar88.chatgpt.site. No DNS, domain, audience or tunnel configuration was changed.
+- EN/ES wiki published at commit `cb771852304f996bc4210faebcb948d2cb0290dc`; anonymous retrieval of the Spanish score guide succeeded. The legacy publishing script's SSH route was unavailable in this environment, so the same validated pages were published through an isolated HTTPS clone, preserving other wiki files.
+- A real Chromium session on the public custom domain verified footer `709e0e0`, the mobile title layout, a two-part MusicXML review, acoustic audition, insertion into seven total tracks and seven mixer channels. The reader manifest, worker and public source archive returned HTTP 200; there were no page errors or failed same-origin responses. See [production verification](production-v7-verification.json).
+
+This publication record is a documentation-only follow-up and does not require rebuilding the deployed runtime.

@@ -1,0 +1,27 @@
+{
+  "url": "https://studio.suizman.org",
+  "footer": "709e0e0",
+  "scoreParts": 2,
+  "insertedTracks": 7,
+  "mixerChannels": 7,
+  "acousticPreview": true,
+  "assets": [
+    {
+      "path": "/omr/models.json",
+      "status": 200,
+      "bytes": 1894
+    },
+    {
+      "path": "/omr/omr-worker.js",
+      "status": 200,
+      "bytes": 30473
+    },
+    {
+      "path": "/source/studio-source.zip",
+      "status": 200,
+      "bytes": 1346877
+    }
+  ],
+  "errors": [],
+  "failures": []
+}
