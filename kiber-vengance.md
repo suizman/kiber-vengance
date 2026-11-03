@@ -370,3 +370,13 @@ En escritorio, Arrange → Audio & sampler añade VOICE · ES/EN: voz hablada Ko
 ## Native desktop singing — 2026-10-30
 
 The approved desktop approach supersedes earlier “no singing control / research pending” statements above. An optional local companion now exposes DiffSinger score singing and ACE-Step musical proposals through the existing studio audio workflow, with native Mac/Windows/Linux packages, AppImage for Arch/Ubuntu, explicit model downloads/licenses, CPU/GPU profiles, pairing, cancellation, recovery and non-destructive effects/insertion. The browser remains static, generation controls load exclusively on desktop, and v6 assets/history/packages stay compatible. See [implementation, actual evidence and remaining physical-device/listening limits](docs/DESKTOP_VOCALS.md). Existing browser-only DiffSinger feasibility and perceptual preference are not inferred from the native implementation.
+
+## Studio 7 — current contract (2026-11-03)
+
+The approved v7 model supersedes the historical v6-only constraint. Projects v2–v6 migrate; existing tracks, clips, sounds and binary references remain. Instrument tracks are dynamic. New score import/review retains originals and all parts, supports acoustic playback and optional local PDF/image recognition, and commits insertion as one undoable edit.
+
+Project data now saves through a serialized IndexedDB worker, with metadata-only recovery lists and a small emergency delta journal. Corrupt canonical saves are quarantined before recovery. Piano-roll notes, ruler labels and automation bars render only the visible window; selection remains in the model. Tempo integration is compiled per edit; inactive distortion/saturation curves are reused. WAV encoding is cancellable in a worker with a device memory guard; OGG and windowed rendering from Site 38 remain available.
+
+Track rails, launcher and mixer support additional channels through contained scrolling. Shared 12 px metadata and 44 px touch controls improve readability; mobile text/number inputs use 16 px to avoid focus zoom. Existing keyboards/dials, four workspaces, shortcuts and cyberpunk colors are retained. Score review provides local progress, cancel/retry, draft recovery, audio audition, editable notes/tempo/meter, bounded notation and corrected MusicXML export. Third-party parser diagnostics may retain their source language; Studio controls/notices are EN/ES.
+
+See `docs/STUDIO_V7_DELIVERY.md` for actual checks and performance measurements, and `docs/SCORE_IMPORT.md` for OMR/model/instrument licensing, memory bounds and physical-device limits. Browser emulation and one printed fixture do not establish perfect recognition or testing on a physical iPhone/M3/Radeon system.

@@ -4,7 +4,7 @@
 
 ## Clips y notas
 
-Cada una de las cinco pistas mantiene al menos un clip. Los clips admiten 1, 2, 4 u 8 compases y una rejilla de 1/64 a 1/4. Crear, duplicar, renombrar, variar y borrar se integran con Undo/Redo. Al borrar un clip utilizado por secciones, una confirmación identifica sus usos y reasigna las referencias a otro clip.
+Cada pista instrumental mantiene al menos un clip. Los clips admiten 1, 2, 4 u 8 compases y una rejilla de 1/64 a 1/4. Crear, duplicar, renombrar, variar y borrar se integran con Undo/Redo. Al borrar un clip utilizado por secciones, una confirmación identifica sus usos y reasigna las referencias a otro clip.
 
 El piano roll ofrece **Dibujar, Seleccionar y Navegar**, zoom, desplazamiento, marquee y selección múltiple. Arrastra una nota para moverla y su extremo para redimensionarla; edita duración y velocity. Las acciones de duplicar, cuantizar y borrar afectan a la selección. La duplicación avisa si necesitas ampliar el clip.
 
@@ -20,7 +20,7 @@ Tonalidad y escala ayudan a escribir acordes, riffs, bajos, arpegios y beats. Mu
 
 Dibuja automatización de cutoff, volumen o panorama bajo el piano roll. El carácter de cada clip conserva arp, LFO, efectos y macros; su instrumento también es independiente. Duplicar copia esos ajustes; crear parte del carácter activo. Los faders y Solo/Mute pertenecen a la pista.
 
-**▶ CLIP** alterna con **Ⅱ PAUSE** y escucha los clips activos conjuntamente. Usa Solo para una sola pista. **Load to Compose**, desde una sección del arreglo, activa sus cinco clips y abre el editor.
+**▶ CLIP** alterna con **Ⅱ PAUSE** y escucha los clips activos conjuntamente. Usa Solo para una sola pista. **Load to Compose**, desde una sección del arreglo, activa sus clips y abre el editor.
 
 La [IA local](ES-Local-AI.md) genera nuevos clips editables a partir de instrucciones y contexto. No sustituye los clips originales.
 

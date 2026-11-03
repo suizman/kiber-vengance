@@ -71,3 +71,13 @@ The compact transport includes a Transport settings disclosure at every width; q
 The dense-clip comparison in refactor-metrics.json demonstrates reduced DOM reconstruction; it is not a Core Web Vitals or audio-latency benchmark. Browser regression checks assert node/ruler identity, undo, independent decks, crossfade gains and Cue routing with simulated output. Physical Apple hardware remains a separate validation boundary. Five Live-keyboard name mismatches were reproduced in the original release and are explicitly outside this refactor; deck accessibility is audited separately. Test screenshot output uses node:os tmpdir for portability.
 
 Final validation: check:full passed with 46 unit tests and 37 Chromium/Firefox workflows. The test navigation helper now waits for Preact's active shell before clicking; the former cold-load race could click static, unbound HTML. No application navigation behavior was changed for that test fix.
+
+## Studio 7 — current contract (2026-11-03)
+
+The approved v7 model supersedes the historical v6-only constraint. Projects v2–v6 migrate; existing tracks, clips, sounds and binary references remain. Instrument tracks are dynamic. New score import/review retains originals and all parts, supports acoustic playback and optional local PDF/image recognition, and commits insertion as one undoable edit.
+
+Project data now saves through a serialized IndexedDB worker, with metadata-only recovery lists and a small emergency delta journal. Corrupt canonical saves are quarantined before recovery. Piano-roll notes, ruler labels and automation bars render only the visible window; selection remains in the model. Tempo integration is compiled per edit; inactive distortion/saturation curves are reused. WAV encoding is cancellable in a worker with a device memory guard; OGG and windowed rendering from Site 38 remain available.
+
+Track rails, launcher and mixer support additional channels through contained scrolling. Shared 12 px metadata and 44 px touch controls improve readability; mobile text/number inputs use 16 px to avoid focus zoom. Existing keyboards/dials, four workspaces, shortcuts and cyberpunk colors are retained. Score review provides local progress, cancel/retry, draft recovery, audio audition, editable notes/tempo/meter, bounded notation and corrected MusicXML export. Third-party parser diagnostics may retain their source language; Studio controls/notices are EN/ES.
+
+See `docs/STUDIO_V7_DELIVERY.md` for actual checks and performance measurements, and `docs/SCORE_IMPORT.md` for OMR/model/instrument licensing, memory bounds and physical-device limits. Browser emulation and one printed fixture do not establish perfect recognition or testing on a physical iPhone/M3/Radeon system.

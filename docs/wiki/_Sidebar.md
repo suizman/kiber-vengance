@@ -33,3 +33,5 @@
 - [Atajos y ajustes](ES-Shortcuts-and-settings.md)
 - [Compatibilidad y licencias](ES-Compatibility-and-licenses.md)
 - [Desarrollo](ES-Development.md)
+
+- [Scores and acoustic instruments](Scores-and-instruments.md) · [Partituras e instrumentos](ES-Scores-and-instruments.md)

@@ -10,12 +10,12 @@
 
 | Workspace | What you can do |
 | --- | --- |
-| **Compose** | Piano roll, five instruments, per-clip sounds, generators, local AI, presets, FX and macros |
+| **Compose** | Piano roll, expandable instrument tracks, score/PDF import, per-clip sounds, generators, local AI, presets, FX and macros |
 | **Arrange** | Sections, tempo/meter, non-destructive audio, recording, sampler, automation and MIDI Learn |
 | **Live** | Keyboard/MIDI, clip launcher, two Scratch Decks, Cue and performance recording |
 | **Mix** | dB levels, Solo/Mute, groups, sends, sidechain, Master, meters, mono and A/B |
 
-Autosave, recovery and snapshots; v6 projects with v2–v5 imports; JSON, **Project Package with audio**, WAV, MIDI and stems. Optional speech and singing on desktop. [All features and their limits](docs/wiki/Home.md).
+Autosave, recovery and snapshots; v7 projects with v2–v6 imports; JSON, **Project Package with audio**, WAV, compressed OGG/Vorbis, MIDI and stems. Optional speech and singing on desktop. [All features and their limits](docs/wiki/Home.md).
 
 ## Get started
 
@@ -42,3 +42,7 @@ The [desktop companion](companion/README.md) adds DiffSinger and ACE-Step. Insta
 The [versioned manual](docs/wiki/Home.md) defaults to English and includes a [Spanish edition](docs/wiki/ES-Home.md). Both editions share real English-language screenshots. The [GitHub Wiki](https://github.com/suizman/kiber-vengance/wiki/Home) is published; this repository copy remains its versioned source. [Technical evidence](docs/DESKTOP_VOCALS.md), the [public data audit](docs/SECURITY_AUDIT.md), the [product plan](PRODUCT_PLAN.md) and [project memory](PROJECT_MEMORY.md) retain decisions and verified results.
 
 Software: [GPL-3.0-or-later](LICENSE). Included compositions: [CC BY-NC-ND 4.0](projects/LICENSE.md), independently of music created by users. The official identity is **КИБЕР VENGANCE**; historical slugs remain for compatibility.
+
+## Studio 7
+
+Local score import/review, acoustic General MIDI instruments, optional local PDF recognition, dynamic tracks, asynchronous project storage and a virtualized editor. OGG export from the previous Site publication is retained. [Score guide and limits](docs/SCORE_IMPORT.md) · [Refactor and verification](docs/STUDIO_V7_DELIVERY.md) · [Guía en español](docs/wiki/ES-Scores-and-instruments.md).

@@ -4,7 +4,7 @@
 
 ## Construir la canción
 
-En **Arrange → Arrangement**, cada sección asigna un clip por pista y un número de repeticiones. Añade, renombra, reordena con botones o arrastre, selecciona varias, copia, pega, duplica, borra o crea fills. **Load to Compose** abre juntos sus cinco clips.
+En **Arrange → Arrangement**, cada sección asigna un clip por pista y un número de repeticiones. Añade, renombra, reordena con botones o arrastre, selecciona varias, copia, pega, duplica, borra o crea fills. **Load to Compose** abre juntos sus clips.
 
 El timeline ofrece zoom, marcadores, salto exacto, loop y límites de punch-in. Los mapas de tempo y compás se conservan en el proyecto; reproducción y WAV usan el reloj musical compartido. Cambiar el compás remapea posiciones para conservar la forma musical.
 

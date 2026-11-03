@@ -4,7 +4,7 @@
 
 ## Clip launcher
 
-**Live → Clip launcher** provides a five-track matrix. Queue clips on beats/bars, stop tracks separately and use MIDI notes **36–63** for visible cells. **Capture** records the launch sequence; **Commit to Arrange** makes editable sections.
+**Live → Clip launcher** provides a matrix with all instrument tracks. Queue clips on beats/bars, stop tracks separately and use MIDI notes **36–63** for visible cells. **Capture** records the launch sequence; **Commit to Arrange** makes editable sections.
 
 ## Two Scratch Decks
 

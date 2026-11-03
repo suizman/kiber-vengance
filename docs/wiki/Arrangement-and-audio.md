@@ -4,7 +4,7 @@
 
 ## Build a song
 
-In **Arrange → Arrangement**, each section assigns one clip per track and a repeat count. Add, rename, reorder with buttons/drag, multi-select, copy, paste, duplicate, delete and make fills. **Load to Compose** opens its five clips together.
+In **Arrange → Arrangement**, each section assigns one clip per track and a repeat count. Add, rename, reorder with buttons/drag, multi-select, copy, paste, duplicate, delete and make fills. **Load to Compose** opens its assigned clips together.
 
 The timeline provides zoom, markers, exact seeking, loop and punch-in boundaries. Tempo/meter maps persist in the project; playback and WAV share a musical clock. Changing meter remaps positions to preserve musical shape.
 

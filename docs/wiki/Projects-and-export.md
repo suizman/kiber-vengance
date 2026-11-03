@@ -4,7 +4,7 @@
 
 ## Save and recover
 
-The current format is **v6**, with v2–v5 import compatibility. Project provides cinematic/minimal/performance/hybrid-audio templates, project duplication, named snapshots, automatic recovery and JSON/Project Package import/export.
+The current format is **v7**, with v2–v6 import compatibility. Project provides cinematic/minimal/performance/hybrid-audio templates, project duplication, named snapshots, automatic recovery and JSON/Project Package import/export.
 
 Autosave uses localStorage; pending edits flush when hiding/leaving the page. Quota/save failures are visible in all workspaces. Unreadable autosaves are preserved before recovery; preservation failure prevents silent overwrite.
 
@@ -23,6 +23,7 @@ Package includes deduplicated references with IDs, MIME types and an asset manif
 | Format | Uses and options |
 | --- | --- |
 | WAV | Song/arrangement and loaded audio; 16-bit PCM or 32-bit float, 44.1/48/96 kHz, TPDF dither, normalization, dry/wet, tail and loop region |
+| OGG/Vorbis | Compressed stereo song audio; Small (q1), Balanced (q4) or High (q8). Shares sample rate, normalization, dry/wet, tail and loop region with WAV. WAV depth/dither do not apply |
 | Stems ZIP | Selected tracks and manifest; isolated instruments and individual audio lanes |
 | MIDI | Notes/expression and tempo/meter maps; ramps discretized at quarter-step intervals. No samples, audio or synth patches |
 | JSON | Editable model and provenance, without audio blobs |
@@ -35,6 +36,6 @@ Package includes deduplicated references with IDs, MIME types and an asset manif
 
 Export reports missing required sources; an unrelated take does not block a song WAV. The shared clock applies tempo/swing maps. Audio tails can extend duration without restarting the instrumental arrangement.
 
-Stem queues show progress and support cancellation between renders. OfflineAudioContext DSP cannot be interrupted once rendering starts. Song WAV does not capture live scratching: use Record Take.
+Song exports show rendering/compression progress and allow cancellation. On browsers with offline suspension, voices are prepared in short windows and cancelled processing stops at the next checkpoint. Other browsers can stop waiting but cannot interrupt native DSP. OGG uses a bundled local Vorbis worker, including offline caching; it reduces file size and still needs the audio render. Stem queues support cancellation between renders. Song WAV does not capture live scratching: use Record Take.
 
 [Technical reliability](../RELIABILITY.md) · [Compatibility](Compatibility-and-licenses.md).

@@ -14,7 +14,7 @@ npm run dev
 
 | Ruta | Responsabilidad |
 | --- | --- |
-| `src/core.ts`, `src/model.ts` | Modelo v6, migraciones, eventos musicales e historial |
+| `src/core.ts`, `src/model.ts` | Modelo v7, migraciones, eventos musicales e historial |
 | `src/audio.ts`, `src/audio/`, `src/scratch-worklet.ts` | Scheduler, síntesis, DSP, routing, WAV y decks |
 | `src/features/`, `src/ui/`, `src/app.ts` | Controladores, shell Preact, teclados, diálogos y puente |
 | `src/ai/` | Compositor y motores opcionales aislados |

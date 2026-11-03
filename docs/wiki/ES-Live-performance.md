@@ -4,7 +4,7 @@
 
 ## Clip launcher
 
-**Live → Clip launcher** ofrece una matriz de cinco pistas. Lanza clips cuantizados a beat o compás, detén pistas por separado y usa las notas MIDI **36–63** para las celdas visibles. **Capture** registra la secuencia de lanzamientos y **Commit to Arrange** la convierte en secciones editables.
+**Live → Clip launcher** ofrece una matriz con todas las pistas instrumentales. Lanza clips cuantizados a beat o compás, detén pistas por separado y usa las notas MIDI **36–63** para las celdas visibles. **Capture** registra la secuencia de lanzamientos y **Commit to Arrange** la convierte en secciones editables.
 
 ## Dos Scratch Decks
 

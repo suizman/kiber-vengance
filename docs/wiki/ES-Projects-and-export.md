@@ -4,7 +4,7 @@
 
 ## Guardar y recuperar
 
-El formato actual es **v6**, con importación compatible v2–v5. El menú Project permite plantillas cinematic/minimal/performance/hybrid-audio, duplicar proyecto, snapshots con nombre, recuperación automática e import/export de JSON o Project Package.
+El formato actual es **v7**, con importación compatible v2–v6. El menú Project permite plantillas cinematic/minimal/performance/hybrid-audio, duplicar proyecto, snapshots con nombre, recuperación automática e import/export de JSON o Project Package.
 
 El autosave se guarda en localStorage; las ediciones pendientes se vacían al ocultar/cerrar la página. Los errores de cuota o guardado se muestran en todos los espacios. Un autosave ilegible se preserva antes de intentar recuperación; si no puede preservarse, no se sobrescribe silenciosamente.
 
@@ -23,6 +23,7 @@ Package reúne referencias deduplicadas con IDs, MIME y manifiesto de assets; co
 | Formato | Uso y opciones |
 | --- | --- |
 | WAV | Canción/arreglo y audio cargado; PCM 16-bit o float 32-bit, 44.1/48/96 kHz, dither TPDF, normalización, dry/wet, cola y región de loop |
+| OGG/Vorbis | Canción estéreo comprimida; Small (q1), Balanced (q4) o High (q8). Comparte frecuencia, normalización, dry/wet, cola y región con WAV. Profundidad y dither solo se aplican a WAV |
 | Stems ZIP | Pistas seleccionadas y manifiesto; instrumentos aislados y lanes de audio individuales |
 | MIDI | Notas/expresión y mapa de tempo/compás; rampas discretizadas en intervalos de cuarto de paso. No contiene samples, audio ni patches de síntesis |
 | JSON | Modelo editable y procedencia, sin blobs de audio |
@@ -35,6 +36,6 @@ Package reúne referencias deduplicadas con IDs, MIME y manifiesto de assets; co
 
 La exportación avisa de fuentes necesarias ausentes; una toma no participante no bloquea el WAV de canción. El reloj compartido aplica mapas de tempo/swing. Las colas de audio pueden extender la duración sin reiniciar el arreglo instrumental.
 
-La cola de stems permite progreso/cancelación entre renders. No se puede interrumpir el DSP interno de un OfflineAudioContext ya iniciado. El WAV de canción no captura scratching en directo: usa Record Take.
+La exportación muestra progreso de render/compresión y permite cancelar. Si el navegador admite suspensión offline, las voces se preparan por ventanas y el procesamiento cancelado se detiene en el siguiente punto de control. Otros navegadores permiten dejar de esperar, pero no interrumpir el DSP nativo. OGG usa un codificador Vorbis local incluido en la caché offline; reduce el tamaño y sigue necesitando el render. La cola de stems permite cancelar entre renders. El WAV de canción no captura scratching en directo: usa Record Take.
 
 [Fiabilidad técnica](../RELIABILITY.md) · [Compatibilidad](ES-Compatibility-and-licenses.md).

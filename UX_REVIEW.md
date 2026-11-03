@@ -72,3 +72,21 @@ The approved desktop approach supersedes earlier “no singing control / researc
 ## Desktop voice scope
 
 Speech and native singing entrypoints and dialogs are desktop-only and their modules load on demand. Service/worker admission checks precede model or companion requests. Low-memory desktop computers retain Kokoro while the heavier Chatterbox engine stays blocked. General audio import, recording, region editing, effects and existing generated-audio playback remain independent of voice generation.
+
+
+## Local export progress and OGG — 2026-10-30
+
+Save and export keeps WAV and adds an explicit OGG compressed-audio action. Advanced options expose three Vorbis quality choices alongside the existing shared mix/region settings; WAV depth and dither remain WAV-specific. Rendering and compression display separate progress. Cancellation prevents a finished file write, stops a compression worker immediately and prevents further offline-window resumption where the browser supports it. Linked destinations remain independent per format.
+
+
+OGG completion is reported only after finalization and byte delivery, rather than after feeding the last PCM block. Loading, compression and finalization failures are distinguished; a worker load failure recommends reloading the application to refresh stale runtime assets.
+
+## Studio 7 — current contract (2026-11-03)
+
+The approved v7 model supersedes the historical v6-only constraint. Projects v2–v6 migrate; existing tracks, clips, sounds and binary references remain. Instrument tracks are dynamic. New score import/review retains originals and all parts, supports acoustic playback and optional local PDF/image recognition, and commits insertion as one undoable edit.
+
+Project data now saves through a serialized IndexedDB worker, with metadata-only recovery lists and a small emergency delta journal. Corrupt canonical saves are quarantined before recovery. Piano-roll notes, ruler labels and automation bars render only the visible window; selection remains in the model. Tempo integration is compiled per edit; inactive distortion/saturation curves are reused. WAV encoding is cancellable in a worker with a device memory guard; OGG and windowed rendering from Site 38 remain available.
+
+Track rails, launcher and mixer support additional channels through contained scrolling. Shared 12 px metadata and 44 px touch controls improve readability; mobile text/number inputs use 16 px to avoid focus zoom. Existing keyboards/dials, four workspaces, shortcuts and cyberpunk colors are retained. Score review provides local progress, cancel/retry, draft recovery, audio audition, editable notes/tempo/meter, bounded notation and corrected MusicXML export. Third-party parser diagnostics may retain their source language; Studio controls/notices are EN/ES.
+
+See `docs/STUDIO_V7_DELIVERY.md` for actual checks and performance measurements, and `docs/SCORE_IMPORT.md` for OMR/model/instrument licensing, memory bounds and physical-device limits. Browser emulation and one printed fixture do not establish perfect recognition or testing on a physical iPhone/M3/Radeon system.

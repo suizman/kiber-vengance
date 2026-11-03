@@ -6,7 +6,7 @@
 
 The workflow moves from immediate sound to detailed production: play the demo, experiment with clips and presets, edit notes and sound, arrange the song, perform, then export useful files. The current four workspaces are **Compose, Arrange, Live and Mix**, with a shared Sound inspector. Earlier references to Forge, Audio and Perform describe internal panels or the previous interface, not additional current workspaces.
 
-The project model is **v6**, with **v2–v5 import compatibility**. Speech and singing generation are desktop-only; general audio editing, recording, sample playback and project portability remain independent of generation engines. Historical milestones and validation counts below describe their dated deliveries; `PROJECT_MEMORY.md` records the current publication and acceptance state.
+The project model is **v7**, with **v2–v6 import compatibility**. Speech and singing generation are desktop-only; general audio editing, recording, sample playback and project portability remain independent of generation engines. Historical milestones and validation counts below describe their dated deliveries; `PROJECT_MEMORY.md` records the current publication and acceptance state.
 
 ## Delivered milestones
 
@@ -204,3 +204,12 @@ Speech and singing controls/modules load exclusively on desktop. Chatterbox is b
 ## Native desktop singing — 2026-10-30
 
 The approved native approach supersedes earlier browser-singing research statements. An optional loopback companion provides DiffSinger score singing and ACE-Step musical proposals through the existing audio workflow. Native Mac/Windows/Linux packages, including AppImage for Arch/Ubuntu, provide explicit model downloads/licenses, CPU/GPU profiles, pairing, cancellation, recovery and non-destructive effects/insertion. The studio stays static; generation controls load only on desktop; v6 assets/history/packages remain compatible. See [implementation, actual evidence and physical-device/listening limits](docs/DESKTOP_VOCALS.md). Native inference does not establish completed browser-only DiffSinger feasibility or perceptual superiority.
+
+
+## Local export performance and compressed audio — 2026-10-30
+
+Offline instrument rendering prepares voices in two-second windows where supported, releases completed voices, omits disabled effects and retires inactive clip FX after their tails. Progress is visible and stalled processing is distinguished from a long but advancing render. A symmetric distortion curve removes silent-input DC. Firefox versions without offline suspension keep the full scheduling fallback. OGG/Vorbis export adds local worker compression with q1/q4/q8 quality, the common mix/region controls and independent remembered destinations; WAV/stems remain available. OGG reduces output size and does not remove synthesis cost. Validation and measured local-project results are recorded in PROJECT_MEMORY.md; physical Safari/iOS output is not inferred.
+
+## Studio 7 — 2026-11-03
+
+Dynamic instrument tracks, local score/PDF review, acoustic playback, asynchronous persistence, compact undo deltas, compiled audio timing and virtualized note/automation rendering implement the approved end-to-end plan. Existing four workspaces, cyberpunk identity, desktop-only singing and Site 38 OGG/windowed exports are retained. See `docs/STUDIO_V7_DELIVERY.md` for acceptance evidence and `docs/SCORE_IMPORT.md` for format, recognition and hardware limits.

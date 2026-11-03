@@ -2,7 +2,7 @@
 
 [English](Home.md) | [Español](ES-Home.md)
 
-A browser studio for electro-rock, industrial, synthwave and cinematic composition. Four workspaces, five instruments, audio tracks and local export.
+A browser studio for electro-rock, industrial, synthwave and cinematic composition. Four workspaces, expandable instruments, audio tracks and local export.
 
 ![Compose on desktop](assets/compose.png)
 
@@ -20,7 +20,7 @@ A browser studio for electro-rock, industrial, synthwave and cinematic compositi
 | Balance and finish a mix | [Mixing](Mixing.md): dB, Solo/Mute, groups, sends, sidechain, Master, LUFS, mono and A/B |
 | Generate editable melodies | [Local AI](Local-AI.md): context, modes, A/B/C, Quality, partial regeneration and recipes |
 | Generate vocals on desktop | [Speech and singing](Speech-and-singing.md): Kokoro, Chatterbox, DiffSinger, ACE-Step and companion |
-| Save, recover or export | [Projects and export](Projects-and-export.md): v6, autosave, snapshots, JSON, Package, WAV, MIDI and stems |
+| Save, recover or export | [Projects and export](Projects-and-export.md): v7, autosave, snapshots, JSON, Package, WAV, compressed OGG, MIDI and stems |
 | Customize the studio | [Shortcuts and settings](Shortcuts-and-settings.md): keyboard, MIDI, appearance, languages, guide and accessibility |
 | Check compatibility and licenses | [Compatibility](Compatibility-and-licenses.md): browsers, offline operation, formats and practical limits |
 | Develop, test or publish | [Development](Development.md): architecture, commands, tests, native packages, wiki and Sites |
@@ -32,3 +32,5 @@ A browser studio for electro-rock, industrial, synthwave and cinematic compositi
 This directory is the versioned manual source and works without a wiki. Publish the same pages to GitHub Wiki with `node scripts/publish-wiki.mjs --publish` after enabling and initializing the native wiki. [Maintenance and prerequisites](Development.md).
 
 English is the default edition. Every guide links to its Spanish counterpart; both editions share actual English UI screenshots.
+
+- [Scores and acoustic instruments](Scores-and-instruments.md) · [Partituras e instrumentos](ES-Scores-and-instruments.md)

@@ -1,0 +1,102 @@
+{
+  "environment": "Chromium; localhost; 390x844 touch; 4x CPU throttling; fresh storage; no network throttling; three runs; identical 64-bar fixture",
+  "baselineCommit": "31826ed4d37357f41179d21552705dd23ff77ad2",
+  "results": [
+    {
+      "version": "v6",
+      "notes": 1000,
+      "run": 0,
+      "readyMs": 1722.5999999996275,
+      "domNodes": 4045,
+      "longestTaskMs": 714
+    },
+    {
+      "version": "v6",
+      "notes": 1000,
+      "run": 1,
+      "readyMs": 1730.199999999255,
+      "domNodes": 4045,
+      "longestTaskMs": 721
+    },
+    {
+      "version": "v6",
+      "notes": 1000,
+      "run": 2,
+      "readyMs": 1870.2999999988824,
+      "domNodes": 3999,
+      "longestTaskMs": 754
+    },
+    {
+      "version": "v6",
+      "notes": 10000,
+      "run": 0,
+      "readyMs": 7049.800000000745,
+      "domNodes": 21999,
+      "longestTaskMs": 4480
+    },
+    {
+      "version": "v6",
+      "notes": 10000,
+      "run": 1,
+      "readyMs": 7428.4000000003725,
+      "domNodes": 21999,
+      "longestTaskMs": 4919
+    },
+    {
+      "version": "v6",
+      "notes": 10000,
+      "run": 2,
+      "readyMs": 5799.799999998882,
+      "domNodes": 21999,
+      "longestTaskMs": 3497
+    },
+    {
+      "version": "v7",
+      "notes": 1000,
+      "run": 0,
+      "readyMs": 1184.9000000003725,
+      "domNodes": 1859,
+      "longestTaskMs": 312
+    },
+    {
+      "version": "v7",
+      "notes": 1000,
+      "run": 1,
+      "readyMs": 1267.199999999255,
+      "domNodes": 1859,
+      "longestTaskMs": 396
+    },
+    {
+      "version": "v7",
+      "notes": 1000,
+      "run": 2,
+      "readyMs": 1227.7000000011176,
+      "domNodes": 1859,
+      "longestTaskMs": 404
+    },
+    {
+      "version": "v7",
+      "notes": 10000,
+      "run": 0,
+      "readyMs": 1717.3999999985099,
+      "domNodes": 2013,
+      "longestTaskMs": 559
+    },
+    {
+      "version": "v7",
+      "notes": 10000,
+      "run": 1,
+      "readyMs": 1579.2000000011176,
+      "domNodes": 2013,
+      "longestTaskMs": 494
+    },
+    {
+      "version": "v7",
+      "notes": 10000,
+      "run": 2,
+      "readyMs": 1665.699999999255,
+      "domNodes": 2013,
+      "longestTaskMs": 472
+    }
+  ]
+}
