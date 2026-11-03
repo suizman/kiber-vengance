@@ -1,3 +1,4 @@
+import { onInferenceEvicted } from "../ai/inference-lock";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { KEYS, SCALES } from "../core";
@@ -149,6 +150,7 @@ export function setupLocalAI() {
     const attempt = useRef(0);
     const busy =
       status === "loading" || status === "generating" || status === "deleting";
+    useEffect(() => onInferenceEvicted(kind => { if (kind === "melody") { setStatus("idle"); setLoadedBackend(null); } }), []);
     useEffect(() => {
       if (!busy) return;
       const started = performance.now();

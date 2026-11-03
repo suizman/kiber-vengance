@@ -82,10 +82,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
       offset: 0,
       expression: { pressure: 0, timbre: 0, bend: 0 },
     }));
-    globalThis.localStorage.setItem(
-      "kiber-vengance-project-v6",
-      JSON.stringify(p),
-    );
+    await globalThis.__writeSavedProject(p);
   });
   await page.reload();
   await goToView(page, "audio");
@@ -94,7 +91,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
   await page.locator("#desktopPairCode").fill(local.code);
   await page.locator("#desktopPair").click();
   await page.waitForFunction(
-    () => !document.querySelector("#generateDesktopVocals").disabled,
+    async () => !document.querySelector("#generateDesktopVocals").disabled,
   );
   await page.locator("#captureVocalNotes").click();
   assert.equal(await page.locator(".desktop-note-list tbody tr").count(), 4);
@@ -114,12 +111,12 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
     .selectOption("presence");
   await page.locator("#insertDesktopVocals").click();
   await page.waitForFunction(
-    () => !document.querySelector("#insertDesktopVocals").disabled,
+    async () => !document.querySelector("#insertDesktopVocals").disabled,
   );
   await page.locator("#desktopVocalsDialog header button").click();
   await page.waitForTimeout(500);
-  const stored = await page.evaluate(() =>
-    JSON.parse(globalThis.localStorage.getItem("kiber-vengance-project-v6")),
+  const stored = await page.evaluate(async () =>
+    (await globalThis.__readSavedProject()),
   );
   const region = stored.audioLanes.at(-1).regions.at(-1);
   assert.equal(region.generation.kind, "singing");
@@ -142,7 +139,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
     .getByRole("button", { name: "Check connection", exact: true })
     .click();
   await page.waitForFunction(
-    () => !document.querySelector("#generateDesktopVocals").disabled,
+    async () => !document.querySelector("#generateDesktopVocals").disabled,
   );
   await page.locator("#desktopVocalEngine").selectOption("acestep");
   await page.locator("#desktopAceLyrics").fill("La noche arde.");
@@ -154,7 +151,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
     : null;
   await page.locator("#generateDesktopVocals").click();
   await page.waitForFunction(
-    (previous) =>
+    async (previous) =>
       !!document.querySelector("#desktopVocalPreview")?.getAttribute("src") &&
       document.querySelector("#desktopVocalPreview")?.getAttribute("src") !==
         previous &&
@@ -167,7 +164,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
   await page.locator("#generateDesktopVocals").click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.waitForFunction(
-    () =>
+    async () =>
       document
         .querySelector("#desktopVocalsStatus")
         .textContent.startsWith("Cancelled") &&
@@ -210,7 +207,7 @@ test("desktop vocals pair with the real loopback server, capture notes, audition
   await owner.waitForTimeout(2400);
   assert.equal(
     await download.evaluate(
-      (element) => element === document.activeElement && element.isConnected,
+      async (element) => element === document.activeElement && element.isConnected,
     ),
     true,
   );
@@ -232,14 +229,14 @@ test("desktop singing is absent on phones without probing or downloading a local
   });
   await page.goto(server.url + "/?qa=1");
   await goToView(page, "audio");
-  await page.evaluate(() => globalThis.dispatchEvent(new globalThis.Event("kv-open-desktop-vocals")));
+  await page.evaluate(async () => globalThis.dispatchEvent(new globalThis.Event("kv-open-desktop-vocals")));
   assert.equal(await page.locator("#desktopVocalsBtn").count(), 0);
   assert.equal(await page.locator("#desktopVocalsDialog").count(), 0);
   assert.equal(await page.locator("#localVoiceBtn").count(), 0);
   assert.equal(localRequests, 0);
   assert.equal(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= globalThis.innerWidth,
+      async () => document.documentElement.scrollWidth <= globalThis.innerWidth,
     ),
     true,
   );

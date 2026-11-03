@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "id": "program-023",
+  "kind": "program",
+  "number": 23,
+  "name": "tango accordion",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0230_FluidR3_GM_sf2_file.js",
+    "sha256": "191f338f38f46808cb2d3e19a1cda0bc7707282ff7dea4e76fdad4ebc0bbc3d7",
+    "bytes": 296966
+  },
+  "zones": [
+    {
+      "midi": 23,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 60,
+      "loopStart": 36629,
+      "loopEnd": 182237,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 22050,
+      "ahdsr": false,
+      "anchor": 6.46648502,
+      "sample": {
+        "path": "samples/8518f908f8d85ab3fe846b43ecd3c1d1e93ac2710eb95bc243500b0c683d2595.mp3",
+        "sha256": "8518f908f8d85ab3fe846b43ecd3c1d1e93ac2710eb95bc243500b0c683d2595",
+        "bytes": 65661,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 23,
+      "originalPitch": 6600,
+      "keyRangeLow": 61,
+      "keyRangeHigh": 66,
+      "loopStart": 43688,
+      "loopEnd": 141064,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 22050,
+      "ahdsr": false,
+      "anchor": 4.34018135,
+      "sample": {
+        "path": "samples/aaaf8e09bdc083a24551c38121cc9b3efe19e6ad9e873f983969e76afaf62c5f.mp3",
+        "sha256": "aaaf8e09bdc083a24551c38121cc9b3efe19e6ad9e873f983969e76afaf62c5f",
+        "bytes": 50142,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 23,
+      "originalPitch": 7200,
+      "keyRangeLow": 67,
+      "keyRangeHigh": 72,
+      "loopStart": 35370,
+      "loopEnd": 99592,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 22050,
+      "ahdsr": false,
+      "anchor": 2.86240363,
+      "sample": {
+        "path": "samples/f685f71063cca5b366813173079eaebf5fcf6c0cba5b19d235f80c229b8b5ff4.mp3",
+        "sha256": "f685f71063cca5b366813173079eaebf5fcf6c0cba5b19d235f80c229b8b5ff4",
+        "bytes": 42329,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 23,
+      "originalPitch": 7800,
+      "keyRangeLow": 73,
+      "keyRangeHigh": 78,
+      "loopStart": 23733,
+      "loopEnd": 71964,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 22050,
+      "ahdsr": false,
+      "anchor": 2.15256238,
+      "sample": {
+        "path": "samples/8a955a82be86f5651025ab5b0cfbb0cd92978567cc030a3e27967bf2c58ed722.mp3",
+        "sha256": "8a955a82be86f5651025ab5b0cfbb0cd92978567cc030a3e27967bf2c58ed722",
+        "bytes": 26641,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 23,
+      "originalPitch": 8400,
+      "keyRangeLow": 79,
+      "keyRangeHigh": 84,
+      "loopStart": 7893,
+      "loopEnd": 59440,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 22050,
+      "ahdsr": false,
+      "anchor": 1.15433109,
+      "sample": {
+        "path": "samples/8990327c01089cfb1848e5a0b24fd160ae7992c312dce2ffa8093fd1ecb4b641.mp3",
+        "sha256": "8990327c01089cfb1848e5a0b24fd160ae7992c312dce2ffa8093fd1ecb4b641",
+        "bytes": 24943,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 23,
+      "originalPitch": 9000,
+      "keyRangeLow": 85,
+      "keyRangeHigh": 108,
+      "loopStart": 3415,
+      "loopEnd": 24793,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 22050,
+      "ahdsr": false,
+      "anchor": 0.9520635,
+      "sample": {
+        "path": "samples/58a1ea6d3a5a3f2ac9d8469b140e7ff54a31ff84699022eedcf4fbeaa74cb5d6.mp3",
+        "sha256": "58a1ea6d3a5a3f2ac9d8469b140e7ff54a31ff84699022eedcf4fbeaa74cb5d6",
+        "bytes": 11797,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

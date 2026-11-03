@@ -9,7 +9,8 @@ const server = http.createServer(async (req, res) => {
     const clean = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[/\\])+/, '');
     const file = join(root, clean === '/' ? 'index.html' : clean);
     const body = await readFile(file);
-    res.writeHead(200, { 'Content-Type': `${types[extname(file)] || 'application/octet-stream'}; charset=utf-8`, 'Cache-Control':'no-store' });
+    const mime = types[extname(file)] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': mime.startsWith('text/') || /json|svg/.test(mime) ? `${mime}; charset=utf-8` : mime, 'Cache-Control':'no-store' });
     res.end(body);
   } catch { res.writeHead(404); res.end('Not found'); }
 });

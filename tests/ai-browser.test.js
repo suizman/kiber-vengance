@@ -119,7 +119,7 @@ test("AI composition integrates context, shaping, A/B loops, selected bars, reci
     await page.locator("#auditionLocalAI").click();
     await page.waitForFunction(() =>
       globalThis.__previewContexts.some((c) => c.state === "running"),
-    );
+    ).catch(async error => { throw new Error(`${error.message}; preview: ${await page.locator(".ai-error").allTextContents()}; contexts: ${await page.evaluate(() => globalThis.__previewContexts.map(c => c.state))}; errors: ${errors}`); });
     await page.locator('[data-ai-proposal="0"]').click();
     await page.waitForTimeout(1600);
     assert.equal(

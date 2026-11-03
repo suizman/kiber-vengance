@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "program-079",
+  "kind": "program",
+  "number": 79,
+  "name": "ocarina",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0790_FluidR3_GM_sf2_file.js",
+    "sha256": "17a965373047d438b156e3cbd41e402f007a9e654203e0d2c977ab43a8789955",
+    "bytes": 111119
+  },
+  "zones": [
+    {
+      "midi": 79,
+      "originalPitch": 5200,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 52,
+      "loopStart": 39130,
+      "loopEnd": 60001,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.15156463,
+      "sample": {
+        "path": "samples/d5255420ec320a6f2deeadaf23e63e61839fcb2d51b9bb1c101c1f241e89e82b.mp3",
+        "sha256": "d5255420ec320a6f2deeadaf23e63e61839fcb2d51b9bb1c101c1f241e89e82b",
+        "bytes": 20772,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 79,
+      "originalPitch": 6200,
+      "keyRangeLow": 53,
+      "keyRangeHigh": 67,
+      "loopStart": 39149,
+      "loopEnd": 60001,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.06040816,
+      "sample": {
+        "path": "samples/cc9d10002a0ee6dad963bb17a82624b135fe0e21c074f8e5366e30bbd52c5728.mp3",
+        "sha256": "cc9d10002a0ee6dad963bb17a82624b135fe0e21c074f8e5366e30bbd52c5728",
+        "bytes": 21733,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 79,
+      "originalPitch": 7600,
+      "keyRangeLow": 68,
+      "keyRangeHigh": 92,
+      "loopStart": 40234,
+      "loopEnd": 60001,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.42802721,
+      "sample": {
+        "path": "samples/3a7bde1b3351150b6c190ddd05b386189f6bc7f3cb56de612e7447cb520f3ccb.mp3",
+        "sha256": "3a7bde1b3351150b6c190ddd05b386189f6bc7f3cb56de612e7447cb520f3ccb",
+        "bytes": 22905,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 79,
+      "originalPitch": 9300,
+      "keyRangeLow": 93,
+      "keyRangeHigh": 108,
+      "loopStart": 20002,
+      "loopEnd": 40001,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.54544216,
+      "sample": {
+        "path": "samples/91ab4662bac6c7613fe200fba4e0c5a1fa833f82584378b55a70ccdb08c8a859.mp3",
+        "sha256": "91ab4662bac6c7613fe200fba4e0c5a1fa833f82584378b55a70ccdb08c8a859",
+        "bytes": 17127,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

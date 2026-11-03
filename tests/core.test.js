@@ -34,7 +34,7 @@ test('empty projects and musical meters retain a complete five-track structure',
 test('legacy v2 patterns migrate into independent per-track clips', () => {
   const legacy={version:2,title:'Legacy Signal',tempo:118,macros:{energy:.4},tracks:{lead:{drive:.7}},patterns:[{id:'p1',name:'Old Pattern',bars:2,notes:{lead:[{step:0,pitch:60,length:2,velocity:.8}],bass:[],pad:[],drums:[]}}],activePatternId:'p1',arrangement:[{id:'s1',name:'INTRO',patternId:'p1',repeats:2}]};
   const p=migrateProject(legacy);
-  assert.equal(p.version,6);
+  assert.equal(p.version,7);
   assert.equal(p.clips.length,5);
   assert.equal(activeClip(p,'lead').notes[0].pitch,60);
   assert.equal(activeClip(p,'lead').character.fx.distortion,.7);
@@ -44,10 +44,10 @@ test('legacy v2 patterns migrate into independent per-track clips', () => {
 
 test('v3 track character migrates into every existing clip without losing its sound',()=>{
   const legacy=createProject();legacy.version=3;legacy.macros={energy:.21,darkness:.32,tension:.43,aggression:.54,space:.65,complexity:.76};legacy.tracks.lead.arp={enabled:true,mode:'down',octaves:3,rate:2};legacy.tracks.lead.lfo={enabled:true,target:'pitch',rate:7,depth:.4};legacy.tracks.lead.fx={bypass:false,distortion:.81,saturation:.7,chorus:.2,delay:.3,reverb:.4,tone:.5};legacy.clips.forEach(c=>delete c.character);
-  const migrated=migrateProject(JSON.parse(JSON.stringify(legacy))),lead=clipsForTrack(migrated,'lead');assert.equal(migrated.version,6);assert.ok(lead.every(c=>c.character.arp.mode==='down'&&c.character.fx.distortion===.81&&c.character.macros.space===.65));assert.equal(migrated.macros,undefined);assert.equal(migrated.tracks.lead.fx,undefined);
+  const migrated=migrateProject(JSON.parse(JSON.stringify(legacy))),lead=clipsForTrack(migrated,'lead');assert.equal(migrated.version,7);assert.ok(lead.every(c=>c.character.arp.mode==='down'&&c.character.fx.distortion===.81&&c.character.macros.space===.65));assert.equal(migrated.macros,undefined);assert.equal(migrated.tracks.lead.fx,undefined);
 });
 
-test('v4 projects migrate to v6 without changing musical material',()=>{const old=createProject(),notes=playbackEvents(old,{song:true}).events.map(event=>[event.track,event.step,event.pitch,event.clipId]);old.version=4;delete old.markers;delete old.loop;delete old.launcher;delete old.performanceTakes;delete old.samples;delete old.masterSettings;delete old.editor.arrangeZoom;delete old.audioLanes;delete old.automationLanes;delete old.modulationRoutes;delete old.mixerGroups;delete old.tempoMap;delete old.meterMap;delete old.midiMappings;for(const track of TRACKS){delete old.tracks[track].preGainDb;delete old.tracks[track].sendMode;delete old.tracks[track].color}const migrated=migrateProject(JSON.parse(JSON.stringify(old)));assert.equal(migrated.version,6);assert.deepEqual(playbackEvents(migrated,{song:true}).events.map(event=>[event.track,event.step,event.pitch,event.clipId]),notes);assert.equal(migrated.tracks.lead.preGainDb,0);assert.ok(migrated.editor.arrangeZoom);assert.deepEqual(migrated.audioLanes,[]);assert.equal(migrated.masterSettings.targetLufs,-14)});
+test('v4 projects migrate to v7 without changing musical material',()=>{const old=createProject(),notes=playbackEvents(old,{song:true}).events.map(event=>[event.track,event.step,event.pitch,event.clipId]);old.version=4;delete old.markers;delete old.loop;delete old.launcher;delete old.performanceTakes;delete old.samples;delete old.masterSettings;delete old.editor.arrangeZoom;delete old.audioLanes;delete old.automationLanes;delete old.modulationRoutes;delete old.mixerGroups;delete old.tempoMap;delete old.meterMap;delete old.midiMappings;for(const track of TRACKS){delete old.tracks[track].preGainDb;delete old.tracks[track].sendMode;delete old.tracks[track].color}const migrated=migrateProject(JSON.parse(JSON.stringify(old)));assert.equal(migrated.version,7);assert.deepEqual(playbackEvents(migrated,{song:true}).events.map(event=>[event.track,event.step,event.pitch,event.clipId]),notes);assert.equal(migrated.tracks.lead.preGainDb,0);assert.ok(migrated.editor.arrangeZoom);assert.deepEqual(migrated.audioLanes,[]);assert.equal(migrated.masterSettings.targetLufs,-14)});
 
 test('v5 studio metadata survives a portable JSON round trip',()=>{const p=createProject();p.markers.push({id:'marker-1',step:12.5,name:'DROP',color:'#ff3bd4'});p.loop={enabled:true,start:8,end:40,punch:true};p.launcher.quantization=4;p.masterSettings.bypass=true;p.samples.push({id:'sample-1',name:'impact.wav',slot:0,size:2048,type:'audio/wav',trimStart:.1,trimEnd:.8,tune:-3,attack:.01,release:.2,reverse:true});p.tracks.lead.preGainDb=2.5;p.tracks.lead.sendMode='pre';const restored=migrateProject(JSON.parse(JSON.stringify(p)));assert.deepEqual(restored.markers,p.markers);assert.deepEqual(restored.loop,p.loop);assert.equal(restored.launcher.quantization,4);assert.equal(restored.masterSettings.bypass,true);assert.deepEqual(restored.samples,p.samples);assert.equal(restored.tracks.lead.preGainDb,2.5);assert.equal(restored.tracks.lead.sendMode,'pre')});
 
@@ -294,7 +294,7 @@ test('audio regions extend the song transport without repeating the last instrum
 
 test('WAV encoding reads channel views once and preserves stereo PCM samples', async()=>{
  let reads=0;const left=new Float32Array([-.5,.25,2]),right=new Float32Array([.5,-.25,-2]);
- const buffer={length:3,sampleRate:48000,getChannelData(channel){reads++;return channel?right:left}};
+ const buffer={length:3,numberOfChannels:2,sampleRate:48000,getChannelData(channel){reads++;return channel?right:left}};
  const blob=wavBlob(buffer,32,false,false),view=new DataView(await blob.arrayBuffer());
  assert.equal(reads,2);assert.equal(blob.size,68);assert.equal(view.getFloat32(44,true),-.5);assert.equal(view.getFloat32(48,true),.5);assert.equal(view.getFloat32(60,true),1);assert.equal(view.getFloat32(64,true),-1);
 });

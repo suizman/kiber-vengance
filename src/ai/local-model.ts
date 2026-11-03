@@ -1,4 +1,4 @@
-import { acquireInference } from "./inference-lock";
+import { acquireInference, registerInferenceResource } from "./inference-lock";
 import { CPU_CACHE, type LocalBackend } from "./model-config";
 import cpuWorkerUrl from "./cpu-worker.ts?worker&url";
 import gpuWorkerUrl from "./inference-worker.ts?worker&url";
@@ -250,3 +250,5 @@ export async function deleteLocalModelCache() {
     }
   }
 }
+
+registerInferenceResource("melody", stopLocalModel);

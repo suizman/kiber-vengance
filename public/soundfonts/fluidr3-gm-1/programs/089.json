@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "program-089",
+  "kind": "program",
+  "number": 89,
+  "name": "pad 2 warm",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0890_FluidR3_GM_sf2_file.js",
+    "sha256": "7ad2d6a3e6da3f12201dd49506fa8aaf005ba00a1639217f85b88b99fc30a331",
+    "bytes": 79930
+  },
+  "zones": [
+    {
+      "midi": 89,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 36638,
+      "loopEnd": 51214,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.67861676,
+      "sample": {
+        "path": "samples/d2fbe66d82f6579d7d4ad8b3177261caf808d0dd9b480623d6c658bc22bdc52b.mp3",
+        "sha256": "d2fbe66d82f6579d7d4ad8b3177261caf808d0dd9b480623d6c658bc22bdc52b",
+        "bytes": 21036,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 89,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 68964,
+      "loopEnd": 94892,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.25065759,
+      "sample": {
+        "path": "samples/86b65549acd49f26c552323259b7bf9db6e4f13f152232199448349c333584e8.mp3",
+        "sha256": "86b65549acd49f26c552323259b7bf9db6e4f13f152232199448349c333584e8",
+        "bytes": 38456,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

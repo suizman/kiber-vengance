@@ -1,3 +1,4 @@
+import { onInferenceEvicted } from "../ai/inference-lock";
 import { AudioEngine } from "../audio";
 import { processAudio } from "../audio/effects";
 import { normalizeEffects } from "../audio/effects-model";
@@ -105,6 +106,7 @@ export function setupLocalVoice(ctx: Context) {
       setLane(ctx.project.audioLanes[0]?.id || "");
       setOpen(true);
     };
+    useEffect(() => onInferenceEvicted(kind => { if (kind === "voice") { setReady(false); } }), []);
     useEffect(() => {
       if (open) dialog.current?.showModal();
       else dialog.current?.close();

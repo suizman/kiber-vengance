@@ -1,124 +1,15 @@
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
+import { trackState } from "../state/tracks";
+import { projectTrackIds, trackMeta } from "../state/tracks";
+import { t as msg } from "../ui/i18n";
 
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
+import { clipsForTrack, captureLauncherScenes } from "../core.js";
 
-import { mountDial } from "../ui/components/dial";
+import type { TrackId } from "../model.js";
 
-import { studioBridge, type StudioView } from "../ui/bridge";
-
-import {
-  createProject,
-  createEmptyProject,
-  migrateProject,
-  activeClip,
-  clipsForTrack,
-  createClip,
-  clipLengthSteps,
-  meterSteps,
-  setProjectMeter,
-  makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
-  resizeClip,
-  quantizeClip,
-  automationValue,
-  generateClip,
-  generateBacking,
-  encodeMidi,
-  playbackEvents,
-  History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
-  addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
-  createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
-  detectTransientSlices,
-  transformNotes,
-  cryptoId,
-  samplerDefaults,
-} from "../core.js";
-
-import { AudioEngine, renderWav } from "../audio.js";
-
-import type {
-  AudioLane,
-  AudioRegion,
-  AutomationLane,
-  MidiMapping,
-  ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
-} from "../model.js";
-
-import type { RuntimeContext } from "../app";
-
-type Language = "en" | "es";
-
-type QuickExportKind =
-  | "wav"
-  | "midi"
-  | "project"
-  | "clip-wav"
-  | "clip-midi"
-  | "stems"
-  | "bundle"
-  | "performance";
-
-type QuickTarget = {
-  handle: any | null;
-  fallback: boolean;
-  cancelled: boolean;
-  name: string;
-  type: string;
-};
-
-type UserPreset = {
-  id: string;
-  name: string;
-  track: TrackId;
-  tags: string[];
-  instrument: import("../model.js").InstrumentState;
-  character: any;
-};
-
-type CommandAction = {
-  label: string;
-  labelEs: string;
-  group: string;
-  groupEs: string;
-  shortcut: string;
-  icon: string;
-  keywords: string;
-  run: () => void;
-};
+import type { LauncherContext } from "../state/contracts";
 
 export async function launchClip(
-  ctx: RuntimeContext,
+  ctx: LauncherContext,
   track: TrackId,
   clipId: string,
 ) {
@@ -130,20 +21,30 @@ export async function launchClip(
     ctx.project.activeClipIds[track] = clipId;
     await ctx.togglePlay(false);
     ctx.engine.onLaunch?.(track, clipId, 0);
-  } else ctx.engine.queueClip(track, clipId, quantization);
+  } else {
+    try {
+      if (await ctx.engine.prepareClipLaunch(track, clipId))
+        ctx.engine.queueClip(track, clipId, quantization);
+    } catch (error) {
+      ctx.toast(error instanceof Error ? error.message : String(error));
+      return;
+    }
+  }
   ctx.recordPerformanceEvent("launcher", track, clipId);
   ctx.renderLauncher();
 }
 
-export function renderLauncher(ctx: RuntimeContext) {
+export function renderLauncher(ctx: LauncherContext) {
   const root = ctx.$("#launcherGrid");
   if (!root) return;
-  root.innerHTML = TRACKS.map((track) => {
-    const cfg = ctx.project.tracks[track],
-      clips = clipsForTrack(ctx.project, track),
-      queued = ctx.engine.launchQueue.get(track)?.clipId;
-    return `<section class="launcher-track" style="--track:${cfg.color || TRACK_META[track].color}"><header><b>${TRACK_META[track].label}</b><button data-launch-stop="${track}" aria-label="${msg("ui_16ab95edb344")}">■</button></header>${clips.map((item) => `<button class="launcher-cell ${ctx.project.activeClipIds[track] === item.id && !ctx.engine.launcherStopped.has(track) ? "active" : ""} ${queued === item.id ? "queued" : ""}" data-launch-track="${track}" data-launch-clip="${item.id}"><b>${ctx.esc(item.name)}</b><small>${item.bars} ${msg("ui_1b402ca81c1b")} · ${item.notes.length} NOTES</small></button>`).join("")}</section>`;
-  }).join("");
+  root.innerHTML = projectTrackIds(ctx.project)
+    .map((track) => {
+      const cfg = trackState(ctx.project, track),
+        clips = clipsForTrack(ctx.project, track),
+        queued = ctx.engine.launchQueue.get(track)?.clipId;
+      return `<section class="launcher-track" style="--track:${cfg.color || trackMeta(ctx.project, track).color}"><header><b>${ctx.esc(trackMeta(ctx.project, track).label)}</b><button data-launch-stop="${track}" aria-label="${msg("ui_16ab95edb344")}">■</button></header>${clips.map((item) => `<button class="launcher-cell ${ctx.project.activeClipIds[track] === item.id && !ctx.engine.launcherStopped.has(track) ? "active" : ""} ${queued === item.id ? "queued" : ""}" data-launch-track="${track}" data-launch-clip="${item.id}"><b>${ctx.esc(item.name)}</b><small>${item.bars} ${msg("ui_1b402ca81c1b")} · ${item.notes.length} NOTES</small></button>`).join("")}</section>`;
+    })
+    .join("");
   ctx
     .$$("[data-launch-clip]")
     .forEach(
@@ -167,12 +68,12 @@ export function renderLauncher(ctx: RuntimeContext) {
   ctx.$("#launchQuantize").value = String(ctx.project.launcher.quantization);
 }
 
-export function setupLauncher(ctx: RuntimeContext) {
+export function setupLauncher(ctx: LauncherContext) {
   ctx.engine.onLaunch = (track, clipId) => {
     if (ctx.launcherCapturing)
       ctx.launcherSnapshot(`LIVE ${ctx.launcherSnapshots.length + 1}`);
     ctx.$("#launcherStatus").textContent =
-      `${TRACK_META[track].label} · ${ctx.project.clips.find((item: any) => item.id === clipId)?.name || "CLIP"} · LIVE`;
+      `${trackMeta(ctx.project, track).label} · ${ctx.project.clips.find((item: any) => item.id === clipId)?.name || "CLIP"} · LIVE`;
     ctx.renderLauncher();
     ctx.changed();
   };

@@ -32,7 +32,7 @@ export class PointerLifecycle<T> {
     this.onRelease(held, pointerId);
   }
   releaseAll() {
-    for (const pointerId of [...this.held.keys()]) this.release(pointerId);
+    for (const pointerId of this.held.keys()) this.release(pointerId);
   }
   dispose() {
     this.releaseAll();

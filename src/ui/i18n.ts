@@ -72,7 +72,7 @@ export function translateText(text: string): string {
 const excluded =
   "[data-user-content],[data-no-translate],script,style,textarea,[contenteditable],.track-name,.launcher-cell,.scene-name,.preset-card,.version-item,.note-block,.keyboard-key,.key,.sampler-key,#clipSelect,#preset,#versionsList,#takeEventList";
 const copySelector =
-  "button,label,summary,option,p,h1,h2,h3,h4,legend,.eyebrow,.rail-label,.clip-scope,.deck-slider span,.export-choice span,.export-choice b,.help-grid span,.command-help,.menu-language span,.versions-head,.export-targets-head,.section-title>span,.audio-head>span,[data-i18n],[data-en][data-es]";
+  "button,label,summary,option,p,h1,h2,h3,h4,legend,.eyebrow,.rail-label,.clip-scope,.deck-slider span,.export-choice span,.export-choice b,.help-grid span,.command-help,.menu-language span,.versions-head,.export-targets-head,.section-title>span,.audio-head>span,#saveState,[data-i18n],[data-en][data-es]";
 const attributeSelector =
   "[title],[aria-label],[aria-description],[placeholder],[data-help-title],[data-help-body]";
 const attributes = [

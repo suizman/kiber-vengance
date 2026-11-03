@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-078",
+  "kind": "program",
+  "number": 78,
+  "name": "whistle",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0780_FluidR3_GM_sf2_file.js",
+    "sha256": "88b4e605a19dbebb45810274b78128f27d2b9b7989da7cb18dd264bf8fae1751",
+    "bytes": 10068
+  },
+  "zones": [
+    {
+      "midi": 78,
+      "originalPitch": 9600,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 16015,
+      "loopEnd": 16434,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.09027211,
+      "sample": {
+        "path": "samples/c3e04e77bc4252a0ae355168cb9e6384bd53cdfd8ae90a3164a6a5cf027d8127.mp3",
+        "sha256": "c3e04e77bc4252a0ae355168cb9e6384bd53cdfd8ae90a3164a6a5cf027d8127",
+        "bytes": 7292,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

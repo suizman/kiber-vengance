@@ -19,14 +19,15 @@ test('shared audio DSP preserves neutral samples, separates clip effects and kee
 test('mobile audio effects and level controls persist, undo and stay within the viewport',async t=>{
  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());
  const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(server.url+'/?qa=1');
- await page.evaluate(async()=>{const {createEmptyProject,createAudioLane,createAudioRegion}=await import('/core.js');const p=createEmptyProject();const lane=createAudioLane('AI voice');lane.regions.push(createAudioRegion('missing','Phrase'));p.audioLanes.push(lane);globalThis.localStorage.setItem('kiber-vengance-project-v6',JSON.stringify(p));});
+ await page.locator('#app.studio-shell').waitFor();
+ await page.evaluate(async()=>{const {createEmptyProject,createAudioLane,createAudioRegion}=await import('/core.js');const p=createEmptyProject();const lane=createAudioLane('AI voice');lane.regions.push(createAudioRegion('missing','Phrase'));p.audioLanes.push(lane);await globalThis.__writeSavedProject(p);});
  await page.reload();await page.locator('#missingAssetsDialog button').filter({hasText:/Close|Cerrar/}).click();await goToView(page,'audio');await page.locator('.audio-lane').first().waitFor();
  const effects=page.locator('.audio-region .audio-fx');await effects.locator('summary').click();await effects.locator('select').selectOption('radio');await effects.getByRole('button',{name:'Processed',exact:true}).click();assert.equal(await effects.getByRole('button',{name:'Original · bypass',exact:true}).getAttribute('aria-pressed'),'true');
  await goToView(page,'mix');assert.equal(await page.locator('.audio-mixer-channel').count(),1);
  const master=page.locator('#finalMasterControl input[type=number]');await master.fill('-6');await master.press('Tab');assert.match(await page.locator('#finalMasterControl output').textContent(),/-6.0/);
  const mute=page.locator('#outputMute');await mute.click();assert.equal(await mute.getAttribute('aria-pressed'),'true');
  await page.waitForTimeout(500);await page.reload();await page.locator('#missingAssetsDialog button').filter({hasText:/Close|Cerrar/}).click();await goToView(page,'mix');assert.match(await page.locator('#finalMasterControl output').textContent(),/-6.0/);
- assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=globalThis.innerWidth),true);assert.deepEqual(errors,[]);
+ assert.equal(await page.evaluate(async () =>document.documentElement.scrollWidth<=globalThis.innerWidth),true);assert.deepEqual(errors,[]);
  await page.addScriptTag({content:axe.source});const violations=await page.evaluate(async()=> (await axe.run(document.querySelector('.output-mix'))).violations.map(v=>v.id));assert.deepEqual(violations,[]);
 });
 test('final Master controls deck audio and excludes preview while Cue stays independent',async t=>{
@@ -54,12 +55,12 @@ test('mobile devices have no voice generation UI or voice-engine requests',async
   const requests=[];
   context.on('request',request=>{if(/local-voice-|desktop-vocals-|chatterbox-worker-|voice-worker-|huggingface\.co|cdn\.jsdelivr\.net|127\.0\.0\.1:19738/.test(request.url()))requests.push(request.url());});
   const page=await context.newPage();await page.goto(server.url+'/?qa=1');await goToView(page,'audio');
-  await page.evaluate(()=>globalThis.dispatchEvent(new globalThis.Event('kv-open-desktop-vocals')));
+  await page.evaluate(async () =>globalThis.dispatchEvent(new globalThis.Event('kv-open-desktop-vocals')));
   await page.waitForTimeout(300);
   for(const selector of ['#localVoiceBtn','#desktopVocalsBtn','#localVoiceDialog','#desktopVocalsDialog','#useLightweightVoice'])assert.equal(await page.locator(selector).count(),0,selector);
   assert.equal(await page.locator('#audioImport').count(),1);assert.equal(await page.locator('#audioLaneBtn').count(),1);assert.equal(await page.locator('#samplerLab').count(),1);
   assert.deepEqual(requests,[]);
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=globalThis.innerWidth),true);
+  assert.equal(await page.evaluate(async () =>document.documentElement.scrollWidth<=globalThis.innerWidth),true);
   await context.close();
  }
 });
@@ -73,15 +74,15 @@ test('low-memory desktop retains Kokoro while blocking the expressive engine bef
  assert.equal(await page.locator('#loadLocalVoice').isDisabled(),true);assert.equal(await page.locator('#generateLocalVoice').isDisabled(),true);
  await page.locator('#voiceDeviceNotice').waitFor();assert.match(await page.locator('#voiceDeviceNotice').innerText(),/4 GB/);assert.deepEqual(requests,[]);
  await page.locator('#useLightweightVoice').click();assert.equal(await page.locator('#voiceEngine').inputValue(),'kokoro');assert.equal(await page.locator('#voicePrecision').inputValue(),'q8');assert.equal(await page.locator('#voiceText').inputValue(),'Conserva este texto.');
- await page.locator('#loadLocalVoice').click();await page.waitForFunction(()=>!document.querySelector('#generateLocalVoice').disabled);await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();assert.deepEqual(requests,[]);
+ await page.locator('#loadLocalVoice').click();await page.waitForFunction(async () =>!document.querySelector('#generateLocalVoice').disabled);await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();assert.deepEqual(requests,[]);
  await context.close();
 });
 test('expressive speech settings and selected treatment survive insertion and reload (protocol fixture)',async t=>{
  await server.ready();const browser=await launchBrowser();t.after(()=>browser.close());const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});const page=await context.newPage();
  const fixture=`self.onmessage=({data})=>{if(data.kind==='load')self.postMessage({kind:'loaded'});if(data.kind==='generate'){const pcm=new Float32Array(24000);for(let i=0;i<pcm.length;i++)pcm[i]=.1*Math.sin(i*.05);self.postMessage({kind:'audio',pcm,sampleRate:24000,phonemes:''});}}`;
- await context.route('**/chatterbox-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:fixture}));await page.goto(server.url+'/?qa=1');await goToView(page,'audio');await page.locator('#localVoiceBtn').click();await page.locator('#voiceEngine').selectOption('chatterbox');await page.locator('#voiceLanguage').selectOption('es');await page.locator('#voiceIntensity').fill('0.8');await page.locator('#voiceText').fill('Voz de prueba.');await page.locator('#loadLocalVoice').click();await page.waitForFunction(()=>!document.querySelector('#generateLocalVoice').disabled);await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();
- await page.locator('#localVoiceDialog .audio-fx summary').click();await page.locator('#localVoiceDialog .audio-fx select').selectOption('radio');await page.locator('#insertLocalVoice').click();await page.waitForFunction(()=>!document.querySelector('#loadLocalVoice').disabled);await page.locator('#localVoiceDialog header button').click();await page.waitForTimeout(500);
- const stored=await page.evaluate(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).audioLanes.at(-1).regions.at(-1));assert.equal(stored.generation.engine,'chatterbox');assert.equal(stored.generation.voice,'default');assert.equal(stored.generation.intensity,.8);assert.equal(stored.effects.filter,.42);assert.ok(stored.generation.revision);
+ await context.route('**/chatterbox-worker-*.js',route=>route.fulfill({contentType:'text/javascript',body:fixture}));await page.goto(server.url+'/?qa=1');await goToView(page,'audio');await page.locator('#localVoiceBtn').click();await page.locator('#voiceEngine').selectOption('chatterbox');await page.locator('#voiceLanguage').selectOption('es');await page.locator('#voiceIntensity').fill('0.8');await page.locator('#voiceText').fill('Voz de prueba.');await page.locator('#loadLocalVoice').click();await page.waitForFunction(async () =>!document.querySelector('#generateLocalVoice').disabled);await page.locator('#generateLocalVoice').click();await page.locator('#voicePreview').waitFor();
+ await page.locator('#localVoiceDialog .audio-fx summary').click();await page.locator('#localVoiceDialog .audio-fx select').selectOption('radio');await page.locator('#insertLocalVoice').click();await page.waitForFunction(async () =>!document.querySelector('#loadLocalVoice').disabled);await page.locator('#localVoiceDialog header button').click();await page.waitForTimeout(500);
+ const stored=await page.evaluate(async () =>(await globalThis.__readSavedProject()).audioLanes.at(-1).regions.at(-1));assert.equal(stored.generation.engine,'chatterbox');assert.equal(stored.generation.voice,'default');assert.equal(stored.generation.intensity,.8);assert.equal(stored.effects.filter,.42);assert.ok(stored.generation.revision);
  await page.reload();await goToView(page,'audio');assert.ok(await page.locator('.audio-region').count());
 });
 test('WAV export applies independent region and lane FX, honors dry and final Master without altering sources',async t=>{

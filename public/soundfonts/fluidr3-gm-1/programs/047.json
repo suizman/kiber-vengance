@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "program-047",
+  "kind": "program",
+  "number": 47,
+  "name": "timpani",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0470_FluidR3_GM_sf2_file.js",
+    "sha256": "73199484c911d02124df296769e3d4e7d9b4b71ce878d8d2338cd4e0b3ef544b",
+    "bytes": 177310
+  },
+  "zones": [
+    {
+      "midi": 47,
+      "originalPitch": 3600,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 36,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": false,
+      "anchor": 0.00996875,
+      "sample": {
+        "path": "samples/5c33d0a7965ac43b464b6d8ce76af2d9d8db626dcb22bfa9b74a8c70a46835cb.mp3",
+        "sha256": "5c33d0a7965ac43b464b6d8ce76af2d9d8db626dcb22bfa9b74a8c70a46835cb",
+        "bytes": 47313,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 47,
+      "originalPitch": 3800,
+      "keyRangeLow": 37,
+      "keyRangeHigh": 42,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": false,
+      "anchor": 0.016125,
+      "sample": {
+        "path": "samples/1dc81152d90a931bfe531b4eec3ea60c32163dd60af574060b0be7cfce1b221f.mp3",
+        "sha256": "1dc81152d90a931bfe531b4eec3ea60c32163dd60af574060b0be7cfce1b221f",
+        "bytes": 42561,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 47,
+      "originalPitch": 4300,
+      "keyRangeLow": 43,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": false,
+      "anchor": 0.010375,
+      "sample": {
+        "path": "samples/fbd09065ceae54b2aedb2a1059cdefdf34e3381fda6f36805097a6e7daa273fe.mp3",
+        "sha256": "fbd09065ceae54b2aedb2a1059cdefdf34e3381fda6f36805097a6e7daa273fe",
+        "bytes": 42489,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

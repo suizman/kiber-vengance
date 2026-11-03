@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "drum-063",
+  "kind": "drum",
+  "number": 63,
+  "name": "GM percussion 63",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/12863_0_FluidR3_GM_sf2_file.js",
+    "sha256": "b8322d6234d41dce5cdc68aa3ec89f0736b9fd7c8a92b5dc62b11698648bbdbd",
+    "bytes": 15503
+  },
+  "zones": [
+    {
+      "midi": 128,
+      "loopStart": 0,
+      "loopEnd": 0,
+      "keyRangeLow": 63,
+      "keyRangeHigh": 63,
+      "sampleRate": 44100,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "originalPitch": 6300,
+      "anchor": 0.00385488,
+      "sample": {
+        "path": "samples/7e111c518d0bd5e544eb123813a7d169c524684f23925ead2c597af4259a0d8e.mp3",
+        "sha256": "7e111c518d0bd5e544eb123813a7d169c524684f23925ead2c597af4259a0d8e",
+        "bytes": 11385,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

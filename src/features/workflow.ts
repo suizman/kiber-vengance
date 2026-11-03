@@ -1,88 +1,33 @@
+import { sceneLengthSteps, songDurationSteps } from "../core";
+import { trackState } from "../state/tracks";
+import { projectTrackIds, trackMeta } from "../state/tracks";
 import { formatDb, levelDb } from "../ui/level-control";
 import { controlIcon } from "../ui/icons";
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
+import { t as msg, setLanguage, translateDOM } from "../ui/i18n";
 
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
-
-import { mountDial } from "../ui/components/dial";
-
-import { studioBridge, type StudioView } from "../ui/bridge";
+import { studioBridge } from "../ui/bridge";
 
 import {
   projectAssets,
   createProject,
   createEmptyProject,
-  migrateProject,
   activeClip,
   clipsForTrack,
-  createClip,
   clipLengthSteps,
   meterSteps,
-  setProjectMeter,
-  makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
-  resizeClip,
-  quantizeClip,
-  automationValue,
-  generateClip,
-  generateBacking,
-  encodeMidi,
-  playbackEvents,
-  History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
-  addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
   quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
   createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
-  detectTransientSlices,
-  transformNotes,
   cryptoId,
-  samplerDefaults,
 } from "../core.js";
 
-import { AudioEngine, renderWav } from "../audio.js";
+import { renderWav } from "../audio.js";
 
-import type {
-  AudioLane,
-  AudioRegion,
-  AutomationLane,
-  MidiMapping,
-  ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
-} from "../model.js";
+import type { PerformanceTake, TrackId } from "../model.js";
 
-import type { RuntimeContext } from "../app";
-
-type Language = "en" | "es";
+import type { WorkflowContext } from "../state/contracts";
 
 type QuickExportKind =
+  | "ogg"
   | "wav"
   | "midi"
   | "project"
@@ -91,23 +36,6 @@ type QuickExportKind =
   | "stems"
   | "bundle"
   | "performance";
-
-type QuickTarget = {
-  handle: any | null;
-  fallback: boolean;
-  cancelled: boolean;
-  name: string;
-  type: string;
-};
-
-type UserPreset = {
-  id: string;
-  name: string;
-  track: TrackId;
-  tags: string[];
-  instrument: import("../model.js").InstrumentState;
-  character: any;
-};
 
 type CommandAction = {
   label: string;
@@ -120,7 +48,7 @@ type CommandAction = {
   run: () => void;
 };
 
-export function reportError(ctx: RuntimeContext, message: unknown) {
+export function reportError(ctx: WorkflowContext, message: unknown) {
   window.__kvErrors.push(String(message));
   const el = document.getElementById("toast");
   if (el) {
@@ -129,7 +57,7 @@ export function reportError(ctx: RuntimeContext, message: unknown) {
   }
 }
 
-export function quickHandleDb(ctx: RuntimeContext) {
+export function quickHandleDb(ctx: WorkflowContext) {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(ctx.QUICK_HANDLE_DB, 1);
     request.onupgradeneeded = () => request.result.createObjectStore("handles");
@@ -139,7 +67,7 @@ export function quickHandleDb(ctx: RuntimeContext) {
 }
 
 export function showQuickHandle(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   _kind: QuickExportKind,
   _handle: any,
 ) {
@@ -147,7 +75,7 @@ export function showQuickHandle(
   ctx.$("#exportBtn").classList.toggle("bound", ctx.quickHandles.size > 0);
 }
 
-export async function loadQuickHandles(ctx: RuntimeContext) {
+export async function loadQuickHandles(ctx: WorkflowContext) {
   if (!("indexedDB" in window)) return;
   try {
     const db = await ctx.quickHandleDb(),
@@ -155,6 +83,7 @@ export async function loadQuickHandles(ctx: RuntimeContext) {
       store = transaction.objectStore("handles");
     for (const kind of [
       "wav",
+      "ogg",
       "midi",
       "project",
       "clip-wav",
@@ -175,7 +104,7 @@ export async function loadQuickHandles(ctx: RuntimeContext) {
 }
 
 export async function rememberQuickHandle(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   kind: QuickExportKind,
   handle: any,
 ) {
@@ -189,7 +118,7 @@ export async function rememberQuickHandle(
   } catch {}
 }
 
-export function applyLanguage(ctx: RuntimeContext, render = false) {
+export function applyLanguage(ctx: WorkflowContext, render = false) {
   setLanguage(ctx.language);
   document.documentElement.lang = ctx.language;
   localStorage.setItem(ctx.LANGUAGE_STORAGE, ctx.language);
@@ -233,7 +162,7 @@ export function applyLanguage(ctx: RuntimeContext, render = false) {
   if (ctx.helpMode) ctx.showHelpIntro();
 }
 
-export function controlInfo(ctx: RuntimeContext, el: any): [string, string] {
+export function controlInfo(ctx: WorkflowContext, el: any): [string, string] {
   const data = ctx.controlDescriptions[el.id];
   if (data) return [ctx.L(data[0], data[1]), ctx.L(data[2], data[3])];
   if (el.matches(".knob")) {
@@ -280,7 +209,7 @@ export function controlInfo(ctx: RuntimeContext, el: any): [string, string] {
   return [name, msg("ui_901734b3b46f")];
 }
 
-export function installControlHelp(ctx: RuntimeContext) {
+export function installControlHelp(ctx: WorkflowContext) {
   const controls = ctx.$$(
     'button,input,select,canvas,[role="application"],.knob',
   );
@@ -293,13 +222,13 @@ export function installControlHelp(ctx: RuntimeContext) {
   }
 }
 
-export function showHelpIntro(ctx: RuntimeContext) {
+export function showHelpIntro(ctx: WorkflowContext) {
   ctx.$("#contextHelpTitle").textContent = msg("ui_19f09c8efccc");
   ctx.$("#contextHelpBody").textContent = msg("ui_9ec253c1d7a9");
   ctx.$("#contextHelp").hidden = false;
 }
 
-export function toggleHelp(ctx: RuntimeContext, force?: boolean) {
+export function toggleHelp(ctx: WorkflowContext, force?: boolean) {
   ctx.helpMode = force ?? !ctx.helpMode;
   document.body.classList.toggle("help-mode", ctx.helpMode);
   ctx.$("#helpBtn").setAttribute("aria-pressed", String(ctx.helpMode));
@@ -307,14 +236,14 @@ export function toggleHelp(ctx: RuntimeContext, force?: boolean) {
   else ctx.$("#contextHelp").hidden = true;
 }
 
-export function showControlHelp(ctx: RuntimeContext, el: any) {
+export function showControlHelp(ctx: WorkflowContext, el: any) {
   if (!ctx.helpMode || !el?.dataset.helpBody) return;
   ctx.$("#contextHelpTitle").textContent = el.dataset.helpTitle;
   ctx.$("#contextHelpBody").textContent = el.dataset.helpBody;
   ctx.$("#contextHelp").hidden = false;
 }
 
-export function showTutorialStep(ctx: RuntimeContext) {
+export function showTutorialStep(ctx: WorkflowContext) {
   const steps = ctx.tutorialSteps(),
     step = steps[ctx.tutorialStep]!;
   ctx
@@ -351,7 +280,7 @@ export function showTutorialStep(ctx: RuntimeContext) {
     );
 }
 
-export function startTutorial(ctx: RuntimeContext) {
+export function startTutorial(ctx: WorkflowContext) {
   ctx.toggleHelp(false);
   ctx.tutorialStep = 0;
   document.body.classList.add("tutorial-active");
@@ -359,7 +288,7 @@ export function startTutorial(ctx: RuntimeContext) {
   ctx.showTutorialStep();
 }
 
-export function endTutorial(ctx: RuntimeContext) {
+export function endTutorial(ctx: WorkflowContext) {
   document.body.classList.remove("tutorial-active");
   ctx
     .$$(".tutorial-target")
@@ -368,7 +297,7 @@ export function endTutorial(ctx: RuntimeContext) {
   localStorage.setItem("kiber-vengance-tutorial-complete-v1", "true");
 }
 
-export function initLearning(ctx: RuntimeContext) {
+export function initLearning(ctx: WorkflowContext) {
   const changeLanguage = (value: string) => {
     ctx.language = value === "es" ? "es" : "en";
     ctx.applyLanguage(false);
@@ -415,7 +344,7 @@ export function initLearning(ctx: RuntimeContext) {
   );
 }
 
-export function updateDeleteClipDialog(ctx: RuntimeContext) {
+export function updateDeleteClipDialog(ctx: WorkflowContext) {
   const target = ctx.project.clips.find(
     (c: any) => c.id === ctx.pendingDeleteClipId,
   );
@@ -435,7 +364,7 @@ export function updateDeleteClipDialog(ctx: RuntimeContext) {
   );
 }
 
-export function requestClipDelete(ctx: RuntimeContext, id: string) {
+export function requestClipDelete(ctx: WorkflowContext, id: string) {
   const target = ctx.project.clips.find((c: any) => c.id === id);
   if (!target) return;
   if (clipsForTrack(ctx.project, target.track).length <= 1) {
@@ -447,7 +376,7 @@ export function requestClipDelete(ctx: RuntimeContext, id: string) {
   ctx.$("#deleteClipDialog").showModal();
 }
 
-export function launcherSnapshot(ctx: RuntimeContext, name = "LIVE") {
+export function launcherSnapshot(ctx: WorkflowContext, name = "LIVE") {
   const current = {
     name,
     clipIds: { ...ctx.project.activeClipIds },
@@ -456,29 +385,26 @@ export function launcherSnapshot(ctx: RuntimeContext, name = "LIVE") {
   const previous = ctx.launcherSnapshots.at(-1);
   if (
     previous &&
-    TRACKS.every((track) => previous.clipIds[track] === current.clipIds[track])
+    projectTrackIds(ctx.project).every(
+      (track) => previous.clipIds[track] === current.clipIds[track],
+    )
   )
     previous.repeats = Math.min(16, previous.repeats + 1);
   else ctx.launcherSnapshots.push(current);
   ctx.$("#launcherCommitBtn").disabled = !ctx.launcherSnapshots.length;
 }
 
-export function sceneLength(ctx: RuntimeContext, scene: any) {
-  return Math.max(
-    ...TRACKS.map((track) =>
-      clipLengthSteps(
-        ctx.project.clips.find((c: any) => c.id === scene.clipIds[track]) ||
-          activeClip(ctx.project, track),
-      ),
-    ),
-  );
+export function sceneLength(
+  ctx: WorkflowContext,
+  scene: import("../model").Scene,
+) {
+  return sceneLengthSteps(ctx.project, scene);
+}
+export function songLength(ctx: WorkflowContext) {
+  return songDurationSteps(ctx.project);
 }
 
-export function songLength(ctx: RuntimeContext) {
-  return playbackEvents(ctx.project, { song: true }).durationSteps;
-}
-
-export function setGlobalStart(ctx: RuntimeContext, value: number) {
+export function setGlobalStart(ctx: WorkflowContext, value: number) {
   ctx.globalStartStep = Math.max(
     0,
     Math.min(Math.max(0, ctx.songLength() - 1), Math.round(value)),
@@ -494,7 +420,7 @@ export function setGlobalStart(ctx: RuntimeContext, value: number) {
   }
 }
 
-export function setClipStart(ctx: RuntimeContext, value: number, seek = true) {
+export function setClipStart(ctx: WorkflowContext, value: number, seek = true) {
   const c = ctx.clip(),
     length = clipLengthSteps(c),
     step = Math.max(0, Math.min(length - 1, Math.round(value)));
@@ -509,14 +435,14 @@ export function setClipStart(ctx: RuntimeContext, value: number, seek = true) {
   }
 }
 
-export function performanceStep(ctx: RuntimeContext) {
+export function performanceStep(ctx: WorkflowContext) {
   return Math.max(
     0,
     (Date.now() - ctx.performanceStarted) / 1000 / (60 / ctx.project.tempo / 4),
   );
 }
 
-export function openTakeEditor(ctx: RuntimeContext, take: PerformanceTake) {
+export function openTakeEditor(ctx: WorkflowContext, take: PerformanceTake) {
   ctx.activePerformanceTakeId = take.id;
   ctx.$("#takeEditorTitle").textContent = take.name;
   ctx.$("#takeTrimStart").value = take.trimStart;
@@ -590,23 +516,23 @@ export function openTakeEditor(ctx: RuntimeContext, take: PerformanceTake) {
   ctx.open("#takeEditorDialog");
 }
 
-export function mixSnapshot(ctx: RuntimeContext) {
+export function mixSnapshot(ctx: WorkflowContext) {
   const tracks = Object.fromEntries(
-      TRACKS.map((track) => [
+      projectTrackIds(ctx.project).map((track) => [
         track,
         {
-          volume: ctx.project.tracks[track].volume,
-          pan: ctx.project.tracks[track].pan,
-          preGainDb: ctx.project.tracks[track].preGainDb,
+          volume: trackState(ctx.project, track).volume,
+          pan: trackState(ctx.project, track).pan,
+          preGainDb: trackState(ctx.project, track).preGainDb,
         },
       ]),
     ),
     loudness = Math.sqrt(
-      TRACKS.reduce(
+      projectTrackIds(ctx.project).reduce(
         (sum, track) =>
           sum +
-          (ctx.project.tracks[track].volume *
-            10 ** (ctx.project.tracks[track].preGainDb / 20)) **
+          (trackState(ctx.project, track).volume *
+            10 ** (trackState(ctx.project, track).preGainDb / 20)) **
             2,
         0,
       ),
@@ -614,7 +540,7 @@ export function mixSnapshot(ctx: RuntimeContext) {
   return { tracks, master: ctx.project.master, loudness };
 }
 
-export function presetFavorites(ctx: RuntimeContext) {
+export function presetFavorites(ctx: WorkflowContext) {
   try {
     return new Set<string>(
       JSON.parse(localStorage.getItem(ctx.PRESET_FAVORITES) || "[]"),
@@ -624,7 +550,7 @@ export function presetFavorites(ctx: RuntimeContext) {
   }
 }
 
-export function setupLibraries(ctx: RuntimeContext) {
+export function setupLibraries(ctx: WorkflowContext) {
   ctx.$("#presetLibraryBtn").onclick = () => {
     ctx.$("#projectMenu").close();
     ctx.renderPresetLibrary();
@@ -685,7 +611,7 @@ export function setupLibraries(ctx: RuntimeContext) {
   };
 }
 
-export function setupStudioExtensions(ctx: RuntimeContext) {
+export function setupStudioExtensions(ctx: WorkflowContext) {
   ctx.$("#globalPosition").oninput = () =>
     ctx.setGlobalStart(+ctx.$("#globalPosition").value);
   ctx.$("#clipPosition").oninput = () =>
@@ -722,15 +648,16 @@ export function setupStudioExtensions(ctx: RuntimeContext) {
   ctx.$("#mixerMaster").oninput = () => {
     ctx.project.master = +ctx.$("#mixerMaster").value;
     ctx.recordPerformanceEvent("mixer", "master:volume", ctx.project.master);
-    ctx.$("#mixerMasterValue").textContent =
-      formatDb(levelDb(ctx.project.master));
+    ctx.$("#mixerMasterValue").textContent = formatDb(
+      levelDb(ctx.project.master),
+    );
     ctx.$("#masterVolume").value = ctx.project.master;
     ctx.$("#masterValue").textContent = formatDb(levelDb(ctx.project.master));
     ctx.engine.setProject(ctx.project);
   };
   ctx.$("#mixerMaster").onchange = () => ctx.changed();
   ctx.$("#forgetTargetsBtn").onclick = async () => {
-    for (const kind of [...ctx.quickHandles.keys()])
+    for (const kind of ctx.quickHandles.keys())
       await ctx.forgetExportTarget(kind);
     ctx.toast(msg("ui_c84ce0da9fc4"));
   };
@@ -750,7 +677,7 @@ export function setupStudioExtensions(ctx: RuntimeContext) {
     );
 }
 
-export function readUiPrefs(ctx: RuntimeContext): {
+export function readUiPrefs(ctx: WorkflowContext): {
   focus: boolean;
   collapsed: string[];
   compact: boolean;
@@ -767,7 +694,7 @@ export function readUiPrefs(ctx: RuntimeContext): {
   }
 }
 
-export function writeUiPrefs(ctx: RuntimeContext) {
+export function writeUiPrefs(ctx: WorkflowContext) {
   localStorage.setItem(
     ctx.UI_STORAGE,
     JSON.stringify({
@@ -779,7 +706,7 @@ export function writeUiPrefs(ctx: RuntimeContext) {
 }
 
 export function setRackCollapsed(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   id: string,
   collapsed: boolean,
   persist = true,
@@ -804,7 +731,7 @@ export function setRackCollapsed(
 }
 
 export function toggleFocus(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   force?: boolean,
   silent = false,
 ) {
@@ -821,7 +748,7 @@ export function toggleFocus(
     ctx.toast(active ? msg("ui_421d43f4784f") : msg("ui_f423dce4371a"));
 }
 
-export function selectTrack(ctx: RuntimeContext, track: TrackId) {
+export function selectTrack(ctx: WorkflowContext, track: TrackId) {
   ctx.selectedTrack = track;
   ctx.selectedNotes.clear();
   ctx.activateView("forge");
@@ -829,7 +756,7 @@ export function selectTrack(ctx: RuntimeContext, track: TrackId) {
   ctx.setDefaultScroll();
 }
 
-export function matchingCommands(ctx: RuntimeContext, query: string) {
+export function matchingCommands(ctx: WorkflowContext, query: string) {
   const needle = query.trim().toLowerCase();
   return ctx.commands.filter(
     (command) =>
@@ -840,7 +767,7 @@ export function matchingCommands(ctx: RuntimeContext, query: string) {
   );
 }
 
-export function renderCommands(ctx: RuntimeContext, query = "") {
+export function renderCommands(ctx: WorkflowContext, query = "") {
   const list = ctx.matchingCommands(query);
   ctx.commandIndex = Math.max(0, Math.min(ctx.commandIndex, list.length - 1));
   ctx.$("#commandResults").innerHTML = list.length
@@ -861,7 +788,7 @@ export function renderCommands(ctx: RuntimeContext, query = "") {
 }
 
 export function runCommand(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   command: CommandAction | undefined,
 ) {
   if (!command) return;
@@ -869,7 +796,7 @@ export function runCommand(
   command.run();
 }
 
-export function openCommands(ctx: RuntimeContext) {
+export function openCommands(ctx: WorkflowContext) {
   ctx.commandIndex = 0;
   ctx.$("#commandSearch").value = "";
   ctx.renderCommands();
@@ -877,7 +804,7 @@ export function openCommands(ctx: RuntimeContext) {
   setTimeout(() => ctx.$("#commandSearch").focus(), 0);
 }
 
-export function initWorkflowUi(ctx: RuntimeContext) {
+export function initWorkflowUi(ctx: WorkflowContext) {
   const stored = localStorage.getItem(ctx.UI_STORAGE),
     prefs = ctx.readUiPrefs(),
     defaults =
@@ -933,7 +860,7 @@ export function initWorkflowUi(ctx: RuntimeContext) {
   };
 }
 
-export function audioBufferWav(ctx: RuntimeContext, buffer: AudioBuffer) {
+export function audioBufferWav(ctx: WorkflowContext, buffer: AudioBuffer) {
   const channels = Math.min(2, buffer.numberOfChannels),
     frames = buffer.length,
     bytes = 44 + frames * channels * 2,
@@ -968,7 +895,7 @@ export function audioBufferWav(ctx: RuntimeContext, buffer: AudioBuffer) {
   return new Blob([array], { type: "audio/wav" });
 }
 
-export function setupProjectTemplates(ctx: RuntimeContext) {
+export function setupProjectTemplates(ctx: WorkflowContext) {
   if (!ctx.$("#projectTemplate"))
     ctx
       .$("#newBtn")
@@ -981,7 +908,8 @@ export function setupProjectTemplates(ctx: RuntimeContext) {
       next = type === "cinematic" ? createProject() : createEmptyProject();
     if (type === "performance") {
       next.title = "Live Voltage";
-      for (const track of TRACKS) activeClip(next, track).bars = 4;
+      for (const track of projectTrackIds(ctx.project))
+        activeClip(next, track).bars = 4;
       next.loop = { enabled: true, start: 0, end: 64, punch: false };
     }
     if (type === "audio") {
@@ -997,7 +925,7 @@ export function setupProjectTemplates(ctx: RuntimeContext) {
 }
 
 export function syncClipTransportButton(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   running = ctx.engine.playing,
 ) {
   const button = ctx.$("#clipStartBtn");
@@ -1017,7 +945,7 @@ export function syncClipTransportButton(
 }
 
 export function syncTransportButtons(
-  ctx: RuntimeContext,
+  ctx: WorkflowContext,
   running = ctx.engine.playing,
 ) {
   studioBridge.update({
@@ -1047,7 +975,8 @@ export function syncTransportButtons(
   ctx.$("#pauseBtn").classList.toggle("active", false);
 }
 
-export function wavOptions(ctx: RuntimeContext) {
+export function wavOptions(ctx: WorkflowContext) {
+  let currentStage = "prepare";
   const useRegion =
     Boolean(ctx.$("#wavRegion").checked) &&
     ctx.project.loop.end > ctx.project.loop.start;
@@ -1065,12 +994,23 @@ export function wavOptions(ctx: RuntimeContext) {
     signal: ctx.exportController?.signal,
     drumSamples: ctx.engine.drumSamples,
     audioAssets: ctx.engine.audioAssets,
+    onProgress: (fraction: number) => {
+      const encoding = currentStage === "encode";
+      ctx.setExportProgress(
+        (encoding ? 85 : 45) + fraction * (encoding ? 14 : 39),
+        ctx.L(
+          encoding ? "Compressing audio…" : "Processing audio…",
+          encoding ? "Comprimiendo audio…" : "Procesando audio…",
+        ) + ` ${Math.round(fraction * 100)}%`,
+      );
+    },
     onStage: (stage: "prepare" | "schedule" | "render" | "encode") => {
+      currentStage = stage;
       const labels = {
         prepare: ctx.L("Preparing audio…", "Preparando audio…"),
         schedule: ctx.L("Preparing the mix…", "Preparando la mezcla…"),
         render: ctx.L("Processing audio…", "Procesando audio…"),
-        encode: ctx.L("Encoding WAV…", "Codificando WAV…"),
+        encode: ctx.L("Encoding audio…", "Codificando audio…"),
       };
       ctx.setExportProgress(
         { prepare: 12, schedule: 25, render: 45, encode: 85 }[stage],
@@ -1080,7 +1020,7 @@ export function wavOptions(ctx: RuntimeContext) {
   };
 }
 
-export async function renderStems(ctx: RuntimeContext) {
+export async function renderStems(ctx: WorkflowContext) {
   const files: Array<{ name: string; data: Blob }> = [],
     base = ctx.safeName(),
     selected = new Set(
@@ -1088,7 +1028,8 @@ export async function renderStems(ctx: RuntimeContext) {
     ),
     jobs =
       (selected.has("master") ? 1 : 0) +
-      TRACKS.filter((track) => selected.has(track)).length +
+      projectTrackIds(ctx.project).filter((track) => selected.has(track))
+        .length +
       ctx.project.audioLanes.filter((lane: import("../model").AudioLane) =>
         selected.has(`audio:${lane.id}`),
       ).length;
@@ -1103,21 +1044,23 @@ export async function renderStems(ctx: RuntimeContext) {
     });
     done++;
   }
-  for (const track of TRACKS.filter((track) => selected.has(track))) {
+  for (const track of projectTrackIds(ctx.project).filter((track) =>
+    selected.has(track),
+  )) {
     if (ctx.exportController.signal.aborted)
       throw new DOMException("Export cancelled", "AbortError");
     const isolated = structuredClone(ctx.project);
     isolated.audioLanes = [];
-    TRACKS.forEach((id) => {
-      isolated.tracks[id].solo = id === track;
-      isolated.tracks[id].mute = false;
+    projectTrackIds(ctx.project).forEach((id) => {
+      trackState(isolated, id).solo = id === track;
+      trackState(isolated, id).mute = false;
     });
     ctx.setExportProgress(
       (done / Math.max(1, jobs)) * 88,
       msg("ui_d89ec6f2ce8f", {
         arg0: done + 1,
         arg1: jobs,
-        arg2: TRACK_META[track].label,
+        arg2: trackMeta(ctx.project, track).label,
       }),
     );
     files.push({
@@ -1132,13 +1075,13 @@ export async function renderStems(ctx: RuntimeContext) {
     if (ctx.exportController.signal.aborted)
       throw new DOMException("Export cancelled", "AbortError");
     const isolated = structuredClone(ctx.project);
-    for (const id of TRACKS) {
-      isolated.tracks[id].mute = true;
-      isolated.tracks[id].solo = false;
+    for (const id of projectTrackIds(ctx.project)) {
+      trackState(isolated, id).mute = true;
+      trackState(isolated, id).solo = false;
     }
     isolated.audioLanes = [structuredClone(lane)];
-    isolated.audioLanes[0].solo = true;
-    isolated.audioLanes[0].mute = false;
+    isolated.audioLanes[0]!.solo = true;
+    isolated.audioLanes[0]!.mute = false;
     ctx.setExportProgress((done / Math.max(1, jobs)) * 88, lane.name);
     files.push({
       name: `${base}-audio-${lane.id.replace(/[^a-z0-9_-]/gi, "-")}.wav`,
@@ -1175,7 +1118,7 @@ export async function renderStems(ctx: RuntimeContext) {
   return zip;
 }
 
-export async function renderProjectBundle(ctx: RuntimeContext) {
+export async function renderProjectBundle(ctx: WorkflowContext) {
   const files: Array<{ name: string; data: Blob }> = [
     {
       name: `${ctx.safeName()}.kiber.json`,
@@ -1215,7 +1158,7 @@ export async function renderProjectBundle(ctx: RuntimeContext) {
     name: "PACKAGE-README.txt",
     data: new Blob(
       [
-        "КИБЕР VENGANCE v6 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores takes, sampler, audio-region and drum-sample assets into local browser storage.\n",
+        "КИБЕР VENGANCE v7 project package\nImport this ZIP from Project Core. КИБЕР VENGANCE restores takes, sampler, audio-region, drum-sample and score-source assets into local browser storage.\n",
       ],
       { type: "text/plain" },
     ),
@@ -1223,7 +1166,7 @@ export async function renderProjectBundle(ctx: RuntimeContext) {
   return ctx.zipFiles(files);
 }
 
-export function compatibility(ctx: RuntimeContext) {
+export function compatibility(ctx: WorkflowContext) {
   return {
     timestamp: new Date().toISOString(),
     userAgent: navigator.userAgent,
@@ -1239,7 +1182,7 @@ export function compatibility(ctx: RuntimeContext) {
   };
 }
 
-export function showCompatibility(ctx: RuntimeContext) {
+export function showCompatibility(ctx: WorkflowContext) {
   const data = ctx.compatibility();
   ctx.$("#compatReport").innerHTML = Object.entries(data)
     .map(
@@ -1251,7 +1194,7 @@ export function showCompatibility(ctx: RuntimeContext) {
   return data;
 }
 
-export function setupStudioUi(ctx: RuntimeContext) {
+export function setupStudioUi(ctx: WorkflowContext) {
   const bar = document.createElement("div");
   bar.className = "studio-context";
   bar.innerHTML =
@@ -1346,7 +1289,8 @@ export function setupStudioUi(ctx: RuntimeContext) {
   quick.className = "export-simple";
   for (const [kind, en, es] of [
     ["bundle", "Save complete project", "Guardar proyecto completo"],
-    ["wav", "Export audio", "Exportar audio"],
+    ["wav", "Export WAV", "Exportar WAV"],
+    ["ogg", "Export OGG (compressed)", "Exportar OGG (comprimido)"],
     ["midi", "Export MIDI", "Exportar MIDI"],
   ]) {
     const button = document.createElement("button");
@@ -1410,7 +1354,7 @@ export function setupStudioUi(ctx: RuntimeContext) {
   ctx.syncStudioUi();
 }
 
-export function setupConsistentControls(ctx: RuntimeContext) {
+export function setupConsistentControls(ctx: WorkflowContext) {
   const labels: Array<[string, string, string]> = [
     ["scratchCaptureBtn", "Capture mix", "Capturar mezcla"],
     ["scratchBrakeBtn", "Brake", "Frenar"],
@@ -1467,7 +1411,7 @@ export function setupConsistentControls(ctx: RuntimeContext) {
           id: cryptoId(),
           step,
           beats: Number(data.get("beats")),
-          unit: Number(data.get("unit")),
+          unit: Number(data.get("unit")) as import("../model").MeterUnit,
         });
       else
         ctx.project.tempoMap.push({

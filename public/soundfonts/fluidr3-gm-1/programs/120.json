@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-120",
+  "kind": "program",
+  "number": 120,
+  "name": "guitar fret noise",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1200_FluidR3_GM_sf2_file.js",
+    "sha256": "5c2a76bf84ae2163fec4ea23c8f1095533bc91c6d7ca4eea9a6399dc4d5ed167",
+    "bytes": 8439
+  },
+  "zones": [
+    {
+      "midi": 120,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": -3,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.15394558,
+      "sample": {
+        "path": "samples/a209a7e79c8700521a9cd2c432e865c439df4ec073cab1fc10ad7a45aac73085.mp3",
+        "sha256": "a209a7e79c8700521a9cd2c432e865c439df4ec073cab1fc10ad7a45aac73085",
+        "bytes": 6071,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

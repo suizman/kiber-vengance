@@ -1,8 +1,11 @@
+import { field, bindRuntime } from "./state/bindings";
+import { projectTrackIds, trackMeta, trackKind } from "./state/tracks";
 import { formatDb, levelDb } from "./ui/level-control";
 import { setupOutputMix } from "./ui/output-mix";
 import { voiceGenerationUnavailable } from "./ai/voice-safety";
 import { bindNoteDrag as bindNoteGesture } from "./features/note-editor";
 import { ProjectSession } from "./state/project-session";
+import { ProjectRepository } from "./state/project-repository";
 import { captureMusicalContext } from "./ai/composer";
 import { requestConfirmation } from "./ui/dialogs";
 import {
@@ -20,926 +23,507 @@ import * as arrangement from "./features/arrangement";
 import * as mixer from "./features/mixer";
 import * as scratch from "./features/scratch";
 import * as sampler from "./features/sampler";
-// Compatibility facade for retained features. New editor/deck/session code uses state/contracts.ts.
+// Application-owned state and services. Features receive typed subsets from state/contracts.ts.
 // UI components never own the audio engine lifetime.
-const runtime = {
-  get beginProjectEdit() {
-    return beginProjectEdit;
-  },
-  get reportError() {
-    return reportError;
-  },
-  get $() {
-    return $;
-  },
-  get $$() {
-    return $$;
-  },
-  get STORAGE() {
-    return STORAGE;
-  },
-  get LEGACY_V5() {
-    return LEGACY_V5;
-  },
-  get LEGACY_V4() {
-    return LEGACY_V4;
-  },
-  get LEGACY_V3() {
-    return LEGACY_V3;
-  },
-  get LEGACY() {
-    return LEGACY;
-  },
-  get VERSIONS() {
-    return VERSIONS;
-  },
-  get UI_STORAGE() {
-    return UI_STORAGE;
-  },
-  get LANGUAGE_STORAGE() {
-    return LANGUAGE_STORAGE;
-  },
-  get project(): any {
-    return project;
-  },
-  set project(value: typeof project) {
-    project = value;
-  },
-  get selectedTrack() {
-    return selectedTrack;
-  },
-  set selectedTrack(value: typeof selectedTrack) {
-    selectedTrack = value;
-  },
-  get selectedNotes() {
-    return selectedNotes;
-  },
-  set selectedNotes(value: typeof selectedNotes) {
-    selectedNotes = value;
-  },
-  get currentStep() {
-    return currentStep;
-  },
-  set currentStep(value: typeof currentStep) {
-    currentStep = value;
-  },
-  get currentScene() {
-    return currentScene;
-  },
-  set currentScene(value: typeof currentScene) {
-    currentScene = value;
-  },
-  get transportPosition() {
-    return transportPosition;
-  },
-  set transportPosition(value: typeof transportPosition) {
-    transportPosition = value;
-  },
-  get globalStartStep() {
-    return globalStartStep;
-  },
-  set globalStartStep(value: typeof globalStartStep) {
-    globalStartStep = value;
-  },
-  get draggedScene() {
-    return draggedScene;
-  },
-  set draggedScene(value: typeof draggedScene) {
-    draggedScene = value;
-  },
-  get recordArmed() {
-    return recordArmed;
-  },
-  set recordArmed(value: typeof recordArmed) {
-    recordArmed = value;
-  },
-  get metronome() {
-    return metronome;
-  },
-  set metronome(value: typeof metronome) {
-    metronome = value;
-  },
-  get animation() {
-    return animation;
-  },
-  set animation(value: typeof animation) {
-    animation = value;
-  },
-  get clipboard() {
-    return clipboard;
-  },
-  set clipboard(value: typeof clipboard) {
-    clipboard = value;
-  },
-  get recording() {
-    return recording;
-  },
-  set recording(value: typeof recording) {
-    recording = value;
-  },
-  get rollScroll() {
-    return rollScroll;
-  },
-  set rollScroll(value: typeof rollScroll) {
-    rollScroll = value;
-  },
-  get activeView() {
-    return activeView;
-  },
-  set activeView(value: typeof activeView) {
-    activeView = value;
-  },
-  get commandIndex() {
-    return commandIndex;
-  },
-  set commandIndex(value: typeof commandIndex) {
-    commandIndex = value;
-  },
-  get pendingDeleteClipId() {
-    return pendingDeleteClipId;
-  },
-  set pendingDeleteClipId(value: typeof pendingDeleteClipId) {
-    pendingDeleteClipId = value;
-  },
-  get suppressSequencerClick() {
-    return suppressSequencerClick;
-  },
-  set suppressSequencerClick(value: typeof suppressSequencerClick) {
-    suppressSequencerClick = value;
-  },
-  get scratchBuffer() {
-    return scratchBuffer;
-  },
-  set scratchBuffer(value: typeof scratchBuffer) {
-    scratchBuffer = value;
-  },
-  get performanceTake() {
-    return performanceTake;
-  },
-  set performanceTake(value: typeof performanceTake) {
-    performanceTake = value;
-  },
-  get performanceStarted() {
-    return performanceStarted;
-  },
-  set performanceStarted(value: typeof performanceStarted) {
-    performanceStarted = value;
-  },
-  get performanceTimer() {
-    return performanceTimer;
-  },
-  set performanceTimer(value: typeof performanceTimer) {
-    performanceTimer = value;
-  },
-  get mixerReference() {
-    return mixerReference;
-  },
-  set mixerReference(value: typeof mixerReference) {
-    mixerReference = value;
-  },
-  get mixerComparing() {
-    return mixerComparing;
-  },
-  set mixerComparing(value: typeof mixerComparing) {
-    mixerComparing = value;
-  },
-  get activePerformanceTakeId() {
-    return activePerformanceTakeId;
-  },
-  set activePerformanceTakeId(value: typeof activePerformanceTakeId) {
-    activePerformanceTakeId = value;
-  },
-  get performanceEvents() {
-    return performanceEvents;
-  },
-  set performanceEvents(value: typeof performanceEvents) {
-    performanceEvents = value;
-  },
-  get exportController() {
-    return exportController;
-  },
-  set exportController(value: typeof exportController) {
-    exportController = value;
-  },
-  get launcherCapturing() {
-    return launcherCapturing;
-  },
-  set launcherCapturing(value: typeof launcherCapturing) {
-    launcherCapturing = value;
-  },
-  get launcherSnapshots() {
-    return launcherSnapshots;
-  },
-  set launcherSnapshots(value: typeof launcherSnapshots) {
-    launcherSnapshots = value;
-  },
-  get selectedScenes() {
-    return selectedScenes;
-  },
-  set selectedScenes(value: typeof selectedScenes) {
-    selectedScenes = value;
-  },
-  get sceneClipboard() {
-    return sceneClipboard;
-  },
-  set sceneClipboard(value: typeof sceneClipboard) {
-    sceneClipboard = value;
-  },
-  get mixerPeaks() {
-    return mixerPeaks;
-  },
-  set mixerPeaks(value: typeof mixerPeaks) {
-    mixerPeaks = value;
-  },
-  get clipStartSteps() {
-    return clipStartSteps;
-  },
-  get samplerArmed() {
-    return samplerArmed;
-  },
-  set samplerArmed(value: typeof samplerArmed) {
-    samplerArmed = value;
-  },
-  get loadedSamplerAssetId() {
-    return loadedSamplerAssetId;
-  },
-  set loadedSamplerAssetId(value: typeof loadedSamplerAssetId) {
-    loadedSamplerAssetId = value;
-  },
-  get samplerQwertyBase() {
-    return samplerQwertyBase;
-  },
-  set samplerQwertyBase(value: typeof samplerQwertyBase) {
-    samplerQwertyBase = value;
-  },
-  get samplerHeld() {
-    return samplerHeld;
-  },
-  get toastTimer() {
-    return toastTimer;
-  },
-  set toastTimer(value: typeof toastTimer) {
-    toastTimer = value;
-  },
-  get editorTool() {
-    return editorTool;
-  },
-  set editorTool(value: typeof editorTool) {
-    editorTool = value;
-  },
-  get soundPanel() {
-    return soundPanel;
-  },
-  set soundPanel(value: typeof soundPanel) {
-    soundPanel = value;
-  },
-  get language() {
-    return language;
-  },
-  set language(value: typeof language) {
-    language = value;
-  },
-  get tutorialStep() {
-    return tutorialStep;
-  },
-  set tutorialStep(value: typeof tutorialStep) {
-    tutorialStep = value;
-  },
-  get helpMode() {
-    return helpMode;
-  },
-  set helpMode(value: typeof helpMode) {
-    helpMode = value;
-  },
-  get L() {
-    return L;
-  },
-  get history() {
-    return history;
-  },
-  get engine() {
-    return engine;
-  },
-  get presets() {
-    return presets;
-  },
-  get keyMap() {
-    return keyMap;
-  },
-  get pitchNames() {
-    return pitchNames;
-  },
-  get samplerQwertyPitches() {
-    return samplerQwertyPitches;
-  },
-  get samplerQwertyMap() {
-    return samplerQwertyMap;
-  },
-  get loadProject() {
-    return loadProject;
-  },
-  get esc() {
-    return esc;
-  },
-  get snapshot() {
-    return snapshot;
-  },
-  get changed() {
-    return changed;
-  },
-  get toast() {
-    return toast;
-  },
-  get download() {
-    return download;
-  },
-  get quickHandles() {
-    return quickHandles;
-  },
-  get QUICK_HANDLE_DB() {
-    return QUICK_HANDLE_DB;
-  },
-  get LAST_EXPORT() {
-    return LAST_EXPORT;
-  },
-  get quickHandleDb() {
-    return quickHandleDb;
-  },
-  get ASSET_DB() {
-    return ASSET_DB;
-  },
-  get assetDb() {
-    return assetDb;
-  },
-  get putAsset() {
-    return putAsset;
-  },
-  get getAsset() {
-    return getAsset;
-  },
-  get deleteAsset() {
-    return deleteAsset;
-  },
-  get renderExportTargets() {
-    return renderExportTargets;
-  },
-  get showQuickHandle() {
-    return showQuickHandle;
-  },
-  get loadQuickHandles() {
-    return loadQuickHandles;
-  },
-  get rememberQuickHandle() {
-    return rememberQuickHandle;
-  },
-  get forgetExportTarget() {
-    return forgetExportTarget;
-  },
-  get prepareQuickExport() {
-    return prepareQuickExport;
-  },
-  get writeQuickExport() {
-    return writeQuickExport;
-  },
-  get quickExportProject() {
-    return quickExportProject;
-  },
-  get safeName() {
-    return safeName;
-  },
-  get clip() {
-    return clip;
-  },
-  get pitches() {
-    return pitches;
-  },
-  get staticCopy() {
-    return staticCopy;
-  },
-  get leadingCopy() {
-    return leadingCopy;
-  },
-  get shortcutCopy() {
-    return shortcutCopy;
-  },
-  get controlDescriptions() {
-    return controlDescriptions;
-  },
-  get applyLanguage() {
-    return applyLanguage;
-  },
-  get controlInfo() {
-    return controlInfo;
-  },
-  get installControlHelp() {
-    return installControlHelp;
-  },
-  get showHelpIntro() {
-    return showHelpIntro;
-  },
-  get toggleHelp() {
-    return toggleHelp;
-  },
-  get showControlHelp() {
-    return showControlHelp;
-  },
-  get tutorialSteps() {
-    return tutorialSteps;
-  },
-  get showTutorialStep() {
-    return showTutorialStep;
-  },
-  get startTutorial() {
-    return startTutorial;
-  },
-  get endTutorial() {
-    return endTutorial;
-  },
-  get initLearning() {
-    return initLearning;
-  },
-  get renderTracks() {
-    return renderTracks;
-  },
-  get renderInspector() {
-    return renderInspector;
-  },
-  get applyPreset() {
-    return applyPreset;
-  },
-  get renderArp() {
-    return renderArp;
-  },
-  get renderFx() {
-    return renderFx;
-  },
-  get macroMarkup() {
-    return macroMarkup;
-  },
-  get renderClipControls() {
-    return renderClipControls;
-  },
-  get updateDeleteClipDialog() {
-    return updateDeleteClipDialog;
-  },
-  get requestClipDelete() {
-    return requestClipDelete;
-  },
-  get renderHarmony() {
-    return renderHarmony;
-  },
-  get renderPiano() {
-    return renderPiano;
-  },
-  get bindMarqueeSelection() {
-    return bindMarqueeSelection;
-  },
-  get bindNoteDrag() {
-    return bindNoteDrag;
-  },
-  get syncSelectedClasses() {
-    return syncSelectedClasses;
-  },
-  get syncRollScroll() {
-    return syncRollScroll;
-  },
-  get setDefaultScroll() {
-    return setDefaultScroll;
-  },
-  get renderSelection() {
-    return renderSelection;
-  },
-  get editSelection() {
-    return editSelection;
-  },
-  get deleteSelection() {
-    return deleteSelection;
-  },
-  get renderAutomation() {
-    return renderAutomation;
-  },
-  get heldKeyPointers() {
-    return heldKeyPointers;
-  },
-  get releaseKeyPointer() {
-    return releaseKeyPointer;
-  },
-  get releaseKeyPointers() {
-    return releaseKeyPointers;
-  },
-  get instrumentOctave() {
-    return instrumentOctave;
-  },
-  set instrumentOctave(value: typeof instrumentOctave) {
-    instrumentOctave = value;
-  },
-  get renderKeyboard() {
-    return renderKeyboard;
-  },
-  get startPerformance() {
-    return startPerformance;
-  },
-  get endPerformance() {
-    return endPerformance;
-  },
-  get launcherSnapshot() {
-    return launcherSnapshot;
-  },
-  get launchClip() {
-    return launchClip;
-  },
-  get renderLauncher() {
-    return renderLauncher;
-  },
-  get setupLauncher() {
-    return setupLauncher;
-  },
-  get renderArrangement() {
-    return renderArrangement;
-  },
-  get sceneLength() {
-    return sceneLength;
-  },
-  get focusScene() {
-    return focusScene;
-  },
-  get updatePlayheads() {
-    return updatePlayheads;
-  },
-  get updatePosition() {
-    return updatePosition;
-  },
-  get updateOrb() {
-    return updateOrb;
-  },
-  get songLength() {
-    return songLength;
-  },
-  get formatLocator() {
-    return formatLocator;
-  },
-  get setGlobalStart() {
-    return setGlobalStart;
-  },
-  get setClipStart() {
-    return setClipStart;
-  },
-  get renderLocators() {
-    return renderLocators;
-  },
-  get syncLocatorsFromPlayback() {
-    return syncLocatorsFromPlayback;
-  },
-  get renderMixer() {
-    return renderMixer;
-  },
-  get animateMixer() {
-    return animateMixer;
-  },
-  get updateScratchPlayButton() {
-    return updateScratchPlayButton;
-  },
-  get armScratchBuffer() {
-    return armScratchBuffer;
-  },
-  get importScratchFile() {
-    return importScratchFile;
-  },
-  get audioRegionScratchBuffer() {
-    return audioRegionScratchBuffer;
-  },
-  get loadAudioRegionIntoScratch() {
-    return loadAudioRegionIntoScratch;
-  },
-  get captureScratchMix() {
-    return captureScratchMix;
-  },
-  get animateScratchDeck() {
-    return animateScratchDeck;
-  },
-  get setupScratchDeck() {
-    return setupScratchDeck;
-  },
-  get performanceEventThrottle() {
-    return performanceEventThrottle;
-  },
-  get performanceStep() {
-    return performanceStep;
-  },
-  get recordPerformanceEvent() {
-    return recordPerformanceEvent;
-  },
-  get loadPerformanceAudio() {
-    return loadPerformanceAudio;
-  },
-  get applyPerformanceEvent() {
-    return applyPerformanceEvent;
-  },
-  get playPerformanceTake() {
-    return playPerformanceTake;
-  },
-  get openTakeEditor() {
-    return openTakeEditor;
-  },
-  get renderPerformanceTakes() {
-    return renderPerformanceTakes;
-  },
-  get togglePerformanceCapture() {
-    return togglePerformanceCapture;
-  },
-  get mixSnapshot() {
-    return mixSnapshot;
-  },
-  get captureMixerReference() {
-    return captureMixerReference;
-  },
-  get toggleMixerReference() {
-    return toggleMixerReference;
-  },
-  get setupArrangeTools() {
-    return setupArrangeTools;
-  },
-  get USER_PRESETS() {
-    return USER_PRESETS;
-  },
-  get PRESET_FAVORITES() {
-    return PRESET_FAVORITES;
-  },
-  get userPresets() {
-    return userPresets;
-  },
-  get saveUserPresets() {
-    return saveUserPresets;
-  },
-  get presetFavorites() {
-    return presetFavorites;
-  },
-  get renderPresetLibrary() {
-    return renderPresetLibrary;
-  },
-  get saveCurrentPreset() {
-    return saveCurrentPreset;
-  },
-  get loadLocalSample() {
-    return loadLocalSample;
-  },
-  get loadLocalSamples() {
-    return loadLocalSamples;
-  },
-  get renderSampleSlots() {
-    return renderSampleSlots;
-  },
-  get setupLibraries() {
-    return setupLibraries;
-  },
-  get setupPrecisionControls() {
-    return setupPrecisionControls;
-  },
-  get setupStudioExtensions() {
-    return setupStudioExtensions;
-  },
-  get readUiPrefs() {
-    return readUiPrefs;
-  },
-  get writeUiPrefs() {
-    return writeUiPrefs;
-  },
-  get setRackCollapsed() {
-    return setRackCollapsed;
-  },
-  get toggleFocus() {
-    return toggleFocus;
-  },
-  get selectTrack() {
-    return selectTrack;
-  },
-  get commands() {
-    return commands;
-  },
-  get matchingCommands() {
-    return matchingCommands;
-  },
-  get renderCommands() {
-    return renderCommands;
-  },
-  get runCommand() {
-    return runCommand;
-  },
-  get openCommands() {
-    return openCommands;
-  },
-  get initWorkflowUi() {
-    return initWorkflowUi;
-  },
-  get renderVersions() {
-    return renderVersions;
-  },
-  get loadVersions() {
-    return loadVersions;
-  },
-  get saveVersion() {
-    return saveVersion;
-  },
-  get inputRecorder() {
-    return inputRecorder;
-  },
-  set inputRecorder(value: typeof inputRecorder) {
-    inputRecorder = value;
-  },
-  get inputStream() {
-    return inputStream;
-  },
-  set inputStream(value: typeof inputStream) {
-    inputStream = value;
-  },
-  get inputChunks() {
-    return inputChunks;
-  },
-  set inputChunks(value: typeof inputChunks) {
-    inputChunks = value;
-  },
-  get midiLearnTarget() {
-    return midiLearnTarget;
-  },
-  set midiLearnTarget(value: typeof midiLearnTarget) {
-    midiLearnTarget = value;
-  },
-  get applyMidiMapping() {
-    return applyMidiMapping;
-  },
-  get audioBufferWav() {
-    return audioBufferWav;
-  },
-  get addAudioBlob() {
-    return addAudioBlob;
-  },
-  get loadAudioAssets() {
-    return loadAudioAssets;
-  },
-  get renderAudioStudio() {
-    return renderAudioStudio;
-  },
-  get renderGlobalAutomation() {
-    return renderGlobalAutomation;
-  },
-  get renderMixGroups() {
-    return renderMixGroups;
-  },
-  get renderTempoMap() {
-    return renderTempoMap;
-  },
-  get samplerSettings() {
-    return samplerSettings;
-  },
-  get setupSamplerOctaveControls() {
-    return setupSamplerOctaveControls;
-  },
-  get samplerNoteName() {
-    return samplerNoteName;
-  },
-  get drawSamplerWaveform() {
-    return drawSamplerWaveform;
-  },
-  get startSamplerPerformance() {
-    return startSamplerPerformance;
-  },
-  get endSamplerPerformance() {
-    return endSamplerPerformance;
-  },
-  get renderSamplerKeyboard() {
-    return renderSamplerKeyboard;
-  },
-  get loadSamplerAsset() {
-    return loadSamplerAsset;
-  },
-  get setupSamplerKeyboard() {
-    return setupSamplerKeyboard;
-  },
-  get setupV6Studio() {
-    return setupV6Studio;
-  },
-  get setupMidiLearnUi() {
-    return setupMidiLearnUi;
-  },
-  get setupV6Copy() {
-    return setupV6Copy;
-  },
-  get setupV6Safety() {
-    return setupV6Safety;
-  },
-  get setupSampleSlicing() {
-    return setupSampleSlicing;
-  },
-  get setupProjectTemplates() {
-    return setupProjectTemplates;
-  },
-  get renderAll() {
-    return renderAll;
-  },
-  get syncTransportButtons() {
-    return syncTransportButtons;
-  },
-  get pausePlayback() {
-    return pausePlayback;
-  },
-  get togglePlay() {
-    return togglePlay;
-  },
-  get animateMeter() {
-    return animateMeter;
-  },
-  get wavOptions() {
-    return wavOptions;
-  },
-  get setExportProgress() {
-    return setExportProgress;
-  },
-  get exportWav() {
-    return exportWav;
-  },
-  get crc32() {
-    return crc32;
-  },
-  get zipFiles() {
-    return zipFiles;
-  },
-  get readStoreZip() {
-    return readStoreZip;
-  },
-  get importProjectFile() {
-    return importProjectFile;
-  },
-  get renderStems() {
-    return renderStems;
-  },
-  get renderProjectBundle() {
-    return renderProjectBundle;
-  },
-  get exportMeta() {
-    return exportMeta;
-  },
-  get exportName() {
-    return exportName;
-  },
-  get performExport() {
-    return performExport;
-  },
-  get quickExportWav() {
-    return quickExportWav;
-  },
-  get quickExportMidi() {
-    return quickExportMidi;
-  },
-  get repeatLastExport() {
-    return repeatLastExport;
-  },
-  get activateView() {
-    return activateView;
-  },
-  get compatibility() {
-    return compatibility;
-  },
-  get showCompatibility() {
-    return showCompatibility;
-  },
-  get open() {
-    return open;
-  },
-  get replaceProject() {
-    return replaceProject;
-  },
-  get initMidi() {
-    return initMidi;
-  },
-  get query() {
-    return query;
-  },
-  get copyQueued() {
-    return copyQueued;
-  },
-  set copyQueued(value: typeof copyQueued) {
-    copyQueued = value;
-  },
-  get syncStudioUi() {
-    return syncStudioUi;
-  },
-  get duplicateSelectedNotes() {
-    return duplicateSelectedNotes;
-  },
-  get quantizeSelectedNotes() {
-    return quantizeSelectedNotes;
-  },
-  get setupStudioUi() {
-    return setupStudioUi;
-  },
-  get setupConsistentControls() {
-    return setupConsistentControls;
-  },
-};
+const runtime = bindRuntime({
+  projectRepository: field(() => projectRepository),
+  beginProjectEdit: field(() => beginProjectEdit),
+  reportError: field(() => reportError),
+  $: field(() => $),
+  $$: field(() => $$),
+  STORAGE: field(() => STORAGE),
+  LEGACY_V5: field(() => LEGACY_V5),
+  LEGACY_V4: field(() => LEGACY_V4),
+  LEGACY_V3: field(() => LEGACY_V3),
+  LEGACY: field(() => LEGACY),
+  VERSIONS: field(() => VERSIONS),
+  UI_STORAGE: field(() => UI_STORAGE),
+  LANGUAGE_STORAGE: field(() => LANGUAGE_STORAGE),
+  project: field(
+    (): Project => project,
+    (value) => {
+      project = value;
+    },
+  ),
+  selectedTrack: field(
+    () => selectedTrack,
+    (value) => {
+      selectedTrack = value;
+    },
+  ),
+  selectedNotes: field(
+    () => selectedNotes,
+    (value) => {
+      selectedNotes = value;
+    },
+  ),
+  currentStep: field(
+    () => currentStep,
+    (value) => {
+      currentStep = value;
+    },
+  ),
+  currentScene: field(
+    () => currentScene,
+    (value) => {
+      currentScene = value;
+    },
+  ),
+  transportPosition: field(
+    () => transportPosition,
+    (value) => {
+      transportPosition = value;
+    },
+  ),
+  globalStartStep: field(
+    () => globalStartStep,
+    (value) => {
+      globalStartStep = value;
+    },
+  ),
+  draggedScene: field(
+    () => draggedScene,
+    (value) => {
+      draggedScene = value;
+    },
+  ),
+  recordArmed: field(
+    () => recordArmed,
+    (value) => {
+      recordArmed = value;
+    },
+  ),
+  metronome: field(
+    () => metronome,
+    (value) => {
+      metronome = value;
+    },
+  ),
+  animation: field(
+    () => animation,
+    (value) => {
+      animation = value;
+    },
+  ),
+  clipboard: field(
+    () => clipboard,
+    (value) => {
+      clipboard = value;
+    },
+  ),
+  recording: field(
+    () => recording,
+    (value) => {
+      recording = value;
+    },
+  ),
+  rollScroll: field(
+    () => rollScroll,
+    (value) => {
+      rollScroll = value;
+    },
+  ),
+  activeView: field(
+    () => activeView,
+    (value) => {
+      activeView = value;
+    },
+  ),
+  commandIndex: field(
+    () => commandIndex,
+    (value) => {
+      commandIndex = value;
+    },
+  ),
+  pendingDeleteClipId: field(
+    () => pendingDeleteClipId,
+    (value) => {
+      pendingDeleteClipId = value;
+    },
+  ),
+  suppressSequencerClick: field(
+    () => suppressSequencerClick,
+    (value) => {
+      suppressSequencerClick = value;
+    },
+  ),
+  scratchBuffer: field(
+    () => scratchBuffer,
+    (value) => {
+      scratchBuffer = value;
+    },
+  ),
+  performanceTake: field(
+    () => performanceTake,
+    (value) => {
+      performanceTake = value;
+    },
+  ),
+  performanceStarted: field(
+    () => performanceStarted,
+    (value) => {
+      performanceStarted = value;
+    },
+  ),
+  performanceTimer: field(
+    () => performanceTimer,
+    (value) => {
+      performanceTimer = value;
+    },
+  ),
+  mixerReference: field(
+    () => mixerReference,
+    (value) => {
+      mixerReference = value;
+    },
+  ),
+  mixerComparing: field(
+    () => mixerComparing,
+    (value) => {
+      mixerComparing = value;
+    },
+  ),
+  activePerformanceTakeId: field(
+    () => activePerformanceTakeId,
+    (value) => {
+      activePerformanceTakeId = value;
+    },
+  ),
+  performanceEvents: field(
+    () => performanceEvents,
+    (value) => {
+      performanceEvents = value;
+    },
+  ),
+  exportController: field(
+    () => exportController,
+    (value) => {
+      exportController = value;
+    },
+  ),
+  launcherCapturing: field(
+    () => launcherCapturing,
+    (value) => {
+      launcherCapturing = value;
+    },
+  ),
+  launcherSnapshots: field(
+    () => launcherSnapshots,
+    (value) => {
+      launcherSnapshots = value;
+    },
+  ),
+  selectedScenes: field(
+    () => selectedScenes,
+    (value) => {
+      selectedScenes = value;
+    },
+  ),
+  sceneClipboard: field(
+    () => sceneClipboard,
+    (value) => {
+      sceneClipboard = value;
+    },
+  ),
+  mixerPeaks: field(
+    () => mixerPeaks,
+    (value) => {
+      mixerPeaks = value;
+    },
+  ),
+  clipStartSteps: field(() => clipStartSteps),
+  samplerArmed: field(
+    () => samplerArmed,
+    (value) => {
+      samplerArmed = value;
+    },
+  ),
+  loadedSamplerAssetId: field(
+    () => loadedSamplerAssetId,
+    (value) => {
+      loadedSamplerAssetId = value;
+    },
+  ),
+  samplerQwertyBase: field(
+    () => samplerQwertyBase,
+    (value) => {
+      samplerQwertyBase = value;
+    },
+  ),
+  samplerHeld: field(() => samplerHeld),
+  toastTimer: field(
+    () => toastTimer,
+    (value) => {
+      toastTimer = value;
+    },
+  ),
+  editorTool: field(
+    () => editorTool,
+    (value) => {
+      editorTool = value;
+    },
+  ),
+  soundPanel: field(
+    () => soundPanel,
+    (value) => {
+      soundPanel = value;
+    },
+  ),
+  language: field(
+    () => language,
+    (value) => {
+      language = value;
+    },
+  ),
+  tutorialStep: field(
+    () => tutorialStep,
+    (value) => {
+      tutorialStep = value;
+    },
+  ),
+  helpMode: field(
+    () => helpMode,
+    (value) => {
+      helpMode = value;
+    },
+  ),
+  L: field(() => L),
+  history: field(() => history),
+  engine: field(() => engine),
+  presets: field(() => presets),
+  keyMap: field(() => keyMap),
+  pitchNames: field(() => pitchNames),
+  samplerQwertyPitches: field(() => samplerQwertyPitches),
+  samplerQwertyMap: field(() => samplerQwertyMap),
+  loadProject: field(() => loadProject),
+  esc: field(() => esc),
+  snapshot: field(() => snapshot),
+  changed: field(() => changed),
+  toast: field(() => toast),
+  download: field(() => download),
+  quickHandles: field(() => quickHandles),
+  QUICK_HANDLE_DB: field(() => QUICK_HANDLE_DB),
+  LAST_EXPORT: field(() => LAST_EXPORT),
+  quickHandleDb: field(() => quickHandleDb),
+  ASSET_DB: field(() => ASSET_DB),
+  assetDb: field(() => assetDb),
+  putAsset: field(() => putAsset),
+  getAsset: field(() => getAsset),
+  deleteAsset: field(() => deleteAsset),
+  renderExportTargets: field(() => renderExportTargets),
+  showQuickHandle: field(() => showQuickHandle),
+  loadQuickHandles: field(() => loadQuickHandles),
+  rememberQuickHandle: field(() => rememberQuickHandle),
+  forgetExportTarget: field(() => forgetExportTarget),
+  prepareQuickExport: field(() => prepareQuickExport),
+  writeQuickExport: field(() => writeQuickExport),
+  quickExportProject: field(() => quickExportProject),
+  safeName: field(() => safeName),
+  clip: field(() => clip),
+  pitches: field(() => pitches),
+  staticCopy: field(() => staticCopy),
+  leadingCopy: field(() => leadingCopy),
+  shortcutCopy: field(() => shortcutCopy),
+  controlDescriptions: field(() => controlDescriptions),
+  applyLanguage: field(() => applyLanguage),
+  controlInfo: field(() => controlInfo),
+  installControlHelp: field(() => installControlHelp),
+  showHelpIntro: field(() => showHelpIntro),
+  toggleHelp: field(() => toggleHelp),
+  showControlHelp: field(() => showControlHelp),
+  tutorialSteps: field(() => tutorialSteps),
+  showTutorialStep: field(() => showTutorialStep),
+  startTutorial: field(() => startTutorial),
+  endTutorial: field(() => endTutorial),
+  initLearning: field(() => initLearning),
+  renderTracks: field(() => renderTracks),
+  renderInspector: field(() => renderInspector),
+  applyPreset: field(() => applyPreset),
+  renderArp: field(() => renderArp),
+  renderFx: field(() => renderFx),
+  macroMarkup: field(() => macroMarkup),
+  renderClipControls: field(() => renderClipControls),
+  updateDeleteClipDialog: field(() => updateDeleteClipDialog),
+  requestClipDelete: field(() => requestClipDelete),
+  renderHarmony: field(() => renderHarmony),
+  renderPiano: field(() => renderPiano),
+  bindMarqueeSelection: field(() => bindMarqueeSelection),
+  bindNoteDrag: field(() => bindNoteDrag),
+  syncSelectedClasses: field(() => syncSelectedClasses),
+  syncRollScroll: field(() => syncRollScroll),
+  setDefaultScroll: field(() => setDefaultScroll),
+  renderSelection: field(() => renderSelection),
+  editSelection: field(() => editSelection),
+  deleteSelection: field(() => deleteSelection),
+  renderAutomation: field(() => renderAutomation),
+  heldKeyPointers: field(() => heldKeyPointers),
+  releaseKeyPointer: field(() => releaseKeyPointer),
+  releaseKeyPointers: field(() => releaseKeyPointers),
+  instrumentOctave: field(
+    () => instrumentOctave,
+    (value) => {
+      instrumentOctave = value;
+    },
+  ),
+  renderKeyboard: field(() => renderKeyboard),
+  startPerformance: field(() => startPerformance),
+  endPerformance: field(() => endPerformance),
+  launcherSnapshot: field(() => launcherSnapshot),
+  launchClip: field(() => launchClip),
+  renderLauncher: field(() => renderLauncher),
+  setupLauncher: field(() => setupLauncher),
+  renderArrangement: field(() => renderArrangement),
+  sceneLength: field(() => sceneLength),
+  focusScene: field(() => focusScene),
+  updatePlayheads: field(() => updatePlayheads),
+  updatePosition: field(() => updatePosition),
+  updateOrb: field(() => updateOrb),
+  songLength: field(() => songLength),
+  formatLocator: field(() => formatLocator),
+  setGlobalStart: field(() => setGlobalStart),
+  setClipStart: field(() => setClipStart),
+  renderLocators: field(() => renderLocators),
+  syncLocatorsFromPlayback: field(() => syncLocatorsFromPlayback),
+  renderMixer: field(() => renderMixer),
+  animateMixer: field(() => animateMixer),
+  updateScratchPlayButton: field(() => updateScratchPlayButton),
+  armScratchBuffer: field(() => armScratchBuffer),
+  importScratchFile: field(() => importScratchFile),
+  audioRegionScratchBuffer: field(() => audioRegionScratchBuffer),
+  loadAudioRegionIntoScratch: field(() => loadAudioRegionIntoScratch),
+  captureScratchMix: field(() => captureScratchMix),
+  animateScratchDeck: field(() => animateScratchDeck),
+  setupScratchDeck: field(() => setupScratchDeck),
+  performanceEventThrottle: field(() => performanceEventThrottle),
+  performanceStep: field(() => performanceStep),
+  recordPerformanceEvent: field(() => recordPerformanceEvent),
+  loadPerformanceAudio: field(() => loadPerformanceAudio),
+  applyPerformanceEvent: field(() => applyPerformanceEvent),
+  playPerformanceTake: field(() => playPerformanceTake),
+  openTakeEditor: field(() => openTakeEditor),
+  renderPerformanceTakes: field(() => renderPerformanceTakes),
+  togglePerformanceCapture: field(() => togglePerformanceCapture),
+  mixSnapshot: field(() => mixSnapshot),
+  captureMixerReference: field(() => captureMixerReference),
+  toggleMixerReference: field(() => toggleMixerReference),
+  setupArrangeTools: field(() => setupArrangeTools),
+  USER_PRESETS: field(() => USER_PRESETS),
+  PRESET_FAVORITES: field(() => PRESET_FAVORITES),
+  userPresets: field(() => userPresets),
+  saveUserPresets: field(() => saveUserPresets),
+  presetFavorites: field(() => presetFavorites),
+  renderPresetLibrary: field(() => renderPresetLibrary),
+  saveCurrentPreset: field(() => saveCurrentPreset),
+  loadLocalSample: field(() => loadLocalSample),
+  loadLocalSamples: field(() => loadLocalSamples),
+  renderSampleSlots: field(() => renderSampleSlots),
+  setupLibraries: field(() => setupLibraries),
+  setupPrecisionControls: field(() => setupPrecisionControls),
+  setupStudioExtensions: field(() => setupStudioExtensions),
+  readUiPrefs: field(() => readUiPrefs),
+  writeUiPrefs: field(() => writeUiPrefs),
+  setRackCollapsed: field(() => setRackCollapsed),
+  toggleFocus: field(() => toggleFocus),
+  selectTrack: field(() => selectTrack),
+  commands: field(() => commands),
+  matchingCommands: field(() => matchingCommands),
+  renderCommands: field(() => renderCommands),
+  runCommand: field(() => runCommand),
+  openCommands: field(() => openCommands),
+  initWorkflowUi: field(() => initWorkflowUi),
+  renderVersions: field(() => renderVersions),
+  loadVersions: field(() => loadVersions),
+  saveVersion: field(() => saveVersion),
+  inputRecorder: field(
+    () => inputRecorder,
+    (value) => {
+      inputRecorder = value;
+    },
+  ),
+  inputStream: field(
+    () => inputStream,
+    (value) => {
+      inputStream = value;
+    },
+  ),
+  inputChunks: field(
+    () => inputChunks,
+    (value) => {
+      inputChunks = value;
+    },
+  ),
+  midiLearnTarget: field(
+    () => midiLearnTarget,
+    (value) => {
+      midiLearnTarget = value;
+    },
+  ),
+  applyMidiMapping: field(() => applyMidiMapping),
+  audioBufferWav: field(() => audioBufferWav),
+  addAudioBlob: field(() => addAudioBlob),
+  loadAudioAssets: field(() => loadAudioAssets),
+  renderAudioStudio: field(() => renderAudioStudio),
+  renderGlobalAutomation: field(() => renderGlobalAutomation),
+  renderMixGroups: field(() => renderMixGroups),
+  renderTempoMap: field(() => renderTempoMap),
+  samplerSettings: field(() => samplerSettings),
+  setupSamplerOctaveControls: field(() => setupSamplerOctaveControls),
+  samplerNoteName: field(() => samplerNoteName),
+  drawSamplerWaveform: field(() => drawSamplerWaveform),
+  startSamplerPerformance: field(() => startSamplerPerformance),
+  endSamplerPerformance: field(() => endSamplerPerformance),
+  renderSamplerKeyboard: field(() => renderSamplerKeyboard),
+  loadSamplerAsset: field(() => loadSamplerAsset),
+  setupSamplerKeyboard: field(() => setupSamplerKeyboard),
+  setupV6Studio: field(() => setupV6Studio),
+  setupMidiLearnUi: field(() => setupMidiLearnUi),
+  setupV6Copy: field(() => setupV6Copy),
+  setupV6Safety: field(() => setupV6Safety),
+  setupSampleSlicing: field(() => setupSampleSlicing),
+  setupProjectTemplates: field(() => setupProjectTemplates),
+  renderAll: field(() => renderAll),
+  syncTransportButtons: field(() => syncTransportButtons),
+  pausePlayback: field(() => pausePlayback),
+  togglePlay: field(() => togglePlay),
+  animateMeter: field(() => animateMeter),
+  wavOptions: field(() => wavOptions),
+  setExportProgress: field(() => setExportProgress),
+  exportWav: field(() => exportWav),
+  crc32: field(() => crc32),
+  zipFiles: field(() => zipFiles),
+  readStoreZip: field(() => readStoreZip),
+  importProjectFile: field(() => importProjectFile),
+  renderStems: field(() => renderStems),
+  renderProjectBundle: field(() => renderProjectBundle),
+  exportMeta: field(() => exportMeta),
+  exportName: field(() => exportName),
+  performExport: field(() => performExport),
+  quickExportWav: field(() => quickExportWav),
+  quickExportMidi: field(() => quickExportMidi),
+  repeatLastExport: field(() => repeatLastExport),
+  activateView: field(() => activateView),
+  compatibility: field(() => compatibility),
+  showCompatibility: field(() => showCompatibility),
+  open: field(() => open),
+  replaceProject: field(() => replaceProject),
+  initMidi: field(() => initMidi),
+  query: field(() => query),
+  copyQueued: field(
+    () => copyQueued,
+    (value) => {
+      copyQueued = value;
+    },
+  ),
+  syncStudioUi: field(() => syncStudioUi),
+  duplicateSelectedNotes: field(() => duplicateSelectedNotes),
+  quantizeSelectedNotes: field(() => quantizeSelectedNotes),
+  setupStudioUi: field(() => setupStudioUi),
+  setupConsistentControls: field(() => setupConsistentControls),
+});
 export type RuntimeContext = typeof runtime;
-import { t as msg, setLanguage, translateDOM, translate } from "./ui/i18n";
-import { mountKeyboard, releaseAllKeyboards } from "./ui/components/keyboard";
-import { mountDial } from "./ui/components/dial";
+import { t as msg, translateDOM, translate } from "./ui/i18n";
+import { releaseAllKeyboards } from "./ui/components/keyboard";
+
 import { studioBridge, type StudioView } from "./ui/bridge";
 import {
   createProject,
@@ -951,53 +535,20 @@ import {
   clipLengthSteps,
   meterSteps,
   setProjectMeter,
-  makeNote,
   duplicateClip,
   deleteClip,
   varyClip,
-  resizeClip,
-  quantizeClip,
-  automationValue,
-  generateClip,
   generateBacking,
-  encodeMidi,
-  playbackEvents,
   History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
   addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
   distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
-  createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
-  detectTransientSlices,
-  transformNotes,
   cryptoId,
-  samplerDefaults,
 } from "./core.js";
-import { AudioEngine, renderWav } from "./audio.js";
+import { AudioEngine } from "./audio.js";
 import type {
   AudioLane,
   AudioRegion,
-  AutomationLane,
-  Clip,
   MidiMapping,
-  ModulationRoute,
   NoteEvent,
   NoteExpression,
   PerformanceEvent,
@@ -1006,7 +557,6 @@ import type {
   SampleAsset,
   SamplerInstrument,
   TrackId,
-  TrackState,
 } from "./model.js";
 
 declare global {
@@ -1029,7 +579,8 @@ window.addEventListener("unhandledrejection", (e) =>
 
 const $ = (s: string): any => document.querySelector(s),
   $$ = (s: string): any[] => [...document.querySelectorAll(s)],
-  STORAGE = "kiber-vengance-project-v6",
+  STORAGE = "kiber-vengance-project-v7",
+  LEGACY_V6 = "kiber-vengance-project-v6",
   LEGACY_V5 = "kiber-vengance-project-v5",
   LEGACY_V4 = "kiber-vengance-project-v4",
   LEGACY_V3 = "kiber-vengance-project-v3",
@@ -1040,7 +591,8 @@ const $ = (s: string): any => document.querySelector(s),
 let copyQueued = false;
 let autosaveRecoveryBlocked = false;
 let autosaveRecoveryNotice = false;
-let project: Project = loadProject(),
+const projectRepository = new ProjectRepository();
+let project: Project = await loadProject(),
   selectedTrack: TrackId = "lead",
   selectedNotes = new Set<string>(),
   currentStep = -1,
@@ -1158,8 +710,35 @@ const keyMap = "awsedftgyhujk",
     k: 12,
   };
 
-function loadProject() {
-  for (const key of [STORAGE, LEGACY_V5, LEGACY_V4, LEGACY_V3, LEGACY])
+async function loadProject() {
+  try {
+    const stored = await projectRepository.load();
+    if (projectRepository.recoveryNotices.length) autosaveRecoveryNotice = true;
+    if (stored) return migrateProject(stored);
+  } catch {
+    autosaveRecoveryNotice = true;
+    try {
+      await projectRepository.quarantineCurrent();
+      for (const version of await projectRepository.listVersions()) {
+        try {
+          const recovered = await projectRepository.getVersion(version.id);
+          if (recovered) return migrateProject(recovered);
+        } catch {
+          /* Try the next readable snapshot. */
+        }
+      }
+    } catch {
+      autosaveRecoveryBlocked = true;
+    }
+  }
+  for (const key of [
+    STORAGE,
+    LEGACY_V6,
+    LEGACY_V5,
+    LEGACY_V4,
+    LEGACY_V3,
+    LEGACY,
+  ])
     try {
       const value = localStorage.getItem(key);
       if (value) return migrateProject(JSON.parse(value));
@@ -1192,12 +771,10 @@ function esc(v: any) {
   );
 }
 const projectSession = new ProjectSession(() => project, history, {
-  storage: {
-    setItem(key, value) {
-      if (autosaveRecoveryBlocked)
-        throw new Error("Unreadable autosave could not be preserved");
-      localStorage.setItem(key, value);
-    },
+  async save(value) {
+    if (autosaveRecoveryBlocked)
+      throw new Error("Unreadable autosave could not be preserved");
+    await projectRepository.save(value);
   },
   key: STORAGE,
   status(state) {
@@ -1215,14 +792,10 @@ const projectSession = new ProjectSession(() => project, history, {
     }
   },
   recovery(project) {
-    const list = loadVersions();
-    list.unshift({
-      id: cryptoId(),
-      label: `AUTO RECOVERY · ${project.title}`,
-      date: Date.now(),
-      project: structuredClone(project),
-    });
-    localStorage.setItem(VERSIONS, JSON.stringify(list.slice(0, 20)));
+    return projectRepository.saveVersion(
+      project,
+      `AUTO RECOVERY · ${project.title}`,
+    );
   },
   recoveryFailed() {
     toast(msg("ui_0af7730f9e25"));
@@ -1269,6 +842,7 @@ function download(
   return storage.download(runtime, data, name, type);
 }
 type QuickExportKind =
+  | "ogg"
   | "wav"
   | "midi"
   | "project"
@@ -1386,8 +960,8 @@ const staticCopy: Array<[string, string, string]> = [
   ["#clearAutomationBtn", "CLEAR LANE", "LIMPIAR LÍNEA"],
   [
     "#arrangeDescription",
-    "Each section combines five independent clips. Edit, repeat and reorder the complete song.",
-    "Cada sección combina cinco clips independientes. Edita, repite y reordena la canción completa.",
+    "Each section combines independent clips. Edit, repeat and reorder the complete song.",
+    "Cada sección combina clips independientes. Edita, repite y reordena la canción completa.",
   ],
   ["#addSceneBtn", "＋ ADD SECTION", "＋ AÑADIR SECCIÓN"],
   ["#autoArrangeBtn", "⟳ AUTO SEQUENCE", "⟳ SECUENCIA AUTO"],
@@ -1508,8 +1082,8 @@ staticCopy.push(
   ["#globalStartBtn", "▶ SONG", "▶ CANCIÓN"],
   [
     "#arrangeDescription",
-    "Each section combines five independent clips. Click the timeline to set the global start; edit, repeat and reorder the complete song.",
-    "Cada sección combina cinco clips independientes. Pulsa la línea temporal para fijar el inicio global; edita, repite y reordena la canción.",
+    "Each section combines independent clips. Click the timeline to set the global start; edit, repeat and reorder the complete song.",
+    "Cada sección combina clips independientes. Pulsa la línea temporal para fijar el inicio global; edita, repite y reordena la canción.",
   ],
   ["#exportDialog h2", "EXPORT / EXPORT AS", "EXPORTAR / EXPORTAR COMO"],
   [
@@ -2693,9 +2267,9 @@ const commands: CommandAction[] = [
     keywords: "project proyecto save import snapshot",
     run: () => $("#menuBtn").click(),
   },
-  ...TRACKS.map((track, index) => ({
-    label: `Select ${TRACK_META[track].label}`,
-    labelEs: `Seleccionar ${TRACK_META[track].label}`,
+  ...projectTrackIds(project).map((track, index) => ({
+    label: `Select ${trackMeta(project, track).label}`,
+    labelEs: `Seleccionar ${trackMeta(project, track).label}`,
     group: "TRACK",
     groupEs: "PISTA",
     shortcut: String(index + 1),
@@ -2822,6 +2396,10 @@ function setupProjectTemplates(): any {
   return workflow.setupProjectTemplates(runtime);
 }
 function renderAll() {
+  if (!project.tracks[selectedTrack]) {
+    selectedTrack = projectTrackIds(project)[0]!;
+    selectedNotes.clear();
+  }
   renderTracks();
   renderClipControls();
   renderHarmony();
@@ -2884,8 +2462,12 @@ function wavOptions(): any {
 function setExportProgress(value: number, status?: string): any {
   return storage.setExportProgress(runtime, value, status);
 }
-async function exportWav(song: boolean, target?: QuickTarget): Promise<any> {
-  return storage.exportWav(runtime, song, target);
+async function exportWav(
+  song: boolean,
+  target?: QuickTarget,
+  format: "wav" | "ogg" = "wav",
+): Promise<any> {
+  return storage.exportWav(runtime, song, target, format);
 }
 function crc32(bytes: Uint8Array): any {
   return storage.crc32(runtime, bytes);
@@ -2911,6 +2493,11 @@ const exportMeta: Record<
   QuickExportKind,
   { extension: string; type: string; description: string }
 > = {
+  ogg: {
+    extension: ".ogg",
+    type: "audio/ogg",
+    description: "Ogg Vorbis audio",
+  },
   wav: { extension: ".wav", type: "audio/wav", description: "Wave audio" },
   midi: { extension: ".mid", type: "audio/midi", description: "MIDI song" },
   project: {
@@ -3064,7 +2651,7 @@ $("#newClipBtn").onclick = () => {
   const source = clip(),
     c = createClip(
       selectedTrack,
-      `${TRACK_META[selectedTrack].label} ${clipsForTrack(project, selectedTrack).length + 1}`,
+      `${trackMeta(project, selectedTrack).label} ${clipsForTrack(project, selectedTrack).length + 1}`,
       2,
       meterSteps(project.meter),
     );
@@ -3186,6 +2773,83 @@ const open = (id: string) => $(id).showModal(),
     clipStartSteps.clear();
     changed(true);
     $("#projectMenu").close();
+  };
+$("#importScoreBtn").onclick = async () => {
+  try {
+    const { openScoreImport } = await import("./score/ui");
+    openScoreImport({
+      getAsset,
+      putAsset,
+      sources: () => project.scoreSources || [],
+      notify: (message) => toast(message, true),
+      async insert(document, file) {
+        const [{ insertScore }, { scoreMusicXml }] = await Promise.all([
+          import("./score/insert"),
+          import("./score/musicxml"),
+        ]);
+        const id = crypto.randomUUID(),
+          assetId = `score-source-${id}`,
+          reviewAssetId = `score-review-${id}`,
+          musicXmlAssetId = `score-xml-${id}`;
+        await putAsset(assetId, file);
+        await putAsset(
+          reviewAssetId,
+          new Blob([JSON.stringify(document)], { type: "application/json" }),
+        );
+        await putAsset(
+          musicXmlAssetId,
+          new Blob([scoreMusicXml(document)], {
+            type: "application/vnd.recordare.musicxml+xml",
+          }),
+        );
+        const next = structuredClone(project);
+        const tracks = insertScore(next, document, {
+          id,
+          assetId,
+          reviewAssetId,
+          musicXmlAssetId,
+          name: file.name,
+          mimeType: file.type,
+          format: document.format,
+          partTracks: [],
+        });
+        snapshot();
+        engine.stop();
+        releaseAllKeyboards();
+        project = next;
+        selectedTrack = tracks[0] || "lead";
+        selectedNotes.clear();
+        history.finish(project);
+        changed(true);
+        setDefaultScroll();
+      },
+    });
+  } catch (error) {
+    toast(error instanceof Error ? error.message : String(error));
+  }
+};
+for (const [id, adding] of [
+  ["newTrackBtn", true],
+  ["manageTrackBtn", false],
+] as const)
+  $("#" + id).onclick = async () => {
+    const { editInstrumentTrack } = await import("./features/track-management");
+    try {
+      const result = await editInstrumentTrack(project, selectedTrack, adding);
+      if (!result) return;
+      snapshot();
+      engine.stop();
+      releaseAllKeyboards();
+      project = result.project;
+      selectedTrack = result.selectedTrack;
+      selectedNotes.clear();
+      history.finish(project);
+      changed(true);
+      setDefaultScroll();
+      toast(L("Track updated", "Pista actualizada"), true);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error));
+    }
   };
 $("#menuBtn").onclick = () => {
   renderVersions();
@@ -3414,7 +3078,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (/^Digit[1-5]$/.test(e.code)) {
-    selectedTrack = TRACKS[+e.code.at(-1)! - 1] ?? "lead";
+    selectedTrack = projectTrackIds(project)[+e.code.at(-1)! - 1] ?? "lead";
     selectedNotes.clear();
     renderAll();
     setDefaultScroll();
@@ -3487,11 +3151,11 @@ document.addEventListener("keydown", (e) => {
             n.step + (e.key === "ArrowRight" ? delta : -delta),
           ),
         );
-      else if (selectedTrack !== "drums")
+      else if (trackKind(project, selectedTrack) !== "drums")
         n.pitch = Math.max(
-          TRACK_META[selectedTrack].low,
+          trackMeta(project, selectedTrack).low,
           Math.min(
-            TRACK_META[selectedTrack].high,
+            trackMeta(project, selectedTrack).high,
             n.pitch + (e.key === "ArrowUp" ? 1 : -1),
           ),
         );
@@ -3501,7 +3165,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   const source = e.key.toLowerCase(),
-    activeKeyMap = selectedTrack === "drums" ? drumKeyMap : keyMap,
+    activeKeyMap =
+      trackKind(project, selectedTrack) === "drums" ? drumKeyMap : keyMap,
     i = activeKeyMap.indexOf(source);
   if (
     i >= 0 &&
@@ -3520,7 +3185,8 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener("keyup", (e) => {
   const source = e.key.toLowerCase(),
-    activeKeyMap = selectedTrack === "drums" ? drumKeyMap : keyMap,
+    activeKeyMap =
+      trackKind(project, selectedTrack) === "drums" ? drumKeyMap : keyMap,
     keyboardId = activeView === "perform" ? "performanceKeyboard" : "keyboard";
   if (activeKeyMap.includes(source))
     endPerformance(source, $(`#${keyboardId} .key[data-source="${source}"]`));
@@ -3569,7 +3235,7 @@ function syncStudioUi() {
   studioBridge.update({
     view: activeView as StudioView,
     language,
-    context: TRACK_META[selectedTrack].label,
+    context: trackMeta(project, selectedTrack).label,
     inspector: soundPanel,
     playing: Boolean(engine.playing),
     paused: studioBridge.getSnapshot().paused,
@@ -3579,7 +3245,7 @@ function syncStudioUi() {
   const context = $("#clipContext");
   if (!context) return;
   const c = clip();
-  context.textContent = `${TRACK_META[selectedTrack].label} → ${c.name} · ${c.bars} ${msg("ui_5a599b482fc1")}`;
+  context.textContent = `${trackMeta(project, selectedTrack).label} → ${c.name} · ${c.bars} ${msg("ui_5a599b482fc1")}`;
   document.body.classList.toggle("sound-panel", soundPanel);
   document.body.dataset.editorTool = editorTool;
   $$("[data-studio-tab]").forEach((b: any) => {
@@ -3619,7 +3285,7 @@ syncTransportButtons();
 
 studioBridge.navigate = (view) => activateView(view);
 studioBridge.melodyTarget = () =>
-  selectedTrack === "drums"
+  trackKind(project, selectedTrack) === "drums"
     ? null
     : {
         projectId: project.id,
@@ -3685,9 +3351,9 @@ studioBridge.auditionMelody = (
   ];
   previewProject.automationLanes = [];
   previewProject.modulationRoutes = [];
-  for (const track of TRACKS) {
-    previewProject.tracks[track].mute = track !== target.track;
-    previewProject.tracks[track].solo = false;
+  for (const track of projectTrackIds(project)) {
+    previewProject.tracks[track]!.mute = track !== target.track;
+    previewProject.tracks[track]!.solo = false;
     const active = activeClip(previewProject, track);
     if (active !== previewClip) {
       active.bars = options.bars;
@@ -3778,10 +3444,22 @@ document.addEventListener("visibilitychange", () => {
 });
 
 window.addEventListener("pagehide", () => {
-  projectSession.flush();
+  void projectSession.flush();
+  try {
+    projectRepository.preservePending(project);
+  } catch {
+    autosaveRecoveryNotice = true;
+  }
 });
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) projectSession.flush();
+  if (document.hidden) {
+    void projectSession.flush();
+    try {
+      projectRepository.preservePending(project);
+    } catch {
+      autosaveRecoveryNotice = true;
+    }
+  }
 });
 
 void storage.showMissingAssets(runtime).catch((error) => toast(String(error)));

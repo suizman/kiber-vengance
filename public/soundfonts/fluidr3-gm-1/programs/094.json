@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-094",
+  "kind": "program",
+  "number": 94,
+  "name": "pad 7 halo",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0940_FluidR3_GM_sf2_file.js",
+    "sha256": "9715cd741d8f18e24164101ae14d37fefb195c3a7a7ed6f28bdacf267c5e0ef5",
+    "bytes": 29176
+  },
+  "zones": [
+    {
+      "midi": 94,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 19277,
+      "loopEnd": 45867,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.2944898,
+      "sample": {
+        "path": "samples/c0dc7b7a14e97b45f22ae2f34d9af2bc7a114e19491232f47be64db6e59d96e0.mp3",
+        "sha256": "c0dc7b7a14e97b45f22ae2f34d9af2bc7a114e19491232f47be64db6e59d96e0",
+        "bytes": 21620,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -24,10 +24,38 @@ export function browserOptions(kind='chromium') {
   throw new Error(`Missing ${kind} browser. Run npx playwright install ${kind}, or set ${kind.toUpperCase()}_EXECUTABLE_PATH. Tests are not skipped.`);
 }
 
+// Test-only access to the canonical async repository; production exposes no storage mirror.
+function installProjectTestStorage() {
+  const open = () => new Promise((resolve, reject) => { const request = globalThis.indexedDB.open('kiber-vengance-state-v7', 1); request.onupgradeneeded = () => { for (const name of ['current','versions','version-index','metadata']) request.result.createObjectStore(name); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+  globalThis.__readSavedProject = async () => { const db = await open(); try { return await new Promise((resolve, reject) => { const request = db.transaction('current').objectStore('current').get('studio'); request.onsuccess = () => resolve(request.result?.project ?? null); request.onerror = () => reject(request.error); }); } finally { db.close(); } };
+  globalThis.__writeSavedProject = async project => { const db = await open(); try { await new Promise((resolve, reject) => { const tx = db.transaction('current', 'readwrite'); tx.objectStore('current').put({ revision: globalThis.crypto.randomUUID(), project }, 'studio'); tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); }); } finally { db.close(); } };
+}
+
+const preparedPages = new WeakSet();
+async function preparePage(page) {
+  if(preparedPages.has(page))return page;
+  preparedPages.add(page);await page.addInitScript(installProjectTestStorage);
+  // Playwright's injected poller treats a returned Promise as truthy. Await asynchronous IDB predicates explicitly.
+  const originalWait=page.waitForFunction.bind(page),setTimeout=page.setDefaultTimeout.bind(page);let defaultTimeout=10000;
+  page.setDefaultTimeout=value=>{defaultTimeout=value;setTimeout(value)};
+  page.waitForFunction=async(fn,arg,options={})=>{
+    if(typeof fn!=='function'||fn.constructor.name!=='AsyncFunction')return originalWait(fn,arg,options);
+    const timeout=options.timeout??defaultTimeout,started=Date.now();
+    for(;;){
+      const handle=await page.evaluateHandle(fn,arg);const value=await handle.jsonValue();
+      if(value)return handle;await handle.dispose();
+      if(timeout&&Date.now()-started>=timeout)throw new Error(`Async browser predicate timed out after ${timeout} ms: ${String(fn)}`);
+      await new Promise(resolve=>globalThis.setTimeout(resolve,typeof options.polling==='number'?options.polling:25));
+    }
+  };
+  return page;
+}
+
 export async function launchBrowser(kind='chromium',overrides={}) {
   const options=browserOptions(kind);
   const browser=await (kind==='firefox'?firefox:chromium).launch({...options,...overrides,args:[...(options.args||[]),...(overrides.args||[])]});
-  const newPage=browser.newPage.bind(browser);browser.newPage=async options=>{const page=await newPage(options);page.setDefaultTimeout(10000);return page};
+  const newPage=browser.newPage.bind(browser);browser.newPage=async options=>{const page=await newPage(options);page.setDefaultTimeout(10000);await preparePage(page);return page};
+  const newContext=browser.newContext.bind(browser);browser.newContext=async options=>{const context=await newContext(options);await context.addInitScript(installProjectTestStorage);const makePage=context.newPage.bind(context);context.newPage=async()=>preparePage(await makePage());return context};
   return browser;
 }
 

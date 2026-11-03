@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "id": "program-062",
+  "kind": "program",
+  "number": 62,
+  "name": "synth brass 1",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0620_FluidR3_GM_sf2_file.js",
+    "sha256": "ddc56934288ac401275016512e001989412c0c02529ce041358d307f12e142d7",
+    "bytes": 97088
+  },
+  "zones": [
+    {
+      "midi": 62,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 60,
+      "loopStart": 32043,
+      "loopEnd": 61141,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 25000,
+      "ahdsr": false,
+      "anchor": 0.02612,
+      "sample": {
+        "path": "samples/25bf97f13362748d2df7613478cd106111b00cff4b9d069cfdcdd326f4f1db39.mp3",
+        "sha256": "25bf97f13362748d2df7613478cd106111b00cff4b9d069cfdcdd326f4f1db39",
+        "bytes": 21813,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 62,
+      "originalPitch": 7200,
+      "keyRangeLow": 61,
+      "keyRangeHigh": 72,
+      "loopStart": 31035,
+      "loopEnd": 73197,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 25000,
+      "ahdsr": false,
+      "anchor": 0.01324,
+      "sample": {
+        "path": "samples/053e50e77b67d6a2af2971a512916b4977c868170966b3f0fe31669f52664003.mp3",
+        "sha256": "053e50e77b67d6a2af2971a512916b4977c868170966b3f0fe31669f52664003",
+        "bytes": 27381,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 62,
+      "originalPitch": 8400,
+      "keyRangeLow": 73,
+      "keyRangeHigh": 127,
+      "loopStart": 37651,
+      "loopEnd": 72998,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 25000,
+      "ahdsr": false,
+      "anchor": 0.00548,
+      "sample": {
+        "path": "samples/e63124248be3a47ba08eb520ac21ede90b452e8fa6fd18b14ca7c4ff55f6d26b.mp3",
+        "sha256": "e63124248be3a47ba08eb520ac21ede90b452e8fa6fd18b14ca7c4ff55f6d26b",
+        "bytes": 22989,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

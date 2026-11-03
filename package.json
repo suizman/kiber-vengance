@@ -1,16 +1,16 @@
 {
   "name": "kiber-vengance",
-  "version": "6.0.1",
+  "version": "7.0.0",
   "private": true,
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js tests/refactor.test.js tests/release.test.js",
-    "test:e2e": "node --test tests/e2e.test.js tests/browser.test.js tests/ai-browser.test.js tests/mixing-browser.test.js tests/desktop-vocals-browser.test.js",
+    "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js tests/refactor.test.js tests/release.test.js tests/scores.test.js",
+    "test:e2e": "node --test --test-timeout=120000 tests/e2e.test.js tests/browser.test.js tests/ai-browser.test.js tests/mixing-browser.test.js tests/desktop-vocals-browser.test.js tests/scores-browser.test.js tests/export-browser.test.js",
     "test:companion": "python -m unittest discover -s companion/tests -v",
     "typecheck": "tsc -p tsconfig.json",
-    "lint": "eslint tests scripts eslint.config.js",
+    "lint": "eslint tests scripts eslint.config.js && oxlint src --max-warnings 0",
     "build:runtime": "vite build",
     "build": "vite build && node scripts/build.mjs",
     "check": "npm run typecheck && npm run build && npm run lint && npm test",
@@ -20,18 +20,26 @@
     "axe-core": "^4.14.0",
     "eslint": "^10.13.0",
     "geckodriver": "^8.0.0",
+    "oxlint": "1.91.0",
     "playwright": "^1.64.1",
     "prettier": "^3.9.10",
     "selenium-webdriver": "^4.51.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "acorn": "8.17.0"
   },
   "dependencies": {
+    "@coderline/alphatab": "1.9.0",
     "@echogarden/espeak-ng-emscripten": "0.3.5",
     "@huggingface/transformers": "4.3.1",
     "@huggingface/transformers-structured-output": "4.3.1",
     "@mlc-ai/web-llm": "0.2.86",
+    "abcjs": "6.7.2",
+    "fflate": "0.8.3",
+    "midi-file": "1.2.4",
+    "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0",
+    "pdfjs-dist": "6.5.438",
     "preact": "^11.0.2",
-    "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0"
+    "wasm-media-encoders": "0.7.0"
   }
 }

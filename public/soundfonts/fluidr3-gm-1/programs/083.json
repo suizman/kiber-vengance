@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "program-083",
+  "kind": "program",
+  "number": 83,
+  "name": "lead 4 chiff",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0830_FluidR3_GM_sf2_file.js",
+    "sha256": "1f17b6c01b2238fa5eea73be08afc36d431788c887d8d9ffc59a3654bf32d04e",
+    "bytes": 11840
+  },
+  "zones": [
+    {
+      "midi": 83,
+      "originalPitch": 9300,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 9830,
+      "loopEnd": 9905,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.05077098,
+      "sample": {
+        "path": "samples/bbbbad62b43941fbf0e4e9d235dc2df2bdde03126cee80793d22dce975079939.mp3",
+        "sha256": "bbbbad62b43941fbf0e4e9d235dc2df2bdde03126cee80793d22dce975079939",
+        "bytes": 5966,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 83,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 2492,
+      "loopEnd": 2825,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.01324263,
+      "sample": {
+        "path": "samples/df272e94c395da2ff42afcc49198c774435831777c57ab1244f492665faed93a.mp3",
+        "sha256": "df272e94c395da2ff42afcc49198c774435831777c57ab1244f492665faed93a",
+        "bytes": 2471,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

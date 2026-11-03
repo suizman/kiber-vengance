@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-124",
+  "kind": "program",
+  "number": 124,
+  "name": "telephone ring",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1240_FluidR3_GM_sf2_file.js",
+    "sha256": "a5f6a347ca2ec32a5f465131d99fa5ede392c2e4bff08ffbd9de4d8ba80c7e08",
+    "bytes": 61426
+  },
+  "zones": [
+    {
+      "midi": 124,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.31263039,
+      "sample": {
+        "path": "samples/8fb5fc7f8c75d5cbd70ac3d75ff06f7eeee68e5cf236e3d84c2c18479cdd03d2.mp3",
+        "sha256": "8fb5fc7f8c75d5cbd70ac3d75ff06f7eeee68e5cf236e3d84c2c18479cdd03d2",
+        "bytes": 45811,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

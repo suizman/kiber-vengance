@@ -1,108 +1,30 @@
-import {
-  requestFields,
-  requestText,
-  requestNumber,
-  requestConfirmation,
-} from "../ui/dialogs";
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
-
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
+import { trackState } from "../state/tracks";
+import { builtinKind } from "../state/tracks";
+import { projectTrackIds, trackMeta, trackKind } from "../state/tracks";
+import { requestFields, requestText, requestNumber } from "../ui/dialogs";
+import { t as msg, translate } from "../ui/i18n";
 
 import { mountDial } from "../ui/components/dial";
 
-import { studioBridge, type StudioView } from "../ui/bridge";
-
 import {
-  createProject,
-  createEmptyProject,
-  migrateProject,
   activeClip,
   instrumentSettings,
   clipsForTrack,
-  createClip,
-  clipLengthSteps,
   meterSteps,
-  setProjectMeter,
-  makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
   resizeClip,
   quantizeClip,
-  automationValue,
   generateClip,
-  generateBacking,
-  encodeMidi,
-  playbackEvents,
-  History,
   TRACKS,
-  TRACK_META,
   DRUM_NAMES,
   SCALES,
   KEYS,
-  addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
-  createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
   detectTransientSlices,
-  transformNotes,
   cryptoId,
-  samplerDefaults,
 } from "../core.js";
 
-import { AudioEngine, renderWav } from "../audio.js";
+import type { SampleAsset, TrackId } from "../model.js";
 
-import type {
-  AudioLane,
-  AudioRegion,
-  AutomationLane,
-  MidiMapping,
-  ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
-} from "../model.js";
-
-import type { RuntimeContext } from "../app";
-
-type Language = "en" | "es";
-
-type QuickExportKind =
-  | "wav"
-  | "midi"
-  | "project"
-  | "clip-wav"
-  | "clip-midi"
-  | "stems"
-  | "bundle"
-  | "performance";
-
-type QuickTarget = {
-  handle: any | null;
-  fallback: boolean;
-  cancelled: boolean;
-  name: string;
-  type: string;
-};
+import type { InstrumentsContext } from "../state/contracts";
 
 type UserPreset = {
   id: string;
@@ -113,25 +35,18 @@ type UserPreset = {
   character: any;
 };
 
-type CommandAction = {
-  label: string;
-  labelEs: string;
-  group: string;
-  groupEs: string;
-  shortcut: string;
-  icon: string;
-  keywords: string;
-  run: () => void;
-};
-
-export function renderTracks(ctx: RuntimeContext) {
-  const soloActive = TRACKS.some((id) => ctx.project.tracks[id].solo);
-  ctx.$("#tracks").innerHTML = TRACKS.map((id, i) => {
-    const m = TRACK_META[id],
-      t = ctx.project.tracks[id],
-      c = activeClip(ctx.project, id);
-    return `<div class="track ${id === ctx.selectedTrack ? "active" : ""} ${t.solo ? "soloed" : ""} ${soloActive && !t.solo ? "solo-muted" : ""}" data-track="${id}" style="--track:${t.color || m.color}"><button class="track-select"><span class="track-head"><span><b class="track-name">${m.label}</b><small>${ctx.esc(c?.name || msg("ui_eb69ca3f3fb0"))}</small></span><b>0${i + 1}</b></span><span class="track-foot"><span class="track-meter"><i style="width:${t.volume * 100}%"></i></span></span></button><span class="track-switches"><button class="solo ${t.solo ? "on" : ""}" data-solo="${id}" aria-label="${msg("ui_cd16c1024d0d")} ${m.label}" aria-pressed="${t.solo}">S</button><button class="mute ${t.mute ? "on" : ""}" data-mute="${id}" aria-label="${msg("ui_6dbf0ca01f5c")} ${m.label}" aria-pressed="${t.mute}">M</button></span></div>`;
-  }).join("");
+export function renderTracks(ctx: InstrumentsContext) {
+  const soloActive = projectTrackIds(ctx.project).some(
+    (id) => trackState(ctx.project, id).solo,
+  );
+  ctx.$("#tracks").innerHTML = projectTrackIds(ctx.project)
+    .map((id, i) => {
+      const m = trackMeta(ctx.project, id),
+        t = trackState(ctx.project, id),
+        c = activeClip(ctx.project, id);
+      return `<div class="track ${id === ctx.selectedTrack ? "active" : ""} ${t.solo ? "soloed" : ""} ${soloActive && !t.solo ? "solo-muted" : ""}" data-track="${id}" style="--track:${t.color || m.color}"><button class="track-select"><span class="track-head"><span><b class="track-name">${ctx.esc(m.label)}</b><small>${ctx.esc(c?.name || msg("ui_eb69ca3f3fb0"))}</small></span><b>0${i + 1}</b></span><span class="track-foot"><span class="track-meter"><i style="width:${t.volume * 100}%"></i></span></span></button><span class="track-switches"><button class="solo ${t.solo ? "on" : ""}" data-solo="${id}" aria-label="${msg("ui_cd16c1024d0d")} ${ctx.esc(m.label)}" aria-pressed="${t.solo}">S</button><button class="mute ${t.mute ? "on" : ""}" data-mute="${id}" aria-label="${msg("ui_6dbf0ca01f5c")} ${ctx.esc(m.label)}" aria-pressed="${t.mute}">M</button></span></div>`;
+    })
+    .join("");
   ctx.$$(".track").forEach(
     (el) =>
       (el.onclick = (e: any) => {
@@ -141,28 +56,34 @@ export function renderTracks(ctx: RuntimeContext) {
           e.stopPropagation();
           ctx.snapshot();
           const id = solo.dataset.solo as TrackId,
-            was = ctx.project.tracks[id].solo;
-          TRACKS.forEach((track) => (ctx.project.tracks[track].solo = false));
-          ctx.project.tracks[id].solo = !was;
-          if (!was) ctx.project.tracks[id].mute = false;
+            was = trackState(ctx.project, id).solo;
+          projectTrackIds(ctx.project).forEach(
+            (track) => (trackState(ctx.project, track).solo = false),
+          );
+          trackState(ctx.project, id).solo = !was;
+          if (!was) trackState(ctx.project, id).mute = false;
           ctx.recordPerformanceEvent("mixer", id + ":solo", !was);
           ctx.changed(true);
           ctx.toast(
             was
               ? msg("ui_370043e434fe")
-              : msg("ui_8c778885e399", { arg0: TRACK_META[id].label }),
+              : msg("ui_8c778885e399", {
+                  arg0: trackMeta(ctx.project, id).label,
+                }),
           );
           return;
         }
         if (mute) {
           e.stopPropagation();
           ctx.snapshot();
-          ctx.project.tracks[mute.dataset.mute].mute =
-            !ctx.project.tracks[mute.dataset.mute].mute;
+          trackState(ctx.project, mute.dataset.mute).mute = !trackState(
+            ctx.project,
+            mute.dataset.mute,
+          ).mute;
           ctx.recordPerformanceEvent(
             "mixer",
             mute.dataset.mute + ":mute",
-            ctx.project.tracks[mute.dataset.mute].mute,
+            trackState(ctx.project, mute.dataset.mute).mute,
           );
           ctx.changed(true);
           return;
@@ -175,51 +96,81 @@ export function renderTracks(ctx: RuntimeContext) {
   );
 }
 
-export function renderInspector(ctx: RuntimeContext) {
-  const meta = TRACK_META[ctx.selectedTrack],
+export function renderInspector(ctx: InstrumentsContext) {
+  const meta = trackMeta(ctx.project, ctx.selectedTrack),
     cfg = ctx.clip().instrument,
-    mixer = ctx.project.tracks[ctx.selectedTrack];
+    mixer = trackState(ctx.project, ctx.selectedTrack);
   document.documentElement.style.setProperty("--track", meta.color);
   ctx.$("#trackName").textContent = meta.label;
   ctx.$("#trackType").textContent =
-    ctx.selectedTrack === "drums"
-      ? msg("ui_0b66072942c6")
-      : ctx.selectedTrack === "guitar"
-        ? msg("ui_b022c81cc782")
-        : msg("ui_b78e09c7fe9b");
-  const names = [...new Set([...ctx.presets[ctx.selectedTrack], cfg.preset])];
+    trackKind(ctx.project, ctx.selectedTrack) === "gm"
+      ? ctx.L("Acoustic instrument", "Instrumento acústico")
+      : trackKind(ctx.project, ctx.selectedTrack) === "drums"
+        ? msg("ui_0b66072942c6")
+        : trackKind(ctx.project, ctx.selectedTrack) === "guitar"
+          ? msg("ui_b022c81cc782")
+          : msg("ui_b78e09c7fe9b");
+  const names = [
+    ...new Set([
+      ...(trackKind(ctx.project, ctx.selectedTrack) === "gm"
+        ? []
+        : ctx.presets[builtinKind(trackKind(ctx.project, ctx.selectedTrack))]),
+      cfg.preset,
+    ]),
+  ];
+  const acoustic = trackKind(ctx.project, ctx.selectedTrack) === "gm";
+  ctx.$("#preset").disabled = acoustic;
+  if (acoustic) names.splice(0, names.length, meta.label);
   ctx.$("#preset").innerHTML = names
     .map(
       (p) =>
         `<option ${p === cfg.preset ? "selected" : ""}>${ctx.esc(p)}</option>`,
     )
     .join("");
-  ctx.$("#waveSelect").hidden = ctx.selectedTrack === "drums";
-  ctx.$("#osc2WaveSelect").hidden = ctx.selectedTrack === "drums";
-  ctx.$("#filterSelect").hidden = ctx.selectedTrack === "drums";
+  ctx.$("#waveSelect").hidden = ["drums", "gm"].includes(
+    trackKind(ctx.project, ctx.selectedTrack),
+  );
+  ctx.$("#osc2WaveSelect").hidden = ["drums", "gm"].includes(
+    trackKind(ctx.project, ctx.selectedTrack),
+  );
+  ctx.$("#filterSelect").hidden = ["drums", "gm"].includes(
+    trackKind(ctx.project, ctx.selectedTrack),
+  );
   ctx.$("#waveSelect").value = cfg.wave || "sawtooth";
   ctx.$("#osc2WaveSelect").value = cfg.osc2Wave || "off";
   ctx.$("#filterSelect").value = cfg.filterType || "lowpass";
-  const defs: any[] =
-      ctx.selectedTrack === "drums"
-        ? [
-            ["volume", msg("ui_f481cc60f17a"), 0, 1, 0.01],
-            ["pan", "PAN", -1, 1, 0.01],
-          ]
-        : [
-            ["volume", msg("ui_f481cc60f17a"), 0, 1, 0.01],
-            ["osc2Mix", msg("ui_126c91105eb0"), 0, 1, 0.01],
-            ["cutoff", msg("ui_49f37bf2cfd3"), 120, 10000, 1],
-            ["resonance", msg("ui_4788370c8385"), 0.1, 16, 0.1],
-            ["attack", msg("ui_df86d4b6db63"), 0.005, 1, 0.005],
-            ["decay", msg("ui_eb866db5850f"), 0.01, 2, 0.01],
-            ["sustain", msg("ui_d76b0d191577"), 0.01, 1, 0.01],
-            ["release", msg("ui_f73b278fdaba"), 0.05, 3, 0.01],
-            ["glide", msg("ui_6c6fd1c7cf9c"), 0, 0.5, 0.005],
-            ["pan", "PAN", -1, 1, 0.01],
-            ["unison", msg("ui_53b6408b26c1"), 1, 3, 1],
-            ["detune", msg("ui_d57268622512"), 0, 20, 0.5],
-          ],
+  type SoundNumber =
+    | "osc2Mix"
+    | "cutoff"
+    | "resonance"
+    | "attack"
+    | "decay"
+    | "sustain"
+    | "release"
+    | "glide"
+    | "unison"
+    | "detune";
+  const defs: Array<
+      [SoundNumber | "volume" | "pan", string, number, number, number]
+    > = ["drums", "gm"].includes(trackKind(ctx.project, ctx.selectedTrack))
+      ? [
+          ["volume", msg("ui_f481cc60f17a"), 0, 1, 0.01],
+          ["pan", "PAN", -1, 1, 0.01],
+        ]
+      : [
+          ["volume", msg("ui_f481cc60f17a"), 0, 1, 0.01],
+          ["osc2Mix", msg("ui_126c91105eb0"), 0, 1, 0.01],
+          ["cutoff", msg("ui_49f37bf2cfd3"), 120, 10000, 1],
+          ["resonance", msg("ui_4788370c8385"), 0.1, 16, 0.1],
+          ["attack", msg("ui_df86d4b6db63"), 0.005, 1, 0.005],
+          ["decay", msg("ui_eb866db5850f"), 0.01, 2, 0.01],
+          ["sustain", msg("ui_d76b0d191577"), 0.01, 1, 0.01],
+          ["release", msg("ui_f73b278fdaba"), 0.05, 3, 0.01],
+          ["glide", msg("ui_6c6fd1c7cf9c"), 0, 0.5, 0.005],
+          ["pan", "PAN", -1, 1, 0.01],
+          ["unison", msg("ui_53b6408b26c1"), 1, 3, 1],
+          ["detune", msg("ui_d57268622512"), 0, 20, 0.5],
+        ],
     format = (key: string, v: number) =>
       key === "cutoff"
         ? `${Math.round(v)} Hz`
@@ -240,7 +191,7 @@ export function renderInspector(ctx: RuntimeContext) {
     }
     mountDial(host, {
       label,
-      value: (key === "volume" || key === "pan" ? mixer : cfg)[key],
+      value: key === "volume" || key === "pan" ? mixer[key] : (cfg[key] ?? 0),
       min,
       max,
       step,
@@ -248,7 +199,8 @@ export function renderInspector(ctx: RuntimeContext) {
       format: (value) => String(format(key, value)),
       onStart: ctx.snapshot,
       onChange: (value) => {
-        (key === "volume" || key === "pan" ? mixer : cfg)[key] = value;
+        if (key === "volume" || key === "pan") mixer[key] = value;
+        else cfg[key] = value;
         ctx.engine.setProject(ctx.project);
       },
       onCommit: () => ctx.changed(),
@@ -277,7 +229,11 @@ export function renderInspector(ctx: RuntimeContext) {
   };
 }
 
-export function applyPreset(ctx: RuntimeContext, track: TrackId, name: string) {
+export function applyPreset(
+  ctx: InstrumentsContext,
+  track: TrackId,
+  name: string,
+) {
   const c = activeClip(ctx.project, track).instrument,
     fx = activeClip(ctx.project, track).character.fx,
     bank: any = {
@@ -464,17 +420,20 @@ export function applyPreset(ctx: RuntimeContext, track: TrackId, name: string) {
         },
       },
     },
-    patch = bank[track][name] || {},
+    patch = bank[builtinKind(trackKind(ctx.project, track))]?.[name] || {},
     { fx: fxPatch, ...instrument } = patch;
   Object.assign(c, instrumentSettings(track, { ...c, ...instrument }));
   if (fxPatch) Object.assign(fx, fxPatch);
   c.preset = name;
 }
 
-export function renderArp(ctx: RuntimeContext) {
+export function renderArp(ctx: InstrumentsContext) {
   const { arp, lfo } = ctx.clip().character as any,
     $panel = ctx.$(".arp-rack");
-  $panel.classList.toggle("disabled", ctx.selectedTrack === "drums");
+  $panel.classList.toggle(
+    "disabled",
+    trackKind(ctx.project, ctx.selectedTrack) === "drums",
+  );
   ctx.$("#arpEnabled").checked = arp.enabled;
   ctx.$("#arpMode").value = arp.mode;
   ctx.$("#arpOctaves").value = arp.octaves;
@@ -521,7 +480,7 @@ export function renderArp(ctx: RuntimeContext) {
   }
 }
 
-export function renderFx(ctx: RuntimeContext) {
+export function renderFx(ctx: InstrumentsContext) {
   const fx = ctx.clip().character.fx,
     defs = [
       ["saturation", msg("ui_33d2f0e12f33")],
@@ -557,7 +516,7 @@ export function renderFx(ctx: RuntimeContext) {
   });
 }
 
-export function macroMarkup(ctx: RuntimeContext, container: any) {
+export function macroMarkup(ctx: InstrumentsContext, container: any) {
   const macros = ctx.clip().character.macros,
     names: Record<string, string> = {
       energy: msg("ui_b3eb6065b291"),
@@ -592,7 +551,7 @@ export function macroMarkup(ctx: RuntimeContext, container: any) {
   });
 }
 
-export function renderClipControls(ctx: RuntimeContext) {
+export function renderClipControls(ctx: InstrumentsContext) {
   const c = ctx.clip(),
     trackClips = clipsForTrack(ctx.project, ctx.selectedTrack);
   ctx.$("#clipSelect").innerHTML = trackClips
@@ -602,6 +561,10 @@ export function renderClipControls(ctx: RuntimeContext) {
     )
     .join("");
   ctx.$("#deleteClipBtn").disabled = trackClips.length <= 1;
+  const barOptions = [...new Set([1, 2, 4, 8, c.bars])].sort((a, b) => a - b);
+  ctx.$("#barsSelect").innerHTML = barOptions
+    .map((bars) => `<option value="${bars}">${bars}</option>`)
+    .join("");
   ctx.$("#barsSelect").value = c.bars;
   ctx.$("#gridSelect").value = ctx.project.editor.snap;
   ctx.$("#zoomRange").value = ctx.project.editor.zoom;
@@ -640,7 +603,7 @@ export function renderClipControls(ctx: RuntimeContext) {
   ctx.$("#deleteClipBtn").onclick = () => ctx.requestClipDelete(c.id);
 }
 
-export function renderHarmony(ctx: RuntimeContext) {
+export function renderHarmony(ctx: InstrumentsContext) {
   ctx.$("#keySelect").innerHTML = KEYS.map(
     (k) => `<option ${k === ctx.project.key ? "selected" : ""}>${k}</option>`,
   ).join("");
@@ -663,8 +626,10 @@ export function renderHarmony(ctx: RuntimeContext) {
   ctx.$$("[data-generate]").forEach((b) => {
     const type = b.dataset.generate;
     b.disabled =
-      (ctx.selectedTrack === "drums" && type !== "drums") ||
-      (ctx.selectedTrack !== "drums" && type === "drums");
+      (trackKind(ctx.project, ctx.selectedTrack) === "drums" &&
+        type !== "drums") ||
+      (trackKind(ctx.project, ctx.selectedTrack) !== "drums" &&
+        type === "drums");
     b.onclick = () => {
       ctx.snapshot();
       generateClip(
@@ -686,20 +651,20 @@ export function renderHarmony(ctx: RuntimeContext) {
   };
 }
 
-export function updateOrb(ctx: RuntimeContext) {
+export function updateOrb(ctx: InstrumentsContext) {
   const macros = ctx.clip().character.macros,
     o = ctx.$("#performanceOrb");
   o.style.transform = `scale(${0.9 + macros.energy * 0.12})`;
   o.style.filter = `saturate(${0.7 + macros.tension}) brightness(${0.8 + macros.space * 0.35})`;
 }
 
-export function formatLocator(ctx: RuntimeContext, step: number) {
+export function formatLocator(ctx: InstrumentsContext, step: number) {
   const bar = meterSteps(ctx.project.meter),
     seconds = (step * 60) / ctx.project.tempo / 4;
   return `${msg("ui_a5d5c1bba91f")} ${Math.floor(step / bar) + 1} · ${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 }
 
-export function userPresets(ctx: RuntimeContext): UserPreset[] {
+export function userPresets(ctx: InstrumentsContext): UserPreset[] {
   try {
     return JSON.parse(localStorage.getItem(ctx.USER_PRESETS) || "[]");
   } catch {
@@ -707,11 +672,11 @@ export function userPresets(ctx: RuntimeContext): UserPreset[] {
   }
 }
 
-export function saveUserPresets(ctx: RuntimeContext, items: UserPreset[]) {
+export function saveUserPresets(ctx: InstrumentsContext, items: UserPreset[]) {
   localStorage.setItem(ctx.USER_PRESETS, JSON.stringify(items));
 }
 
-export function renderPresetLibrary(ctx: RuntimeContext) {
+export function renderPresetLibrary(ctx: InstrumentsContext) {
   const query = String(ctx.$("#presetSearch").value || "").toLowerCase(),
     favorites = ctx.presetFavorites(),
     builtins = TRACKS.flatMap((track) =>
@@ -774,14 +739,14 @@ export function renderPresetLibrary(ctx: RuntimeContext) {
   });
 }
 
-export async function saveCurrentPreset(ctx: RuntimeContext) {
+export async function saveCurrentPreset(ctx: InstrumentsContext) {
   const result = await requestFields({
     title: msg("ui_eb39e1d78db8"),
     fields: [
       {
         name: "name",
         label: msg("ui_eb39e1d78db8"),
-        value: `${TRACK_META[ctx.selectedTrack].label} CUSTOM`,
+        value: `${trackMeta(ctx.project, ctx.selectedTrack).label} CUSTOM`,
       },
       {
         name: "tags",
@@ -809,7 +774,10 @@ export async function saveCurrentPreset(ctx: RuntimeContext) {
   ctx.toast(translate("Preset saved", "Preset guardado"));
 }
 
-export async function loadLocalSample(ctx: RuntimeContext, asset: SampleAsset) {
+export async function loadLocalSample(
+  ctx: InstrumentsContext,
+  asset: SampleAsset,
+) {
   const blob = await ctx.getAsset(asset.id);
   if (!blob) {
     ctx.toast(`${DRUM_NAMES[asset.slot]} · ${msg("ui_bfe4c8a80f66")}`);
@@ -818,7 +786,7 @@ export async function loadLocalSample(ctx: RuntimeContext, asset: SampleAsset) {
   await ctx.engine.setDrumSample(asset.slot, await blob.arrayBuffer(), asset);
 }
 
-export async function loadLocalSamples(ctx: RuntimeContext) {
+export async function loadLocalSamples(ctx: InstrumentsContext) {
   for (const slot of ctx.engine.drumSamples.keys())
     if (!ctx.project.samples.some((asset: SampleAsset) => asset.slot === slot))
       ctx.engine.clearDrumSample(slot);
@@ -828,7 +796,7 @@ export async function loadLocalSamples(ctx: RuntimeContext) {
     } catch {}
 }
 
-export function renderSampleSlots(ctx: RuntimeContext) {
+export function renderSampleSlots(ctx: InstrumentsContext) {
   ctx.$("#sampleSlots").innerHTML = DRUM_NAMES.map((name, slot) => {
     const asset = ctx.project.samples.find(
       (item: SampleAsset) => item.slot === slot,
@@ -874,7 +842,18 @@ export function renderSampleSlots(ctx: RuntimeContext) {
           if (!asset) return;
           ctx.snapshot();
           const key = input.dataset.sampleSetting;
-          asset[key] = input.type === "checkbox" ? input.checked : +input.value;
+          if (key === "reverse") asset.reverse = input.checked;
+          else {
+            const numeric = [
+              "trimStart",
+              "trimEnd",
+              "tune",
+              "attack",
+              "release",
+            ] as const;
+            if (!numeric.includes(key)) return;
+            asset[key as (typeof numeric)[number]] = +input.value;
+          }
           if (asset.trimEnd <= asset.trimStart)
             asset.trimEnd = Math.min(1, asset.trimStart + 0.05);
           await ctx.loadLocalSample(asset);
@@ -900,7 +879,7 @@ export function renderSampleSlots(ctx: RuntimeContext) {
   });
 }
 
-export function setupSampleSlicing(ctx: RuntimeContext) {
+export function setupSampleSlicing(ctx: InstrumentsContext) {
   const decorate = () =>
     ctx.$$("[data-sample-slot]").forEach((row) => {
       const slot = +row.dataset.sampleSlot,

@@ -61,7 +61,7 @@
   color: var(--ink);
 }
 .studio-header .brand-word b:last-child {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
   letter-spacing: 0.16em;
   margin-top: 4px;
@@ -102,7 +102,7 @@
   top: 44px;
   left: 12px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: normal;
   margin: 0;
 }
@@ -157,7 +157,7 @@
 }
 .studio-header .transport .tempo span,
 .studio-header .transport .count-in span {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
   letter-spacing: 0.04em;
 }
@@ -178,7 +178,7 @@
   font-size: 12px;
 }
 .studio-header .transport .toggle {
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: normal;
 }
 .studio-header .top-actions {
@@ -252,7 +252,7 @@
   gap: 8px;
   min-height: 70px;
   padding: 10px 3px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 500;
   border: 1px solid transparent;
   background: transparent;
@@ -343,7 +343,9 @@
 }
 .studio-trackbar #tracks {
   display: grid;
-  grid-template-columns: repeat(5, minmax(142px, 1fr));
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(142px, 1fr);
   gap: 8px;
 }
 .studio-trackbar .track {
@@ -403,7 +405,7 @@
   min-height: 28px;
   height: 28px;
   width: 32px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   padding: 0;
 }
 .studio-content {
@@ -556,14 +558,14 @@
   }
   .studio-header .project-head #saveState {
     position: static;
-    font-size: 10px;
+    font-size: var(--text-xs);
     margin-top: 0;
   }
   .studio-header .top-actions {
     gap: 5px;
   }
   .studio-header .top-actions #exportAsBtn {
-    font-size: 11px;
+    font-size: var(--text-xs);
     padding: 7px;
   }
   .studio-header .top-actions #menuBtn {
@@ -614,7 +616,7 @@
     min-height: 56px;
     padding: 6px 3px;
     gap: 4px;
-    font-size: 11px;
+    font-size: var(--text-xs);
     border-radius: 9px;
   }
   .studio-nav button svg {
@@ -654,7 +656,7 @@
     padding: 10px;
   }
   .studio-trackbar .track small {
-    font-size: 11px;
+    font-size: var(--text-xs);
   }
   .studio-subnav {
     width: 100%;
@@ -685,7 +687,7 @@
   .studio-shell > footer {
     flex-wrap: wrap;
     justify-content: center;
-    font-size: 10px;
+    font-size: var(--text-xs);
     padding: 12px;
   }
   .studio-shell > footer .signal-health,
@@ -751,7 +753,7 @@
   grid-template-columns: auto auto;
   align-items: center;
   gap: 7px;
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .density-control select {
   min-height: 40px;
@@ -793,7 +795,7 @@
   min-height: 36px;
   padding: 6px 9px;
   border: 1px solid transparent;
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .studio-subnav .mode-actions button#undoBtn,
 .studio-subnav .mode-actions button#redoBtn,
@@ -801,7 +803,7 @@
   width: 36px;
 }
 .studio-subnav .mode-actions kbd {
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 .studio-transport-context {
   display: flex;
@@ -921,7 +923,7 @@ html[data-density="compact"] #app .composition-tools {
     min-height: 0;
   }
   .studio-contextbar .eyebrow {
-    font-size: 10px;
+    font-size: var(--text-xs);
   }
   #app .studio-contextbar .studio-context-actions {
     justify-content: flex-start;
@@ -952,7 +954,7 @@ html[data-density="compact"] #app .composition-tools {
     display: none;
   }
   .studio-transport-context {
-    font-size: 10px;
+    font-size: var(--text-xs);
     gap: 6px 12px;
   }
   #app .studio-footer footer {
@@ -1036,7 +1038,9 @@ html[data-density="compact"] #app .composition-tools {
   justify-content: flex-end;
 }
 #app .studio-trackbar #tracks {
-  grid-template-columns: repeat(5, minmax(210px, 1fr));
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(210px, 1fr);
 }
 #app .studio-trackbar .track {
   display: grid;
@@ -1091,7 +1095,7 @@ html[data-density="compact"] #app .composition-tools {
   padding: 0;
   background: transparent;
   border-color: transparent;
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 #app .studio-trackbar .track-switches button.on {
   background: #293c47;
@@ -1139,6 +1143,27 @@ html[data-density="compact"] #app .composition-tools {
   }
   #app .studio-trackbar .track-select {
     min-height: 60px;
+  }
+}
+
+/* Keep the editable project title usable alongside the extra Master control. */
+@media (max-width: 540px) {
+  .studio-header {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+  .studio-header .project-head {
+    grid-column: 2;
+    width: 100%;
+  }
+  .studio-header .project-head #saveState {
+    white-space: nowrap;
+  }
+  .studio-header .top-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .studio-header .transport {
+    grid-row: 3;
   }
 }
 /* Focus and density share one state across shortcuts, menus and workspace actions. */
@@ -1207,7 +1232,7 @@ html[data-density="compact"] #app .composition-tools {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   #app .transport-settings summary {
-    font-size: 11px;
+    font-size: var(--text-xs);
     padding: 8px;
   }
   #app .transport .transport-options input,
@@ -1361,5 +1386,48 @@ html[data-density="compact"] #app .composition-tools {
     box-shadow:
       inset 0 2px var(--magenta),
       0 0 15px #c04fcf35;
+  }
+}
+
+/* Dynamic track collections share one scroll axis, without shrinking touch controls. */
+.track-rail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.track-rail-actions button {
+  flex: 1 1 130px;
+}
+#app .launcher-grid {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(180px, 1fr);
+  overflow-x: auto;
+}
+#app .mixer-channels {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(188px, 1fr);
+  overflow-x: auto;
+}
+@media (pointer: coarse) {
+  #app .track [data-mute],
+  #app .track [data-solo],
+  .studio-subnav button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  input:not([type="range"]):not([type="checkbox"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@media (pointer: coarse) {
+  #app .studio-trackbar .track {
+    height: auto;
+    min-height: 112px;
   }
 }

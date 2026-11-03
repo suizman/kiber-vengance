@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "program-055",
+  "kind": "program",
+  "number": 55,
+  "name": "orchestra hit",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0550_FluidR3_GM_sf2_file.js",
+    "sha256": "233ea40e912917dbe704c3b1987fad84f3d3247d90f3123cf1d413794293e0c1",
+    "bytes": 32558
+  },
+  "zones": [
+    {
+      "midi": 55,
+      "originalPitch": 6800,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 68,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.01485261,
+      "sample": {
+        "path": "samples/b7b69cb04c7cc197840401ca10bed5db3e909d067d29ba986b41f55e4dea698f.mp3",
+        "sha256": "b7b69cb04c7cc197840401ca10bed5db3e909d067d29ba986b41f55e4dea698f",
+        "bytes": 15145,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 55,
+      "originalPitch": 8000,
+      "keyRangeLow": 69,
+      "keyRangeHigh": 96,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.06741497,
+      "sample": {
+        "path": "samples/26fb0212f1723f384ee2648b183423fb122ebeaa407cb56327e981ba3af99caf.mp3",
+        "sha256": "26fb0212f1723f384ee2648b183423fb122ebeaa407cb56327e981ba3af99caf",
+        "bytes": 8829,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

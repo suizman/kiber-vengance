@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-117",
+  "kind": "program",
+  "number": 117,
+  "name": "melodic tom",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1170_FluidR3_GM_sf2_file.js",
+    "sha256": "4e0d10117cd5ed7d8ca964dd6d3345d41c6cf4f93b7b38f8d075bdce6bce8257",
+    "bytes": 21297
+  },
+  "zones": [
+    {
+      "midi": 117,
+      "originalPitch": 5200,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": -1,
+      "fineTune": -23,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.00521542,
+      "sample": {
+        "path": "samples/e540e05cb25fa62549de1a8a1f298235740888d0f8f29ca06bf25473381ba997.mp3",
+        "sha256": "e540e05cb25fa62549de1a8a1f298235740888d0f8f29ca06bf25473381ba997",
+        "bytes": 15712,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

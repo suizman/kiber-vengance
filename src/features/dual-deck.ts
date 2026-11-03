@@ -3,9 +3,6 @@ import { normalizeOutputMix } from "../core";
 import { renderDeck, bindDeck } from "./deck-controller";
 import type { DeckMixerContext } from "../state/contracts";
 
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
-
 export function setupDualDeck(ctx: DeckMixerContext) {
   const primary = ctx.$(".scratch-deck") as HTMLElement;
   const layout = document.createElement("div");

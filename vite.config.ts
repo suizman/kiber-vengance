@@ -32,6 +32,7 @@ export default defineConfig({
   }],
   build: {
     outDir: "dist",
+    manifest: true,
     emptyOutDir: true,
     target: "es2022",
     sourcemap: false,
@@ -40,6 +41,7 @@ export default defineConfig({
       input: {
         studio: "index.html",
         core: "src/core.ts",
+        scores: "src/score/parse.ts",
         audio: "src/audio.ts",
         melody: "src/ai/melody.ts",
         presets: "src/ai/presets.ts",
@@ -49,7 +51,7 @@ export default defineConfig({
       },
       output: {
         entryFileNames: (chunk) =>
-          ["core", "audio", "melody", "presets", "composer", "recipes", "scratch-worklet"].includes(chunk.name)
+          ["core", "scores", "audio", "melody", "presets", "composer", "recipes", "scratch-worklet"].includes(chunk.name)
             ? "[name].js"
             : "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",

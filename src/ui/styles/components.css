@@ -124,7 +124,7 @@ dialog :is(button, select, input, label) {
 }
 #app .editor-head .eyebrow {
   width: 100%;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   margin: 0;
 }
@@ -168,7 +168,7 @@ dialog :is(button, select, input, label) {
 }
 #app :is(.global-locator, .clip-locator) label span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 #app :is(.global-locator, .clip-locator) input {
@@ -260,7 +260,7 @@ dialog :is(button, select, input, label) {
   height: auto;
 }
 #app .automation-head > span {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 #app .automation-pane {
@@ -376,7 +376,7 @@ dialog :is(button, select, input, label) {
 }
 .studio-inspector .knob-control :is(label, output) {
   grid-column: 1/-1;
-  font-size: 11px;
+  font-size: var(--text-xs);
   margin: 0;
   color: var(--muted);
 }
@@ -547,7 +547,7 @@ dialog :is(button, select, input, label) {
   box-shadow: inset 0 -2px #0003;
 }
 #app .instrument-keyboard .keyboard-key span {
-  font-size: 10px;
+  font-size: var(--text-xs);
   opacity: 0.7;
 }
 #app .instrument-keyboard .keyboard-key.root::after {
@@ -664,7 +664,7 @@ dialog :is(button, select, input, label) {
   gap: 6px;
 }
 #app .scene-clips label span {
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 #app .scene-bottom {
   grid-template-columns: 68px 1fr 30px;
@@ -712,6 +712,10 @@ dialog :is(button, select, input, label) {
   min-width: 0;
   width: 100%;
 }
+#app .sampler-lab > header > div {
+  min-width: 0;
+  max-width: 100%;
+}
 #app .audio-track {
   background-color: #121820;
 }
@@ -728,7 +732,7 @@ dialog :is(button, select, input, label) {
 #app .audio-region header button {
   min-height: 32px;
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 #app .audio-region b {
   font-size: 12px;
@@ -861,7 +865,7 @@ dialog :is(button, select, input, label) {
   font-size: 13px;
 }
 .mixer-channel header span {
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 #app .mixer-channel label {
   font-size: 12px;
@@ -1167,7 +1171,7 @@ dialog {
   font-size: 14px;
 }
 .command-item kbd {
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .command-item.active {
   background: #2a4545;
@@ -1193,6 +1197,7 @@ dialog {
   font-size: 12px;
 }
 #toast {
+  pointer-events: none;
   max-width: min(460px, calc(100vw - 32px));
   right: 24px;
   bottom: 24px;
@@ -1205,6 +1210,9 @@ dialog {
   color: var(--ink);
   letter-spacing: normal;
   z-index: 90;
+}
+#toast.show {
+  pointer-events: auto;
 }
 #toast button {
   margin-left: 12px;

@@ -1,181 +1,106 @@
 import { mountLevel } from "../ui/level-control";
 import { mountAudioEffects } from "../ui/audio-effects";
-import {
-  requestFields,
-  requestText,
-  requestNumber,
-  requestConfirmation,
-} from "../ui/dialogs";
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
-
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
-
-import { mountDial } from "../ui/components/dial";
-
-import { studioBridge, type StudioView } from "../ui/bridge";
+import { requestFields, requestConfirmation } from "../ui/dialogs";
+import { t as msg, translate } from "../ui/i18n";
 
 import {
-  createProject,
-  createEmptyProject,
-  migrateProject,
-  activeClip,
-  clipsForTrack,
-  createClip,
   clipLengthSteps,
-  meterSteps,
-  setProjectMeter,
-  makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
-  resizeClip,
-  quantizeClip,
   automationValue,
-  generateClip,
-  generateBacking,
-  encodeMidi,
-  playbackEvents,
-  History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
-  addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
   createAudioLane,
   createAudioRegion,
-  audioRegionRate,
   createAutomationLane,
-  detectTransientSlices,
   transformNotes,
   cryptoId,
-  samplerDefaults,
 } from "../core.js";
-
-import { AudioEngine, renderWav } from "../audio.js";
 
 import type {
   AudioLane,
   AudioRegion,
   AutomationLane,
-  MidiMapping,
   ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
 } from "../model.js";
 
-import type { RuntimeContext } from "../app";
+import type { AudioStudioContext } from "../state/contracts";
 
-type Language = "en" | "es";
-
-type QuickExportKind =
-  | "wav"
-  | "midi"
-  | "project"
-  | "clip-wav"
-  | "clip-midi"
-  | "stems"
-  | "bundle"
-  | "performance";
-
-type QuickTarget = {
-  handle: any | null;
-  fallback: boolean;
-  cancelled: boolean;
-  name: string;
-  type: string;
-};
-
-type UserPreset = {
-  id: string;
-  name: string;
-  track: TrackId;
-  tags: string[];
-  instrument: import("../model.js").InstrumentState;
-  character: any;
-};
-
-type CommandAction = {
-  label: string;
-  labelEs: string;
-  group: string;
-  groupEs: string;
-  shortcut: string;
-  icon: string;
-  keywords: string;
-  run: () => void;
-};
-
-export function renderAutomation(ctx: RuntimeContext) {
-  const c = ctx.clip(),
-    steps = clipLengthSteps(c),
-    zoom = ctx.project.editor.zoom,
-    param = ctx.project.editor.automationParam,
-    lane: any = (c.automation as any)[param];
+const automationViews = new WeakMap<Element, { paint(): void }>();
+export function renderAutomation(ctx: AudioStudioContext) {
+  const clip = ctx.clip(),
+    steps = clipLengthSteps(clip),
+    zoom = ctx.project.editor.zoom;
+  const param = ctx.project.editor.automationParam,
+    lane = clip.automation[param];
   ctx.$("#automationParam").value = param;
-  const el = ctx.$("#automationLane");
+  const el = ctx.$("#automationLane") as HTMLElement,
+    pane = ctx.$("#automationPane") as HTMLElement;
   el.style.width = `${steps * zoom}px`;
-  el.innerHTML =
-    Array.from({ length: steps }, (_, s) => {
-      const value = automationValue(c, param, s, 0.5),
-        point = lane[s] != null;
-      return `<i class="automation-step ${point ? "point" : ""}" style="left:${s * zoom}px;width:${zoom}px;--value:${value}" data-step="${s}"></i>`;
-    }).join("") +
-    `<div class="automation-playhead" style="left:${Math.max(0, ctx.currentStep % steps) * zoom}px"></div>`;
-  const draw = (e: any) => {
-    const rect = el.getBoundingClientRect(),
-      step = Math.max(
-        0,
-        Math.min(
-          steps - 1,
-          Math.round((e.clientX - rect.left) / zoom / ctx.project.editor.snap) *
-            ctx.project.editor.snap,
-        ),
-      ),
-      value = Math.max(
-        0,
-        Math.min(1, 1 - (e.clientY - rect.top) / rect.height),
+  const paint = () => {
+    const start = Math.max(0, Math.floor(pane.scrollLeft / zoom) - 4),
+      end = Math.min(
+        Math.ceil(steps),
+        Math.ceil((pane.scrollLeft + (pane.clientWidth || 1000)) / zoom) + 4,
       );
-    lane[step] = value;
-    ctx.renderAutomation();
+    const head = el.querySelector<HTMLElement>(".automation-playhead");
+    const headLeft =
+      head?.style.left ?? `${Math.max(0, ctx.currentStep % steps) * zoom}px`;
+    el.innerHTML =
+      Array.from({ length: Math.max(0, end - start) }, (_, index) => {
+        const step = start + index,
+          value = automationValue(clip, param, step, 0.5);
+        return `<i class="automation-step ${lane[step] != null ? "point" : ""}" style="left:${step * zoom}px;width:${zoom}px;--value:${value}" data-step="${step}"></i>`;
+      }).join("") +
+      `<div class="automation-playhead" style="left:${headLeft}"></div>`;
+  };
+  if (!automationViews.has(pane))
+    pane.addEventListener("scroll", () => automationViews.get(pane)?.paint(), {
+      passive: true,
+    });
+  automationViews.set(pane, { paint });
+  const draw = (event: PointerEvent) => {
+    const rect = el.getBoundingClientRect(),
+      snap = ctx.project.editor.snap;
+    const step = Math.max(
+      0,
+      Math.min(
+        steps - 1,
+        Math.round((event.clientX - rect.left) / zoom / snap) * snap,
+      ),
+    );
+    lane[step] = Math.max(
+      0,
+      Math.min(1, 1 - (event.clientY - rect.top) / rect.height),
+    );
+    paint();
     ctx.engine.setProject(ctx.project);
   };
-  el.onpointerdown = (e: any) => {
+  el.onpointerdown = (event: PointerEvent) => {
+    if (!event.isPrimary || event.button > 0) return;
+    event.preventDefault();
     ctx.snapshot();
-    draw(e);
-    const move = (ev: any) => draw(ev),
-      up = () => {
-        window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", up);
-        ctx.changed();
-      };
+    draw(event);
+    const move = (next: PointerEvent) => {
+      if (next.pointerId === event.pointerId) draw(next);
+    };
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      window.removeEventListener("blur", end);
+      ctx.changed();
+    };
+    const up = (next: PointerEvent) => {
+      if (next.pointerId === event.pointerId) end();
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    window.addEventListener("blur", end);
   };
-  ctx.$("#automationPane").scrollLeft = ctx.$("#rollPane").scrollLeft;
+  pane.scrollLeft = ctx.$("#rollPane").scrollLeft;
+  paint();
 }
 
 export async function addAudioBlob(
-  ctx: RuntimeContext,
+  ctx: AudioStudioContext,
   blob: Blob,
   name = "",
   lane?: AudioLane,
@@ -209,7 +134,7 @@ export async function addAudioBlob(
   ctx.toast(msg("ui_d16fb4810603"), true);
 }
 
-export function renderAudioStudio(ctx: RuntimeContext) {
+export function renderAudioStudio(ctx: AudioStudioContext) {
   const root = ctx.$("#audioLanes");
   if (!root) return;
   root.innerHTML = ctx.project.audioLanes.length
@@ -349,7 +274,7 @@ export function renderAudioStudio(ctx: RuntimeContext) {
   ctx.installControlHelp();
 }
 
-export function renderGlobalAutomation(ctx: RuntimeContext) {
+export function renderGlobalAutomation(ctx: AudioStudioContext) {
   const root = ctx.$("#globalAutomation");
   if (!root) return;
   root.innerHTML =
@@ -449,7 +374,7 @@ export function renderGlobalAutomation(ctx: RuntimeContext) {
   });
 }
 
-export function setupV6Studio(ctx: RuntimeContext) {
+export function setupV6Studio(ctx: AudioStudioContext) {
   const scale = localStorage.getItem("kiber-vengance-ui-scale-v1") || "1";
   document.documentElement.style.setProperty("--ui-scale", scale);
   ctx.$("#uiScale").value = scale;
@@ -600,7 +525,7 @@ export function setupV6Studio(ctx: RuntimeContext) {
   ctx.loadAudioAssets();
 }
 
-export function setupV6Copy(ctx: RuntimeContext) {
+export function setupV6Copy(ctx: AudioStudioContext) {
   const sync = () => {
     const projectCopy = ctx.$(".export-choice:nth-child(3) span"),
       bundleCopy = ctx.$(".export-choice:nth-child(6) span");
@@ -612,7 +537,7 @@ export function setupV6Copy(ctx: RuntimeContext) {
   ctx.$("#menuLanguageSelect").addEventListener("change", sync);
 }
 
-export function setupV6Safety(ctx: RuntimeContext) {
+export function setupV6Safety(ctx: AudioStudioContext) {
   const syncScale = () =>
     ctx
       .$("#app")

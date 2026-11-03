@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "program-014",
+  "kind": "program",
+  "number": 14,
+  "name": "tubular bells",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0140_FluidR3_GM_sf2_file.js",
+    "sha256": "4c75879d7b72b223188213c709cba6f0c19f4b4b26752be7dce7004561e0435c",
+    "bytes": 153048
+  },
+  "zones": [
+    {
+      "midi": 14,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 66,
+      "loopStart": 61072,
+      "loopEnd": 62484,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04473923,
+      "sample": {
+        "path": "samples/c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004.mp3",
+        "sha256": "c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004",
+        "bytes": 22752,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 14,
+      "originalPitch": 8400,
+      "keyRangeLow": 67,
+      "keyRangeHigh": 75,
+      "loopStart": 61072,
+      "loopEnd": 62484,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04473923,
+      "sample": {
+        "path": "samples/c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004.mp3",
+        "sha256": "c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004",
+        "bytes": 22752,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 14,
+      "originalPitch": 8400,
+      "keyRangeLow": 76,
+      "keyRangeHigh": 84,
+      "loopStart": 61072,
+      "loopEnd": 62484,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04473923,
+      "sample": {
+        "path": "samples/c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004.mp3",
+        "sha256": "c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004",
+        "bytes": 22752,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 14,
+      "originalPitch": 8400,
+      "keyRangeLow": 85,
+      "keyRangeHigh": 94,
+      "loopStart": 61072,
+      "loopEnd": 62484,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04473923,
+      "sample": {
+        "path": "samples/c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004.mp3",
+        "sha256": "c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004",
+        "bytes": 22752,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    },
+    {
+      "midi": 14,
+      "originalPitch": 8400,
+      "keyRangeLow": 95,
+      "keyRangeHigh": 108,
+      "loopStart": 61072,
+      "loopEnd": 62484,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04473923,
+      "sample": {
+        "path": "samples/c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004.mp3",
+        "sha256": "c654c43a6454ec71b40f06f03b50cecff3d150b45db45da988d7a1820b0ce004",
+        "bytes": 22752,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

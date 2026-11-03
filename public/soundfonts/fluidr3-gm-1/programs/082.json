@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-082",
+  "kind": "program",
+  "number": 82,
+  "name": "lead 3 calliope",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0820_FluidR3_GM_sf2_file.js",
+    "sha256": "32acee8f206998b64cfb785404aaac571d195d32befbb432cf82f0b0a4826011",
+    "bytes": 36618
+  },
+  "zones": [
+    {
+      "midi": 82,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 24827,
+      "loopEnd": 63742,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.00886621,
+      "sample": {
+        "path": "samples/f9a6a6412a32da261f6079a576195e06fc8d613d98c114c74b3bff4278f5e716.mp3",
+        "sha256": "f9a6a6412a32da261f6079a576195e06fc8d613d98c114c74b3bff4278f5e716",
+        "bytes": 27197,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+X:1
+T:Kiber owned ABC fixture
+C:Original test CC0-1.0
+M:4/4
+L:1/4
+Q:1/4=120
+K:C
+V:1 name="Upper"
+V:2 clef=bass name="Lower"
+[V:1] |: [CE] D E F | [Q:1/4=60] G A B c :|
+[V:2] |: C,2 G,2 | C,2 G,2 :|

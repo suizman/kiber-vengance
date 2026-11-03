@@ -4,19 +4,20 @@ export type SaveState = "pending" | "saved" | "failed";
 export class ProjectEdit {
   private dirty = false;
   constructor(
-    private before: Project,
+    private current: () => Project,
     private history: History<Project>,
     private notify: () => void,
   ) {}
   markChanged() {
     if (!this.dirty) {
-      this.history.push(this.before);
+      this.history.push(this.current());
       this.dirty = true;
     }
   }
   commit() {
     if (this.dirty) {
       this.dirty = false;
+      this.history.finish?.(this.current());
       this.notify();
     }
   }
@@ -26,14 +27,16 @@ export class ProjectSession {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private lastRecovery = 0;
   private pending = false;
+  private revision = 0;
   constructor(
     private getProject: () => Project,
     readonly history: History<Project>,
     private options: {
-      storage: Pick<Storage, "setItem">;
+      storage?: Pick<Storage, "setItem">;
+      save?: (project: Project) => Promise<void>;
       key: string;
       status: (state: SaveState) => void;
-      recovery: (project: Project) => void;
+      recovery: (project: Project) => void | Promise<void>;
       recoveryFailed: () => void;
     },
   ) {}
@@ -41,13 +44,10 @@ export class ProjectSession {
     this.history.push(this.getProject());
   }
   beginEdit(notify: () => void) {
-    return new ProjectEdit(
-      structuredClone(this.getProject()),
-      this.history,
-      notify,
-    );
+    return new ProjectEdit(this.getProject, this.history, notify);
   }
   changed() {
+    this.revision++;
     this.pending = true;
     this.getProject().modifiedAt = Date.now();
     this.options.status("pending");
@@ -59,21 +59,34 @@ export class ProjectSession {
     this.pending = false;
     clearTimeout(this.timer);
     this.timer = undefined;
-    const project = this.getProject();
-    try {
-      this.options.storage.setItem(this.options.key, JSON.stringify(project));
-      this.options.status("saved");
-    } catch {
-      this.options.status("failed");
-      return;
-    }
-    if (Date.now() - this.lastRecovery > 60000) {
-      try {
-        this.options.recovery(project);
+    const project = this.getProject(),
+      revision = this.revision;
+    const succeeded = () => {
+      if (revision === this.revision) this.options.status("saved");
+      if (Date.now() - this.lastRecovery > 60000) {
         this.lastRecovery = Date.now();
-      } catch {
-        this.options.recoveryFailed();
+        try {
+          const result = this.options.recovery(project);
+          if (result instanceof Promise)
+            void result.catch(() => this.options.recoveryFailed());
+        } catch {
+          this.options.recoveryFailed();
+        }
       }
+    };
+    const failed = () => {
+      if (revision !== this.revision) return;
+      this.pending = true;
+      this.options.status("failed");
+    };
+    if (this.options.save)
+      return this.options.save(project).then(succeeded, failed);
+    try {
+      if (!this.options.storage) throw new Error("Project storage unavailable");
+      this.options.storage.setItem(this.options.key, JSON.stringify(project));
+      succeeded();
+    } catch {
+      failed();
     }
   }
   dispose() {

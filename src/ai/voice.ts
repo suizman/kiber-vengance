@@ -5,7 +5,7 @@ import {
 } from "./voice-safety";
 import expressiveWorkerUrl from "./chatterbox-worker.ts?worker&url";
 import workerUrl from "./voice-worker.ts?worker&url";
-import { acquireInference } from "./inference-lock";
+import { acquireInference, registerInferenceResource } from "./inference-lock";
 export interface SpeechSettings {
   engine?: "kokoro" | "chatterbox";
   device?: "wasm" | "webgpu";
@@ -212,3 +212,5 @@ export function speechWav(result: SpeechResult): Blob {
   );
   return new Blob([data], { type: "audio/wav" });
 }
+
+registerInferenceResource("voice", freeVoice);

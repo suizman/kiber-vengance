@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-126",
+  "kind": "program",
+  "number": 126,
+  "name": "applause",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1260_FluidR3_GM_sf2_file.js",
+    "sha256": "fb7a6c33d2c2721dd1262fd86229042ed98b9c4d2c9b42f69097cbe66c34ef21",
+    "bytes": 93179
+  },
+  "zones": [
+    {
+      "midi": 126,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 72192,
+      "loopEnd": 128516,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.04900227,
+      "sample": {
+        "path": "samples/be23f3e412d758f98a5a68d6c071b382cf5866c164c6f059291585593080ec99.mp3",
+        "sha256": "be23f3e412d758f98a5a68d6c071b382cf5866c164c6f059291585593080ec99",
+        "bytes": 69623,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

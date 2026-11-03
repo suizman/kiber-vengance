@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-127",
+  "kind": "program",
+  "number": 127,
+  "name": "gunshot",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1270_FluidR3_GM_sf2_file.js",
+    "sha256": "7b05a87bacd46d502b07f9ee58e3700e6018b11ab6055574aee9878be4f1ec79",
+    "bytes": 9700
+  },
+  "zones": [
+    {
+      "midi": 127,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 11025,
+      "ahdsr": false,
+      "anchor": 0.02439909,
+      "sample": {
+        "path": "samples/c8257f7525d87df3954b6117e637e1d2048721db2fd6ac772d7af453630d3ce2.mp3",
+        "sha256": "c8257f7525d87df3954b6117e637e1d2048721db2fd6ac772d7af453630d3ce2",
+        "bytes": 7022,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

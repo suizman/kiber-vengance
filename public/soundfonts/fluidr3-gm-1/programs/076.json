@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-076",
+  "kind": "program",
+  "number": 76,
+  "name": "blown bottle",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0760_FluidR3_GM_sf2_file.js",
+    "sha256": "4155b46924c503a86f063e18f77bf27cac25a977295a4f17e55f934247824b46",
+    "bytes": 20559
+  },
+  "zones": [
+    {
+      "midi": 76,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 8008,
+      "loopEnd": 26234,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.14378685,
+      "sample": {
+        "path": "samples/540820b70466bcd86fdce1c4776caf5bd5143bebe73d632c7f8a243055cc0fbb.mp3",
+        "sha256": "540820b70466bcd86fdce1c4776caf5bd5143bebe73d632c7f8a243055cc0fbb",
+        "bytes": 15152,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

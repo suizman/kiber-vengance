@@ -1,3 +1,13 @@
+import { createTempoClock } from "./state/tempo-clock";
+import { encodeWavPcm } from "./audio/wav-codec";
+import { encodeAudioBuffer, offlineContext } from "./audio/wav-export";
+import {
+  prepareGmNotes,
+  prepareGmProject,
+  playGmNote,
+  type SampleVoice,
+} from "./audio/gm-bank";
+import { projectTrackIds, trackState } from "./state/tracks";
 import { StereoMeter } from "./audio/meter";
 import { AudioFx } from "./audio/effects";
 import { normalizeOutputMix } from "./core";
@@ -21,12 +31,10 @@ import {
   songDurationSteps,
   sidechainFactor,
   secondsPerStep,
-  projectSeconds,
-  projectDuration,
-  tempoAtStep,
-  TRACKS,
 } from "./core.js";
 import type {
+  ClipCharacter,
+  MacroState,
   NoteExpression,
   Project,
   SamplerInstrument,
@@ -74,10 +82,63 @@ function applyWave(
   );
 }
 
+interface LiveVoice {
+  id: string;
+  track: TrackId;
+  pitch: number;
+  velocity: number;
+  channel: number | null;
+  cfg: TrackState;
+  macros: MacroState;
+  filter: BiquadFilterNode;
+  gain: GainNode;
+  pan: StereoPannerNode;
+  oscillators: Array<{ node: OscillatorNode; ratio: number }>;
+  expression: NoteExpression;
+}
+interface InstrumentBus {
+  pre: GainNode;
+  reverb: ConvolverNode;
+  input: GainNode;
+  tone: BiquadFilterNode;
+  saturation: WaveShaperNode;
+  shape: WaveShaperNode;
+  dry: GainNode;
+  chorus: DelayNode;
+  chorusWet: GainNode;
+  lfo: OscillatorNode;
+  depth: GainNode;
+  delay: DelayNode;
+  feedback: GainNode;
+  delayWet: GainNode;
+  reverbWet: GainNode;
+  output: GainNode;
+  sendOutput: GainNode;
+  analyser: AnalyserNode;
+  distortionAmount?: number;
+  saturationAmount?: number;
+}
+
 export class AudioEngine {
-  [key: string]: any;
-  ctx: any = null;
-  project: Project;
+  /** Assigned once by init(); public audio operations initialize or guard it. */
+  ctx!: AudioContext;
+  master!: GainNode;
+  masterTone!: BiquadFilterNode;
+  compressor!: DynamicsCompressorNode;
+  limiter!: DynamicsCompressorNode;
+  programGain!: GainNode;
+  analyser!: AnalyserNode;
+  captureDestination!: MediaStreamAudioDestinationNode;
+  impulse?: AudioBuffer;
+  sceneIndex = 0;
+  sceneStep = 0;
+  sceneRepeat = 0;
+  countInRemaining = 0;
+  sequenceStartTime = 0;
+  performanceRecorder?: MediaRecorder;
+  performanceChunks: Blob[] = [];
+  buses: Record<string, InstrumentBus> = {};
+  project!: Project;
   timer: ReturnType<typeof setInterval> | null = null;
   nextTime = 0;
   position = 0;
@@ -92,9 +153,17 @@ export class AudioEngine {
   songMode = false;
   lastFrequency: Partial<Record<TrackId, number>> = {};
   metronome = false;
-  liveVoices = new Map<string, any>();
+  liveVoices = new Map<string, LiveVoice>();
   samplerBuffer: AudioBuffer | null = null;
-  samplerVoices = new Map<string, any>();
+  samplerVoices = new Map<
+    string,
+    {
+      source: AudioBufferSourceNode;
+      filter: BiquadFilterNode;
+      gain: GainNode;
+      settings: SamplerInstrument;
+    }
+  >();
   launchQueue = new Map<TrackId, { clipId: string; quantization: number }>();
   launcherStopped = new Set<TrackId>();
   onLaunch: ((track: TrackId, clipId: string, step: number) => void) | null =
@@ -254,12 +323,11 @@ export class AudioEngine {
       info: Record<string, unknown>,
     ) => void = () => {},
   ) {
-    this.project = null as unknown as Project;
     this.onStep = onStep;
   }
   async init() {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)({
+      this.ctx = new (window.AudioContext || window.webkitAudioContext!)({
         latencyHint: "interactive",
       });
       this.master = this.ctx.createGain();
@@ -468,8 +536,13 @@ export class AudioEngine {
       }
     );
   }
+  private tempoClock?: ReturnType<typeof createTempoClock>;
+  private get clock() {
+    return (this.tempoClock ??= createTempoClock(this.project));
+  }
   setProject(project: Project) {
     this.project = project;
+    this.tempoClock = createTempoClock(project);
     if (this.samplerOutput)
       this.samplerOutput.gain.setTargetAtTime(
         project.sampler.gain,
@@ -537,13 +610,40 @@ export class AudioEngine {
       this.finalInput.channelCountMode = project.masterSettings?.monoCheck
         ? "explicit"
         : "max";
-      for (const id of TRACKS) {
+      this.createEffectBuses();
+      for (const id of projectTrackIds(this.project)) {
         this.updateEffectBus(
           id,
           clipTrackState(project, activeClip(project, id), this.position),
           activeClip(project, id).character,
         );
       }
+    }
+  }
+  private launchReservations: Array<() => void> = [];
+  get loadingInstruments() {
+    return Boolean(this.starting);
+  }
+  private pendingLaunches = new Map<TrackId, AbortController>();
+  async prepareClipLaunch(track: TrackId, clipId: string) {
+    this.pendingLaunches.get(track)?.abort();
+    const request = new AbortController();
+    this.pendingLaunches.set(track, request);
+    try {
+      const prepared = {
+        ...this.project,
+        activeClipIds: { ...this.project.activeClipIds, [track]: clipId },
+      };
+      const release = await prepareGmProject(prepared, false, request.signal);
+      if (request.signal.aborted || !this.playing) {
+        release();
+        return false;
+      }
+      this.launchReservations.push(release);
+      return true;
+    } finally {
+      if (this.pendingLaunches.get(track) === request)
+        this.pendingLaunches.delete(track);
     }
   }
   queueClip(track: TrackId, clipId: string, quantization = 16) {
@@ -562,8 +662,14 @@ export class AudioEngine {
   }
   stopLauncherTrack(track: TrackId, stopped = true) {
     this.launcherStopped ??= new Set<TrackId>();
-    if (stopped) this.launcherStopped.add(track);
-    else this.launcherStopped.delete(track);
+    if (stopped) {
+      this.pendingLaunches.get(track)?.abort();
+      this.launcherStopped.add(track);
+      for (const [id, voice] of this.gmVoices)
+        if (voice.track === track) this.stopLive(id);
+      for (const [id, voice] of this.liveVoices)
+        if (voice.track === track) this.stopLive(id);
+    } else this.launcherStopped.delete(track);
     return stopped;
   }
   async setDrumSample(
@@ -626,7 +732,7 @@ export class AudioEngine {
     return decoded.duration;
   }
   clearSamplerSample() {
-    for (const id of [...this.samplerVoices.keys()]) this.stopSampler(id, true);
+    for (const id of this.samplerVoices.keys()) this.stopSampler(id, true);
     this.samplerBuffer = null;
   }
   private pendingSampler = new Map<string, symbol>();
@@ -644,7 +750,7 @@ export class AudioEngine {
     if (!buffer) return false;
     this.stopSampler(id, true);
     while (this.samplerVoices.size >= Math.max(1, settings.polyphony || 12))
-      this.stopSampler(this.samplerVoices.keys().next().value, true);
+      this.stopSampler(this.samplerVoices.keys().next().value!, true);
     const now = this.ctx.currentTime,
       start = Math.max(0, Math.min(0.98, settings.trimStart)) * buffer.duration,
       end =
@@ -701,9 +807,26 @@ export class AudioEngine {
     } catch {}
   }
   createEffectBuses() {
-    this.buses = {};
+    this.buses ??= {};
+    if (!this.project) return;
     const impulse = this.reverbImpulse();
-    for (const id of TRACKS) {
+    const ids = new Set(projectTrackIds(this.project));
+    for (const id of Object.keys(this.buses))
+      if (!ids.has(id)) {
+        const bus = this.buses[id]!;
+        try {
+          bus.lfo.stop();
+        } catch {}
+        for (const node of Object.values(bus))
+          if (node && typeof (node as AudioNode).disconnect === "function")
+            (node as AudioNode).disconnect();
+        this.instrumentMeters.get(id)?.dispose();
+        this.instrumentMeters.delete(id);
+        this.trackInputs.delete(id);
+        delete this.buses[id];
+      }
+    for (const id of projectTrackIds(this.project)) {
+      if (this.buses[id]) continue;
       const input = this.ctx.createGain(),
         tone = this.ctx.createBiquadFilter(),
         saturation = this.ctx.createWaveShaper(),
@@ -750,6 +873,8 @@ export class AudioEngine {
       lfo.start();
       this.instrumentMeters.set(id, new StereoMeter(this.ctx, analyser));
       this.buses[id] = {
+        pre,
+        reverb,
         input,
         tone,
         saturation,
@@ -771,8 +896,8 @@ export class AudioEngine {
   }
   updateEffectBus(
     id: TrackId,
-    cfg: any,
-    character: any,
+    cfg: TrackState,
+    character: ClipCharacter,
     time = this.ctx.currentTime,
   ) {
     const bus = this.buses?.[id];
@@ -782,7 +907,9 @@ export class AudioEngine {
       bypass = fx.bypass,
       space = 0.55 + macros.space * 0.75,
       energy = 0.78 + macros.energy * 0.25 + (macros.aggression || 0) * 0.32,
-      soloActive = TRACKS.some((track) => this.project.tracks[track].solo),
+      soloActive = projectTrackIds(this.project).some(
+        (track) => trackState(this.project, track).solo,
+      ),
       audible =
         mixAudible(this.project, id) &&
         (!soloActive || cfg.solo) &&
@@ -793,12 +920,16 @@ export class AudioEngine {
         Math.max(0, cfg.volume ?? 1) *
         sidechainFactor(this.project, cfg.groupId, time - this.lastKickTime);
     smooth(this.trackInputs.get(id)!.gain, dbToGain(cfg.preGainDb ?? 0));
-    bus.saturation.curve = this.saturationCurve(
-      bypass ? 0 : (fx.saturation || 0) * energy,
-    );
-    bus.shape.curve = this.distortionCurve(
-      bypass ? 0 : (fx.distortion || 0) * energy,
-    );
+    const saturation = bypass ? 0 : (fx.saturation || 0) * energy,
+      distortion = bypass ? 0 : (fx.distortion || 0) * energy;
+    if (bus.saturationAmount !== saturation) {
+      bus.saturation.curve = makeSaturationCurve(saturation);
+      bus.saturationAmount = saturation;
+    }
+    if (bus.distortionAmount !== distortion) {
+      bus.shape.curve = makeCurve(distortion);
+      bus.distortionAmount = distortion;
+    }
     smooth(
       bus.tone.gain,
       bypass ? 0 : ((fx.tone ?? 0.5) - 0.5) * 18 - macros.darkness * 2,
@@ -820,6 +951,13 @@ export class AudioEngine {
       audible ? (cfg.sendMode === "pre" ? 1 : fader) : 0,
     );
   }
+  private releaseGm: (() => void) | undefined;
+  private starting: AbortController | undefined;
+  private scheduledGm = new Set<SampleVoice>();
+  private gmVoices = new Map<
+    string,
+    { voice: SampleVoice; channel: number | null; track: TrackId }
+  >();
   async start(
     project: Project,
     {
@@ -827,9 +965,25 @@ export class AudioEngine {
       startStep = 0,
     }: { countInBars?: number; startStep?: number } = {},
   ) {
-    await this.init();
+    if (this.playing || this.starting) return;
+    const request = new AbortController();
+    this.starting = request;
+    try {
+      await this.init();
+      const release = await prepareGmProject(
+        project,
+        this.songMode,
+        request.signal,
+      );
+      if (request.signal.aborted) {
+        release();
+        return;
+      }
+      this.releaseGm = release;
+    } finally {
+      if (this.starting === request) this.starting = undefined;
+    }
     this.setProject(project);
-    if (this.playing) return;
     this.playing = true;
     this.nextTime = this.ctx.currentTime + 0.06;
     this.sceneIndex = 0;
@@ -866,6 +1020,18 @@ export class AudioEngine {
     this.regionGraphs.clear();
   }
   stop() {
+    for (const request of this.pendingLaunches.values()) request.abort();
+    this.pendingLaunches.clear();
+    for (const release of this.launchReservations) release();
+    this.launchReservations = [];
+    this.starting?.abort();
+    this.starting = undefined;
+    this.releaseGm?.();
+    this.releaseGm = undefined;
+    for (const id of this.gmVoices.keys()) this.stopLive(id, true);
+    for (const voice of this.scheduledGm)
+      voice.stop(this.ctx?.currentTime, true);
+    this.scheduledGm.clear();
     this.playing = false;
     this.countingIn = false;
     if (this.timer) clearInterval(this.timer);
@@ -876,11 +1042,11 @@ export class AudioEngine {
   }
   seek(step: number, songMode = this.songMode) {
     if (!this.project) return;
-    const requested = Math.max(0, Math.floor(step));
+    const requested = Math.max(0, step);
     if (this.playing && this.timer) this.stopActiveAudioRegions();
     if (!songMode) {
       const length = Math.max(
-        ...TRACKS.map((track) =>
+        ...projectTrackIds(this.project).map((track) =>
           clipLengthSteps(activeClip(this.project, track)),
         ),
       );
@@ -888,7 +1054,7 @@ export class AudioEngine {
       this.audioResumeStep = null;
       return this.position;
     }
-    const { durationSteps } = playbackEvents(this.project, { song: true }),
+    const durationSteps = songDurationSteps(this.project),
       target = requested % Math.max(1, durationSteps);
     this.audioResumeStep = target;
     let cursor = 0;
@@ -930,8 +1096,9 @@ export class AudioEngine {
       this.nextTime = this.ctx.currentTime + 0.03;
     while (this.nextTime < this.ctx.currentTime + 0.12) {
       const position = this.position,
-        base = secondsPerStep(tempoAtStep(this.project, position)),
-        wasCounting = this.countInRemaining > 0;
+        base = secondsPerStep(this.clock.tempo(position)),
+        wasCounting = this.countInRemaining > 0,
+        span = wasCounting ? 1 : this.stepSpan();
       if (wasCounting) {
         const count = this.countInRemaining;
         this.click(this.nextTime, count % 4 === 0);
@@ -939,22 +1106,43 @@ export class AudioEngine {
         this.countInRemaining--;
         if (this.countInRemaining === 0) this.countingIn = false;
       } else {
-        this.scheduleMusicStep(this.nextTime);
-        this.advanceTransport();
+        this.scheduleMusicStep(this.nextTime, span);
+        this.advanceTransport(span);
       }
-      this.nextTime += wasCounting
-        ? base
-        : projectDuration(this.project, position, 1);
+      this.nextTime += wasCounting ? base : this.clock.duration(position, span);
     }
   }
-  scheduleMusicStep(time: number) {
-    const beatSteps = this.project.meter?.unit === 8 ? 2 : 4;
+  private stepSpan() {
+    const scene = this.songMode
+      ? this.project.arrangement[this.sceneIndex]
+      : undefined;
+    let span = Math.min(1, 1 - (this.position % 1));
+    if (scene)
+      span = Math.min(
+        span,
+        sceneLengthSteps(this.project, scene) - this.sceneStep,
+      );
+    for (const track of projectTrackIds(this.project)) {
+      if (this.songMode && !scene?.clipIds[track]) continue;
+      const clip = scene
+        ? this.project.clips.find((c) => c.id === scene.clipIds[track])!
+        : activeClip(this.project, track);
+      const length = clipLengthSteps(clip),
+        local = (this.songMode ? this.sceneStep : this.position) % length;
+      span = Math.min(span, length - local);
+    }
+    return span > 1e-7 ? span : 1;
+  }
+  scheduleMusicStep(time: number, span = 1) {
+    const beatSteps = 16 / (this.project.meter?.unit || 4);
     if (this.metronome && this.position % beatSteps === 0)
       this.click(time, this.position % meterSteps(this.project.meter) === 0);
     const scene = this.songMode
         ? this.project.arrangement[this.sceneIndex]
         : null,
-      soloActive = TRACKS.some((track) => this.project.tracks[track].solo);
+      soloActive = projectTrackIds(this.project).some(
+        (track) => trackState(this.project, track).solo,
+      );
     if (
       mixAudible(this.project, "drums") &&
       !this.launcherStopped.has("drums") &&
@@ -968,14 +1156,14 @@ export class AudioEngine {
         (this.songMode ? this.sceneStep : this.position) %
         clipLengthSteps(drums);
       if (
-        notesAtStep(this.project, drums, "drums", local).some(
+        notesAtStep(this.project, drums, "drums", local, span).some(
           (note) => note.pitch === 0,
         )
       )
         this.lastKickTime = time;
     }
-    for (const track of TRACKS) {
-      if (this.songMode && !scene) continue;
+    for (const track of projectTrackIds(this.project)) {
+      if (this.songMode && (!scene || !scene.clipIds[track])) continue;
       const clip = scene
           ? this.project.clips.find((c) => c.id === scene.clipIds[track]) ||
             activeClip(this.project, track)
@@ -993,7 +1181,7 @@ export class AudioEngine {
       )
         continue;
       const volume = automationValue(clip, "volume", local, 1);
-      for (const n of notesAtStep(this.project, clip, track, local)) {
+      for (const n of notesAtStep(this.project, clip, track, local, span)) {
         const expression = n.expression || {},
           velocity =
             n.velocity *
@@ -1001,7 +1189,7 @@ export class AudioEngine {
             (0.65 + (expression.pressure ?? n.velocity) * 0.35),
           noteTime = Math.max(
             this.ctx.currentTime + 0.001,
-            time + projectDuration(this.project, this.position, n.offset || 0),
+            time + this.clock.duration(this.position, n.offset || 0),
           ),
           cutoff = Math.max(
             0,
@@ -1012,19 +1200,15 @@ export class AudioEngine {
                 0.5,
             ),
           );
-        if (track === "drums") {
-          this.drum(n.pitch, noteTime, velocity, cfg);
+        if (cfg.kind === "drums") {
+          this.drum(n.pitch, noteTime, velocity, cfg, track);
           if (n.pitch === 0) this.duckGroups(noteTime);
         } else
           this.voice(
             track,
             n.pitch + (expression.bend || 0),
             noteTime,
-            projectDuration(
-              this.project,
-              this.position + (n.offset || 0),
-              n.length,
-            ),
+            this.clock.duration(this.position + (n.offset || 0), n.length),
             velocity,
             cfg,
             character,
@@ -1051,7 +1235,7 @@ export class AudioEngine {
   }
   scheduleAudioRegions(time: number, step: number) {
     const resuming = this.audioResumeStep === step,
-      stepSeconds = secondsPerStep(tempoAtStep(this.project, step));
+      stepSeconds = secondsPerStep(this.clock.tempo(step));
     for (const lane of this.project.audioLanes || []) {
       let output = this.audioLaneOutputs.get(lane.id);
       if (!output) {
@@ -1107,15 +1291,13 @@ export class AudioEngine {
             Math.min(
               buffer.duration - 0.001,
               region.offsetSeconds +
-                projectDuration(this.project, region.startStep, elapsedSteps) *
-                  rate,
+                this.clock.duration(region.startStep, elapsedSteps) * rate,
             ),
           ),
           available = Math.max(0.001, buffer.duration - offset),
           wanted = Math.max(
             0.001,
-            projectDuration(
-              this.project,
+            this.clock.duration(
               region.startStep + elapsedSteps,
               region.lengthSteps - elapsedSteps,
             ) * rate,
@@ -1178,8 +1360,8 @@ export class AudioEngine {
     }
     if (resuming) this.audioResumeStep = null;
   }
-  advanceTransport() {
-    this.position++;
+  advanceTransport(span = 1) {
+    this.position += span;
     if (!this.songMode && this.launchQueue?.size) {
       for (const [track, launch] of this.launchQueue)
         if (this.position % launch.quantization === 0) {
@@ -1201,11 +1383,11 @@ export class AudioEngine {
     const scene = this.project.arrangement[this.sceneIndex];
     if (!scene) {
       if (this.position >= songDurationSteps(this.project)) this.seek(0, true);
-      else this.sceneStep++;
+      else this.sceneStep += span;
       return;
     }
-    this.sceneStep++;
-    if (this.sceneStep >= sceneLengthSteps(this.project, scene)) {
+    this.sceneStep += span;
+    if (this.sceneStep >= sceneLengthSteps(this.project, scene) - 1e-7) {
       this.sceneStep = 0;
       this.sceneRepeat++;
       if (this.sceneRepeat >= scene.repeats) {
@@ -1254,13 +1436,28 @@ export class AudioEngine {
     time: number,
     duration: number,
     velocity: number,
-    cfg: any,
-    character: any,
+    cfg: TrackState,
+    character: ClipCharacter,
     cutoffAuto = 0.5,
     panAuto = 0.5,
   ) {
     if (!this.ctx) return;
-    if (track === "guitar") {
+    if (cfg.kind === "gm") {
+      const voice = playGmNote(
+        this.ctx,
+        this.buses[track]!.input,
+        cfg,
+        pitch,
+        time,
+        duration,
+        velocity,
+        (cfg.pan || 0) + (panAuto - 0.5) * 2,
+      );
+      this.scheduledGm.add(voice);
+      void voice.ended.then(() => this.scheduledGm.delete(voice));
+      return;
+    }
+    if (cfg.kind === "guitar") {
       this.guitar(
         pitch,
         time,
@@ -1270,6 +1467,7 @@ export class AudioEngine {
         character,
         cutoffAuto,
         panAuto,
+        track,
       );
       return;
     }
@@ -1287,7 +1485,9 @@ export class AudioEngine {
     filter.frequency.setValueAtTime(
       Math.max(
         120,
-        cfg.cutoff * (0.35 + cutoffAuto * 1.1) * (1 - macros.darkness * 0.35),
+        (cfg.cutoff || 1800) *
+          (0.35 + cutoffAuto * 1.1) *
+          (1 - macros.darkness * 0.35),
       ),
       time,
     );
@@ -1316,14 +1516,14 @@ export class AudioEngine {
       );
     gain.gain.exponentialRampToValueAtTime(
       0.0001,
-      time + duration + cfg.release,
+      time + duration + (cfg.release || 0.12),
     );
-    filter.connect(gain).connect(pan).connect(this.buses[track].input);
+    filter.connect(gain).connect(pan).connect(this.buses[track]!.input);
     if (lfoNode) {
       lfoNode.frequency.value = lfo.rate;
       lfoGain.gain.value =
         lfo.target === "cutoff"
-          ? cfg.cutoff * lfo.depth * 0.45
+          ? (cfg.cutoff || 1800) * lfo.depth * 0.45
           : lfo.target === "pan"
             ? lfo.depth * 0.8
             : lfo.depth * 100;
@@ -1331,7 +1531,7 @@ export class AudioEngine {
       if (lfo.target === "cutoff") lfoGain.connect(filter.frequency);
       if (lfo.target === "pan") lfoGain.connect(pan.pan);
       lfoNode.start(time);
-      lfoNode.stop(time + duration + cfg.release + 0.05);
+      lfoNode.stop(time + duration + (cfg.release || 0.12) + 0.05);
     }
     const addOsc = (wave: Waveform, level = 1, octave = 1) => {
       for (let i = 0; i < unison; i++) {
@@ -1351,13 +1551,13 @@ export class AudioEngine {
         if (lfoNode && lfo.target === "pitch") lfoGain.connect(o.detune);
         o.connect(og).connect(filter);
         o.start(time);
-        o.stop(time + duration + cfg.release + 0.05);
+        o.stop(time + duration + (cfg.release || 0.12) + 0.05);
         oscillators.push(o, og);
       }
     };
     addOsc(cfg.wave || "sawtooth", 1 - (cfg.osc2Mix || 0) * 0.35);
-    if (cfg.osc2Wave && cfg.osc2Wave !== "off" && cfg.osc2Mix > 0)
-      addOsc(cfg.osc2Wave, cfg.osc2Mix, 0.5);
+    if (cfg.osc2Wave && cfg.osc2Wave !== "off" && (cfg.osc2Mix || 0) > 0)
+      addOsc(cfg.osc2Wave, cfg.osc2Mix || 0, 0.5);
     this.lastFrequency[track] = target;
     const tail = oscillators.filter((n) => "onended" in n).at(-1) as
       OscillatorNode | undefined;
@@ -1376,10 +1576,11 @@ export class AudioEngine {
     time: number,
     duration: number,
     velocity: number,
-    cfg: any,
-    character: any,
+    cfg: TrackState,
+    character: ClipCharacter,
     cutoffAuto = 0.5,
     panAuto = 0.5,
+    track: TrackId = "guitar",
   ) {
     const target = frequency(pitch),
       filter = this.ctx.createBiquadFilter(),
@@ -1418,7 +1619,7 @@ export class AudioEngine {
       .connect(body)
       .connect(gain)
       .connect(pan)
-      .connect(this.buses.guitar.input);
+      .connect(this.buses[track]!.input);
     const harmonics = [1, 2, 3, 4],
       levels = [1, 0.34, 0.16, 0.07];
     harmonics.forEach((ratio, index) => {
@@ -1472,12 +1673,12 @@ export class AudioEngine {
     expression: Partial<NoteExpression> = {},
     channel: number | null = null,
   ) {
+    this.stopLive(id, true);
     const request = Symbol();
     this.pendingLive.set(id, request);
     await this.init();
     if (this.pendingLive.get(id) !== request) return;
     this.setProject(this.project);
-    this.stopLive(id, true);
     const now = this.ctx.currentTime,
       cfg = clipTrackState(
         this.project,
@@ -1486,8 +1687,33 @@ export class AudioEngine {
       ),
       character = activeClip(this.project, track).character,
       macros = character.macros;
-    if (track === "drums") {
-      this.drum(pitch, now, velocity, cfg);
+    if (cfg.kind === "gm") {
+      try {
+        await prepareGmNotes(cfg, [pitch]);
+        if (this.pendingLive.get(id) !== request) return;
+        const voice = playGmNote(
+          this.ctx,
+          this.buses[track]!.input,
+          cfg,
+          pitch,
+          this.ctx.currentTime,
+          Infinity,
+          velocity,
+          cfg.pan || 0,
+        );
+        if (expression.bend) voice.bend(expression.bend, this.ctx.currentTime);
+        this.gmVoices.set(id, { voice, channel, track });
+        void voice.ended.then(() => {
+          if (this.gmVoices.get(id)?.voice === voice) this.gmVoices.delete(id);
+        });
+      } finally {
+        if (this.pendingLive.get(id) === request) this.pendingLive.delete(id);
+      }
+      return;
+    }
+    this.pendingLive.delete(id);
+    if (cfg.kind === "drums") {
+      this.drum(pitch, now, velocity, cfg, track);
       return;
     }
     const filter = this.ctx.createBiquadFilter(),
@@ -1521,7 +1747,7 @@ export class AudioEngine {
       now + Math.max(0.005, cfg.attack || 0.005),
       Math.max(0.01, cfg.decay || 0.1),
     );
-    filter.connect(gain).connect(pan).connect(this.buses[track].input);
+    filter.connect(gain).connect(pan).connect(this.buses[track]!.input);
     const add = (wave: Waveform, level: number, ratio: number) => {
       for (let i = 0; i < unison; i++) {
         const node = this.ctx.createOscillator(),
@@ -1554,6 +1780,9 @@ export class AudioEngine {
     });
   }
   updateLive(id: string, expression: Partial<NoteExpression>) {
+    const sampled = this.gmVoices.get(id);
+    if (sampled && expression.bend !== undefined)
+      sampled.voice.bend(expression.bend, this.ctx.currentTime);
     const voice = this.liveVoices.get(id);
     if (!voice || !this.ctx) return;
     Object.assign(voice.expression, expression);
@@ -1591,11 +1820,15 @@ export class AudioEngine {
     );
   }
   updateLiveChannel(channel: number, expression: Partial<NoteExpression>) {
+    for (const [id, voice] of this.gmVoices)
+      if (voice.channel === channel) this.updateLive(id, expression);
     for (const [id, voice] of this.liveVoices)
       if (voice.channel === channel) this.updateLive(id, expression);
   }
   stopLive(id: string, immediate = false) {
     this.pendingLive.delete(id);
+    this.gmVoices.get(id)?.voice.stop(this.ctx?.currentTime, immediate);
+    this.gmVoices.delete(id);
     const voice = this.liveVoices.get(id);
     if (!voice || !this.ctx) return;
     this.liveVoices.delete(id);
@@ -1621,14 +1854,15 @@ export class AudioEngine {
     kind: number,
     time: number,
     velocity: number,
-    cfg: any = this.project.tracks.drums,
+    cfg: TrackState = this.project.tracks.drums,
+    track: TrackId = "drums",
   ) {
     if (!this.ctx) return;
     const custom = this.drumSamples.get(kind),
       g = this.ctx.createGain(),
       pan = this.ctx.createStereoPanner();
     pan.pan.value = cfg.pan || 0;
-    g.connect(pan).connect(this.buses.drums.input);
+    g.connect(pan).connect(this.buses[track]!.input);
     if (custom) {
       const source = this.ctx.createBufferSource(),
         start =
@@ -1727,25 +1961,10 @@ export class AudioEngine {
     }
   }
   distortionCurve(amount: number) {
-    const n = 256,
-      curve = new Float32Array(n),
-      k = amount * 180;
-    for (let i = 0; i < n; i++) {
-      const x = (i * 2) / n - 1;
-      curve[i] = amount < 0.005 ? x : ((1 + k) * x) / (1 + k * Math.abs(x));
-    }
-    return curve;
+    return makeCurve(amount);
   }
   saturationCurve(amount: number) {
-    const n = 256,
-      curve = new Float32Array(n),
-      drive = 1 + amount * 8,
-      norm = Math.tanh(drive);
-    for (let i = 0; i < n; i++) {
-      const x = (i * 2) / (n - 1) - 1;
-      curve[i] = amount < 0.005 ? x : Math.tanh(x * drive) / norm;
-    }
-    return curve;
+    return makeSaturationCurve(amount);
   }
   reverbImpulse() {
     if (this.impulse) return this.impulse;
@@ -1761,7 +1980,10 @@ export class AudioEngine {
   async preview(track: TrackId, pitch: number, velocity = 0.8) {
     await this.init();
     this.setProject(this.project);
-    if (track === "drums") this.drum(pitch, this.ctx.currentTime, velocity);
+    const cfg = clipTrackState(this.project, activeClip(this.project, track));
+    await prepareGmNotes(cfg, [pitch]);
+    if (cfg.kind === "drums")
+      this.drum(pitch, this.ctx.currentTime, velocity, cfg, track);
     else
       this.voice(
         track,
@@ -1769,7 +1991,7 @@ export class AudioEngine {
         this.ctx.currentTime,
         0.22,
         velocity,
-        this.project.tracks[track],
+        cfg,
         activeClip(this.project, track).character,
       );
   }
@@ -1793,10 +2015,15 @@ export class AudioEngine {
       ),
     );
   }
+  private meterBuffers = new WeakMap<AnalyserNode, Uint8Array<ArrayBuffer>>();
   trackLevel(track: TrackId) {
     const analyser = this.buses?.[track]?.analyser;
     if (!analyser) return 0;
-    const data = new Uint8Array(analyser.fftSize);
+    let data = this.meterBuffers.get(analyser);
+    if (!data || data.length !== analyser.fftSize) {
+      data = new Uint8Array(analyser.fftSize);
+      this.meterBuffers.set(analyser, data);
+    }
     analyser.getByteTimeDomainData(data);
     let energy = 0;
     for (const value of data) {
@@ -1854,7 +2081,8 @@ export class AudioEngine {
   diagnostics() {
     return {
       effectBuses: Object.keys(this.buses || {}).length,
-      liveVoices: this.liveVoices.size,
+      liveVoices: this.liveVoices.size + this.gmVoices.size,
+      scheduledSampleVoices: this.scheduledGm.size,
       samplerLoaded: Boolean(this.samplerBuffer),
       samplerVoices: this.samplerVoices.size,
       audioAssets: this.audioAssets.size,
@@ -1892,7 +2120,7 @@ function makeCurve(amount: number) {
   const c = new Float32Array(256),
     k = amount * 180;
   for (let i = 0; i < c.length; i++) {
-    const x = (i * 2) / c.length - 1;
+    const x = (i * 2) / (c.length - 1) - 1;
     c[i] = amount < 0.005 ? x : ((1 + k) * x) / (1 + k * Math.abs(x));
   }
   return c;
@@ -1913,45 +2141,22 @@ export function wavBlob(
   normalize = false,
   dither = false,
 ) {
-  const bytes = bitDepth / 8,
-    block = bytes * 2,
-    len = 44 + buffer.length * block,
-    ab = new ArrayBuffer(len),
-    v = new DataView(ab),
-    str = (o: number, s: string) =>
-      [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-  const channels = [buffer.getChannelData(0), buffer.getChannelData(1)];
-  let peak = 0;
-  if (normalize)
-    for (let ch = 0; ch < 2; ch++)
-      for (const sample of channels[ch]!)
-        peak = Math.max(peak, Math.abs(sample));
-  const gain = normalize && peak > 0 ? Math.min(8, 0.988 / peak) : 1;
-  str(0, "RIFF");
-  v.setUint32(4, len - 8, true);
-  str(8, "WAVEfmt ");
-  v.setUint32(16, 16, true);
-  v.setUint16(20, bitDepth === 32 ? 3 : 1, true);
-  v.setUint16(22, 2, true);
-  v.setUint32(24, buffer.sampleRate, true);
-  v.setUint32(28, buffer.sampleRate * block, true);
-  v.setUint16(32, block, true);
-  v.setUint16(34, bitDepth, true);
-  str(36, "data");
-  v.setUint32(40, len - 44, true);
-  let off = 44;
-  for (let i = 0; i < buffer.length; i++)
-    for (let ch = 0; ch < 2; ch++) {
-      const noise =
-          dither && bitDepth === 16
-            ? (Math.random() - Math.random()) / 65536
-            : 0,
-        x = Math.max(-1, Math.min(1, channels[ch]![i]! * gain + noise));
-      if (bitDepth === 32) v.setFloat32(off, x, true);
-      else v.setInt16(off, x < 0 ? x * 32768 : x * 32767, true);
-      off += bytes;
-    }
-  return new Blob([ab], { type: "audio/wav" });
+  const channels = [
+    buffer.getChannelData(0),
+    buffer.getChannelData(Math.min(1, buffer.numberOfChannels - 1)),
+  ];
+  return new Blob(
+    [
+      encodeWavPcm({
+        channels,
+        sampleRate: buffer.sampleRate,
+        bitDepth,
+        normalize,
+        dither,
+      }),
+    ],
+    { type: "audio/wav" },
+  );
 }
 export interface RenderWavOptions {
   song?: boolean;
@@ -1978,6 +2183,9 @@ export interface RenderWavOptions {
   audioAssets?: Map<string, AudioBuffer>;
   onStage?: (stage: "prepare" | "schedule" | "render" | "encode") => void;
   renderTimeoutMs?: number;
+  onProgress?: (fraction: number) => void;
+  format?: "wav" | "ogg";
+  oggQuality?: number;
 }
 export async function renderWav(
   project: Project,
@@ -1994,10 +2202,28 @@ export async function renderWav(
     drumSamples,
     audioAssets,
     onStage,
-    renderTimeoutMs = 45000,
+    renderTimeoutMs,
+    onProgress,
+    format = "wav",
+    oggQuality = 4,
   }: RenderWavOptions = {},
 ) {
   if (signal?.aborted) throw new DOMException("Export cancelled", "AbortError");
+  const encodeOutput = async (buffer: AudioBuffer) => {
+    onStage?.("encode");
+    if (signal?.aborted)
+      throw new DOMException("Export cancelled", "AbortError");
+    if (format === "ogg") {
+      const { encodeOgg } = await import("./audio/ogg");
+      return encodeOgg(buffer, {
+        quality: oggQuality,
+        normalize,
+        signal,
+        onProgress: (fraction) => onProgress?.(fraction),
+      });
+    }
+    return encodeAudioBuffer(buffer, bitDepth, normalize, dither, signal);
+  };
   onStage?.("prepare");
   for (const asset of renderAssets(project, song, region)) {
     const sample = project.samples.find((item) => item.id === asset.id);
@@ -2030,15 +2256,15 @@ export async function renderWav(
         };
       }),
     durationSteps = regionEnd - regionStart,
+    clock = createTempoClock(project),
     eventTime = (step: number) =>
-      projectSeconds(project, regionStart + step) -
-      projectSeconds(project, regionStart),
+      clock.seconds(regionStart + step) - clock.seconds(regionStart),
     eventDuration = (step: number, length: number) =>
-      projectDuration(project, regionStart + step, length),
+      clock.duration(regionStart + step, length),
     sr = sampleRate,
     duration =
       eventTime(durationSteps) + Math.max(0, Math.min(12, tailSeconds)),
-    ctx = new OfflineAudioContext(2, Math.ceil(duration * sr), sr),
+    ctx = offlineContext(Math.ceil(duration * sr), sr, bitDepth),
     master = ctx.createGain(),
     tone = ctx.createBiquadFilter(),
     comp = ctx.createDynamicsCompressor(),
@@ -2094,489 +2320,637 @@ export async function renderWav(
   // No source can excite the offline graph. Avoid starting idle feedback and
   // convolution nodes (which can stall some Chromium audio backends).
   if (!audibleEvents.length && !hasAudio)
-    return wavBlob(
-      ctx.createBuffer(2, Math.ceil(duration * sr), sr),
-      bitDepth,
-      normalize,
-      dither,
-    );
-  let impulse: AudioBuffer | undefined;
-  const getImpulse = () => {
-    if (impulse) return impulse;
-    impulse = ctx.createBuffer(2, Math.floor(sr * 1.8), sr);
-    for (let ch = 0; ch < 2; ch++) {
-      const d = impulse.getChannelData(ch);
-      for (let i = 0; i < d.length; i++)
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.4);
+    return encodeOutput(ctx.createBuffer(2, Math.ceil(duration * sr), sr));
+  const releaseGm = await prepareGmProject(project, song, signal);
+  try {
+    let impulse: AudioBuffer | undefined;
+    const getImpulse = () => {
+      if (impulse) return impulse;
+      impulse = ctx.createBuffer(2, Math.floor(sr * 1.8), sr);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = impulse.getChannelData(ch);
+        for (let i = 0; i < d.length; i++)
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.4);
+      }
+      return impulse;
+    };
+    const buses: any = {},
+      trackOutputs = Object.fromEntries(
+        projectTrackIds(project).map((track) => {
+          const output = ctx.createGain(),
+            cfg = trackState(project, track),
+            audible = mixAudible(project, track);
+          output.gain.value = audible ? cfg.volume : 0;
+          output.connect(master);
+          return [track, output];
+        }),
+      ) as Record<TrackId, GainNode>,
+      preSendOutputs = Object.fromEntries(
+        projectTrackIds(project).map((track) => {
+          const output = ctx.createGain(),
+            audible = mixAudible(project, track);
+          output.gain.value = audible ? 1 : 0;
+          output.connect(master);
+          return [track, output];
+        }),
+      ) as Record<TrackId, GainNode>;
+    const kicks = audibleEvents
+      .filter((event) => event.track === "drums" && event.pitch === 0)
+      .map((event) => eventTime(event.step))
+      .sort((a, b) => a - b);
+    let kickIndex = 0,
+      lastKick = -Infinity;
+    for (let step = 0; step < durationSteps; step++) {
+      const time = eventTime(step),
+        absolute = step + regionStart;
+      while (kickIndex < kicks.length && kicks[kickIndex]! <= time)
+        lastKick = kicks[kickIndex++]!;
+      master.gain.setTargetAtTime(masterValue(project, absolute), time, 0.015);
+      for (const track of projectTrackIds(project)) {
+        const cfg = clipTrackState(
+          project,
+          activeClip(project, track),
+          absolute,
+        );
+        const level = cfg.mute
+          ? 0
+          : cfg.volume * sidechainFactor(project, cfg.groupId, time - lastKick);
+        trackOutputs[track]!.gain.setTargetAtTime(level, time, 0.025);
+        preSendOutputs[track]!.gain.setTargetAtTime(
+          cfg.mute ? 0 : 1,
+          time,
+          0.025,
+        );
+      }
     }
-    return impulse;
-  };
-  const buses: any = {},
-    trackOutputs = Object.fromEntries(
-      TRACKS.map((track) => {
-        const output = ctx.createGain(),
-          cfg = project.tracks[track],
-          audible = mixAudible(project, track);
-        output.gain.value = audible ? cfg.volume : 0;
-        output.connect(master);
-        return [track, output];
-      }),
-    ) as Record<TrackId, GainNode>,
-    preSendOutputs = Object.fromEntries(
-      TRACKS.map((track) => {
-        const output = ctx.createGain(),
-          cfg = project.tracks[track],
-          audible = mixAudible(project, track);
-        output.gain.value = audible ? 1 : 0;
-        output.connect(master);
-        return [track, output];
-      }),
-    ) as Record<TrackId, GainNode>;
-  const kicks = audibleEvents
-    .filter((event) => event.track === "drums" && event.pitch === 0)
-    .map((event) => eventTime(event.step))
-    .sort((a, b) => a - b);
-  let kickIndex = 0,
-    lastKick = -Infinity;
-  for (let step = 0; step < durationSteps; step++) {
-    const time = eventTime(step),
-      absolute = step + regionStart;
-    while (kickIndex < kicks.length && kicks[kickIndex]! <= time)
-      lastKick = kicks[kickIndex++]!;
-    master.gain.setTargetAtTime(masterValue(project, absolute), time, 0.015);
-    for (const track of TRACKS) {
-      const cfg = clipTrackState(project, activeClip(project, track), absolute);
-      const level = cfg.mute
-        ? 0
-        : cfg.volume * sidechainFactor(project, cfg.groupId, time - lastKick);
-      trackOutputs[track].gain.setTargetAtTime(level, time, 0.025);
-      preSendOutputs[track].gain.setTargetAtTime(cfg.mute ? 0 : 1, time, 0.025);
+    const busRoutes = new Map<
+      string,
+      { routes: [AudioNode, AudioNode][]; active: boolean; end: number }
+    >();
+    for (const clip of project.clips.filter((clip) =>
+      audibleEvents.some((event) => event.clipId === clip.id),
+    )) {
+      const { fx, macros } = clip.character,
+        input = ctx.createGain(),
+        pre = ctx.createGain(),
+        space = 0.55 + macros.space * 0.75,
+        drive = 0.78 + macros.energy * 0.25 + (macros.aggression || 0) * 0.32,
+        bypassed = dry || fx.bypass,
+        trackOutput = trackOutputs[clip.track]!,
+        sendTarget =
+          trackState(project, clip.track).sendMode === "pre"
+            ? preSendOutputs[clip.track]!
+            : trackOutput;
+      pre.gain.value = dbToGain(trackState(project, clip.track).preGainDb ?? 0);
+      input.connect(pre);
+      let output: AudioNode = pre;
+      if (!bypassed) {
+        const tone = ((fx.tone ?? 0.5) - 0.5) * 18 - macros.darkness * 2;
+        if (tone !== 0) {
+          const eq = ctx.createBiquadFilter();
+          eq.type = "highshelf";
+          eq.frequency.value = 1800;
+          eq.gain.value = tone;
+          output.connect(eq);
+          output = eq;
+        }
+        if ((fx.saturation || 0) * drive >= 0.005) {
+          const saturation = ctx.createWaveShaper();
+          saturation.curve = makeSaturationCurve((fx.saturation || 0) * drive);
+          saturation.oversample = "4x";
+          output.connect(saturation);
+          output = saturation;
+        }
+        if ((fx.distortion || 0) * drive >= 0.005) {
+          const shape = ctx.createWaveShaper();
+          shape.curve = makeCurve((fx.distortion || 0) * drive);
+          shape.oversample = "2x";
+          output.connect(shape);
+          output = shape;
+        }
+      }
+      const dryGain = ctx.createGain();
+      dryGain.gain.value = bypassed ? 1 : 0.82;
+      const routes: [AudioNode, AudioNode][] = [[dryGain, trackOutput]];
+      output.connect(dryGain);
+      if (!bypassed && fx.chorus > 0) {
+        const chorus = ctx.createDelay(0.05),
+          wet = ctx.createGain(),
+          lfo = ctx.createOscillator(),
+          depth = ctx.createGain();
+        chorus.delayTime.value = 0.018;
+        wet.gain.value = fx.chorus * 0.4;
+        lfo.frequency.value = 0.18 + fx.chorus * 0.8;
+        depth.gain.value = 0.002 + fx.chorus * 0.006;
+        output.connect(chorus).connect(wet);
+        routes.push([wet, trackOutput]);
+        lfo.connect(depth).connect(chorus.delayTime);
+        lfo.start(0);
+        lfo.stop(duration);
+      }
+      if (!bypassed && fx.delay > 0) {
+        const delay = ctx.createDelay(0.8),
+          feedback = ctx.createGain(),
+          wet = ctx.createGain();
+        delay.delayTime.value = 0.16 + fx.delay * 0.22;
+        feedback.gain.value = Math.min(0.55, 0.1 + fx.delay * 0.4);
+        wet.gain.value = fx.delay * 0.34 * space;
+        output.connect(delay);
+        delay.connect(feedback).connect(delay);
+        delay.connect(wet);
+        routes.push([wet, sendTarget]);
+      }
+      if (!bypassed && fx.reverb > 0) {
+        const reverb = ctx.createConvolver(),
+          wet = ctx.createGain();
+        reverb.buffer = getImpulse();
+        wet.gain.value = fx.reverb * 0.42 * space;
+        output.connect(reverb).connect(wet);
+        routes.push([wet, sendTarget]);
+      }
+      busRoutes.set(clip.id, { routes, active: false, end: 0 });
+      buses[clip.id] = input;
     }
-  }
-  for (const clip of project.clips.filter((clip) =>
-    audibleEvents.some((event) => event.clipId === clip.id),
-  )) {
-    const { fx, macros } = clip.character,
-      input = ctx.createGain(),
-      eq = ctx.createBiquadFilter(),
-      saturation = ctx.createWaveShaper(),
-      shape = ctx.createWaveShaper(),
-      dryGain = ctx.createGain(),
-      chorus = ctx.createDelay(0.05),
-      chorusWet = ctx.createGain(),
-      chorusLfo = ctx.createOscillator(),
-      chorusDepth = ctx.createGain(),
-      delay = ctx.createDelay(0.8),
-      feedback = ctx.createGain(),
-      delayWet = ctx.createGain(),
-      reverb = ctx.createConvolver(),
-      reverbWet = ctx.createGain(),
-      space = 0.55 + macros.space * 0.75,
-      drive = 0.78 + macros.energy * 0.25 + (macros.aggression || 0) * 0.32,
-      bypassed = dry || fx.bypass,
-      trackOutput = trackOutputs[clip.track],
-      sendTarget =
-        project.tracks[clip.track].sendMode === "pre"
-          ? preSendOutputs[clip.track]
-          : trackOutput;
-    eq.type = "highshelf";
-    eq.frequency.value = 1800;
-    eq.gain.value = bypassed
-      ? 0
-      : ((fx.tone ?? 0.5) - 0.5) * 18 - macros.darkness * 2;
-    saturation.curve = makeSaturationCurve(
-      bypassed ? 0 : (fx.saturation || 0) * drive,
-    );
-    saturation.oversample = "4x";
-    shape.curve = makeCurve(bypassed ? 0 : (fx.distortion || 0) * drive);
-    shape.oversample = "2x";
-    dryGain.gain.value = bypassed ? 1 : 0.82;
-    chorus.delayTime.value = 0.018;
-    chorusWet.gain.value = bypassed ? 0 : (fx.chorus || 0) * 0.4;
-    chorusLfo.frequency.value = 0.18 + (fx.chorus || 0) * 0.8;
-    chorusDepth.gain.value = 0.002 + (fx.chorus || 0) * 0.006;
-    delay.delayTime.value = 0.16 + (fx.delay || 0) * 0.22;
-    feedback.gain.value = bypassed
-      ? 0
-      : Math.min(0.55, 0.1 + (fx.delay || 0) * 0.4);
-    delayWet.gain.value = bypassed ? 0 : (fx.delay || 0) * 0.34 * space;
-    reverb.buffer = getImpulse();
-    reverbWet.gain.value = bypassed ? 0 : (fx.reverb || 0) * 0.42 * space;
-    const pre = ctx.createGain();
-    pre.gain.value = dbToGain(project.tracks[clip.track].preGainDb ?? 0);
-    input.connect(pre).connect(eq).connect(saturation).connect(shape);
-    shape.connect(dryGain).connect(trackOutput);
-    shape.connect(chorus).connect(chorusWet).connect(trackOutput);
-    chorusLfo.connect(chorusDepth).connect(chorus.delayTime);
-    chorusLfo.start(0);
-    chorusLfo.stop(duration);
-    shape.connect(delay);
-    delay.connect(feedback).connect(delay);
-    delay.connect(delayWet).connect(sendTarget);
-    shape.connect(reverb).connect(reverbWet).connect(sendTarget);
-    buses[clip.id] = input;
-  }
-  const guitarEvent = (e: import("./core.js").PlaybackEvent, cfg: any) => {
-    const start = eventTime(e.step),
-      noteDuration = eventDuration(e.step, e.length),
-      end =
-        start +
-        Math.max(0.12, noteDuration) +
-        Math.max(0.12, cfg.release || 0.35),
-      clip = project.clips.find((c) => c.id === e.clipId)!,
-      macros = clip.character.macros,
-      cut = automationValue(clip, "cutoff", e.localStep, 0.5),
-      vol = automationValue(clip, "volume", e.localStep, 1),
-      target = frequency(e.pitch),
-      filter = ctx.createBiquadFilter(),
-      body = ctx.createBiquadFilter(),
-      gain = ctx.createGain(),
-      pan = ctx.createStereoPanner(),
-      peak = Math.max(0.002, Math.min(0.24, e.velocity * vol * 0.22));
-    filter.type = "lowpass";
-    filter.frequency.value = Math.max(
-      900,
-      (cfg.cutoff || 5200) * (0.45 + cut * 0.75) * (1 - macros.darkness * 0.28),
-    );
-    filter.Q.value = cfg.resonance || 2;
-    body.type = "peaking";
-    body.frequency.value = 190 + target * 0.28;
-    body.Q.value = 1.2;
-    body.gain.value = 4;
-    pan.pan.value = Math.max(
-      -1,
-      Math.min(
-        1,
-        (automationValue(clip, "pan", e.localStep, 0.5) - 0.5) * 1.3 +
-          (cfg.pan || 0),
-      ),
-    );
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(peak, start + 0.004);
-    gain.gain.exponentialRampToValueAtTime(
-      Math.max(0.001, peak * 0.34),
-      Math.min(end - 0.02, start + 0.16),
-    );
-    gain.gain.exponentialRampToValueAtTime(0.0001, end);
-    filter.connect(body).connect(gain).connect(pan).connect(buses[e.clipId]);
-    [1, 2, 3, 4].forEach((ratio, index) => {
-      const osc = ctx.createOscillator(),
-        level = ctx.createGain();
-      osc.type = index === 0 ? "triangle" : "sine";
-      osc.frequency.value = target * ratio;
-      osc.detune.value = (index % 2 ? 0.7 : -0.7) * (cfg.detune || 3);
-      level.gain.value = [1, 0.34, 0.16, 0.07][index]!;
-      osc.connect(level).connect(filter);
-      osc.start(start);
-      osc.stop(end + 0.02);
-    });
-    const pickLength = 0.018,
-      buffer = ctx.createBuffer(1, Math.ceil(sr * pickLength), sr),
-      data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++)
-      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-    const pick = ctx.createBufferSource(),
-      pickFilter = ctx.createBiquadFilter(),
-      pickGain = ctx.createGain();
-    pick.buffer = buffer;
-    pickFilter.type = "bandpass";
-    pickFilter.frequency.value = Math.min(9000, target * 8);
-    pickFilter.Q.value = 0.7;
-    pickGain.gain.value = peak * 0.75;
-    pick.connect(pickFilter).connect(pickGain).connect(filter);
-    pick.start(start);
-  };
-  const toneEvent = (e: import("./core.js").PlaybackEvent, cfg: any) => {
-    const start = eventTime(e.step),
-      end = start + eventDuration(e.step, e.length),
-      clip = project.clips.find((c) => c.id === e.clipId)!,
-      { lfo, macros } = clip.character,
-      f = ctx.createBiquadFilter(),
-      g = ctx.createGain(),
-      pan = ctx.createStereoPanner(),
-      cut = automationValue(clip, "cutoff", e.localStep, 0.5),
-      vol = automationValue(clip, "volume", e.localStep, 1),
-      unison = Math.max(1, Math.min(3, cfg.unison || 1)),
-      peak = Math.max(0.002, (e.velocity * vol * 0.16) / Math.sqrt(unison)),
-      attack = Math.max(0.005, cfg.attack || 0.005),
-      decay = Math.max(0.01, cfg.decay || 0.1),
-      sustain = Math.max(0.01, cfg.sustain ?? 0.72),
-      release = cfg.release || 0.1,
-      noteDuration = end - start,
-      attackEnd = start + Math.min(attack, noteDuration),
-      decayEnd = Math.min(end, attackEnd + decay);
-    f.type = cfg.filterType || "lowpass";
-    f.frequency.value = Math.max(
-      120,
-      cfg.cutoff * (0.35 + cut * 1.1) * (1 - macros.darkness * 0.35),
-    );
-    f.Q.value = cfg.resonance || 1;
-    pan.pan.value = Math.max(
-      -1,
-      Math.min(
-        1,
-        (automationValue(clip, "pan", e.localStep, 0.5) - 0.5) * 1.3 +
-          (cfg.pan || 0),
-      ),
-    );
-    g.gain.setValueAtTime(0.001, start);
-    g.gain.exponentialRampToValueAtTime(peak, attackEnd);
-    if (decayEnd > attackEnd)
-      g.gain.exponentialRampToValueAtTime(
-        Math.max(0.001, peak * sustain),
-        decayEnd,
+    // Keep only a small window of voices connected. Scheduling the entire song
+    // upfront leaves thousands of per-note filters/panners in the offline graph.
+    const clipsById = new Map(project.clips.map((clip) => [clip.id, clip]));
+    let voiceNodes: AudioNode[] = [];
+    const ownVoice = <T extends AudioNode>(node: T): T => {
+      voiceNodes.push(node);
+      return node;
+    };
+    const voices: { end: number; nodes: AudioNode[] }[] = [];
+    const guitarEvent = (
+      e: import("./core.js").PlaybackEvent,
+      cfg: TrackState,
+    ) => {
+      const start = eventTime(e.step),
+        noteDuration = eventDuration(e.step, e.length),
+        end =
+          start +
+          Math.max(0.12, noteDuration) +
+          Math.max(0.12, cfg.release || 0.35),
+        clip = clipsById.get(e.clipId)!,
+        macros = clip.character.macros,
+        cut = automationValue(clip, "cutoff", e.localStep, 0.5),
+        vol = automationValue(clip, "volume", e.localStep, 1),
+        target = frequency(e.pitch),
+        filter = ownVoice(ctx.createBiquadFilter()),
+        body = ownVoice(ctx.createBiquadFilter()),
+        gain = ownVoice(ctx.createGain()),
+        pan = ownVoice(ctx.createStereoPanner()),
+        peak = Math.max(0.002, Math.min(0.24, e.velocity * vol * 0.22));
+      filter.type = "lowpass";
+      filter.frequency.value = Math.max(
+        900,
+        (cfg.cutoff || 5200) *
+          (0.45 + cut * 0.75) *
+          (1 - macros.darkness * 0.28),
       );
-    if (end > decayEnd)
-      g.gain.setValueAtTime(Math.max(0.001, peak * sustain), end);
-    g.gain.exponentialRampToValueAtTime(0.001, end + release);
-    f.connect(g).connect(pan).connect(buses[e.clipId]);
-    const lfoNode = lfo.enabled ? ctx.createOscillator() : null,
-      lfoGain: any = lfoNode ? ctx.createGain() : null;
-    if (lfoNode) {
-      lfoNode.frequency.value = lfo.rate;
-      lfoGain.gain.value =
-        lfo.target === "cutoff"
-          ? cfg.cutoff * lfo.depth * 0.45
-          : lfo.target === "pan"
-            ? lfo.depth * 0.8
-            : lfo.depth * 100;
-      lfoNode.connect(lfoGain);
-      if (lfo.target === "cutoff") lfoGain.connect(f.frequency);
-      if (lfo.target === "pan") lfoGain.connect(pan.pan);
-      lfoNode.start(start);
-      lfoNode.stop(end + release + 0.02);
-    }
-    const addOsc = (wave: Waveform, level = 1, octave = 1) => {
-      for (let i = 0; i < unison; i++) {
-        const o = ctx.createOscillator(),
-          og = ctx.createGain();
-        applyWave(ctx, o, wave);
-        o.frequency.value = frequency(e.pitch) * octave;
-        o.detune.value = (i - (unison - 1) / 2) * (cfg.detune || 6);
-        og.gain.value = level;
-        if (lfoNode && lfo.target === "pitch") lfoGain.connect(o.detune);
-        o.connect(og).connect(f);
+      filter.Q.value = cfg.resonance || 2;
+      body.type = "peaking";
+      body.frequency.value = 190 + target * 0.28;
+      body.Q.value = 1.2;
+      body.gain.value = 4;
+      pan.pan.value = Math.max(
+        -1,
+        Math.min(
+          1,
+          (automationValue(clip, "pan", e.localStep, 0.5) - 0.5) * 1.3 +
+            (cfg.pan || 0),
+        ),
+      );
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(peak, start + 0.004);
+      gain.gain.exponentialRampToValueAtTime(
+        Math.max(0.001, peak * 0.34),
+        Math.min(end - 0.02, start + 0.16),
+      );
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      filter.connect(body).connect(gain).connect(pan).connect(buses[e.clipId]);
+      [1, 2, 3, 4].forEach((ratio, index) => {
+        const osc = ownVoice(ctx.createOscillator()),
+          level = ownVoice(ctx.createGain());
+        osc.type = index === 0 ? "triangle" : "sine";
+        osc.frequency.value = target * ratio;
+        osc.detune.value = (index % 2 ? 0.7 : -0.7) * (cfg.detune || 3);
+        level.gain.value = [1, 0.34, 0.16, 0.07][index]!;
+        osc.connect(level).connect(filter);
+        osc.start(start);
+        osc.stop(end + 0.02);
+      });
+      const pickLength = 0.018,
+        buffer = ctx.createBuffer(1, Math.ceil(sr * pickLength), sr),
+        data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++)
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const pick = ownVoice(ctx.createBufferSource()),
+        pickFilter = ownVoice(ctx.createBiquadFilter()),
+        pickGain = ownVoice(ctx.createGain());
+      pick.buffer = buffer;
+      pickFilter.type = "bandpass";
+      pickFilter.frequency.value = Math.min(9000, target * 8);
+      pickFilter.Q.value = 0.7;
+      pickGain.gain.value = peak * 0.75;
+      pick.connect(pickFilter).connect(pickGain).connect(filter);
+      pick.start(start);
+    };
+    const toneEvent = (
+      e: import("./core.js").PlaybackEvent,
+      cfg: TrackState,
+    ) => {
+      const start = eventTime(e.step),
+        end = start + eventDuration(e.step, e.length),
+        clip = clipsById.get(e.clipId)!,
+        { lfo, macros } = clip.character,
+        f = ownVoice(ctx.createBiquadFilter()),
+        g = ownVoice(ctx.createGain()),
+        pan = ownVoice(ctx.createStereoPanner()),
+        cut = automationValue(clip, "cutoff", e.localStep, 0.5),
+        vol = automationValue(clip, "volume", e.localStep, 1),
+        unison = Math.max(1, Math.min(3, cfg.unison || 1)),
+        peak = Math.max(0.002, (e.velocity * vol * 0.16) / Math.sqrt(unison)),
+        attack = Math.max(0.005, cfg.attack || 0.005),
+        decay = Math.max(0.01, cfg.decay || 0.1),
+        sustain = Math.max(0.01, cfg.sustain ?? 0.72),
+        release = cfg.release || 0.1,
+        noteDuration = end - start,
+        attackEnd = start + Math.min(attack, noteDuration),
+        decayEnd = Math.min(end, attackEnd + decay);
+      f.type = cfg.filterType || "lowpass";
+      f.frequency.value = Math.max(
+        120,
+        (cfg.cutoff || 1800) *
+          (0.35 + cut * 1.1) *
+          (1 - macros.darkness * 0.35),
+      );
+      f.Q.value = cfg.resonance || 1;
+      pan.pan.value = Math.max(
+        -1,
+        Math.min(
+          1,
+          (automationValue(clip, "pan", e.localStep, 0.5) - 0.5) * 1.3 +
+            (cfg.pan || 0),
+        ),
+      );
+      g.gain.setValueAtTime(0.001, start);
+      g.gain.exponentialRampToValueAtTime(peak, attackEnd);
+      if (decayEnd > attackEnd)
+        g.gain.exponentialRampToValueAtTime(
+          Math.max(0.001, peak * sustain),
+          decayEnd,
+        );
+      if (end > decayEnd)
+        g.gain.setValueAtTime(Math.max(0.001, peak * sustain), end);
+      g.gain.exponentialRampToValueAtTime(0.001, end + release);
+      f.connect(g).connect(pan).connect(buses[e.clipId]);
+      const lfoNode = lfo.enabled ? ownVoice(ctx.createOscillator()) : null,
+        lfoGain: any = lfoNode ? ownVoice(ctx.createGain()) : null;
+      if (lfoNode) {
+        lfoNode.frequency.value = lfo.rate;
+        lfoGain.gain.value =
+          lfo.target === "cutoff"
+            ? (cfg.cutoff || 1800) * lfo.depth * 0.45
+            : lfo.target === "pan"
+              ? lfo.depth * 0.8
+              : lfo.depth * 100;
+        lfoNode.connect(lfoGain);
+        if (lfo.target === "cutoff") lfoGain.connect(f.frequency);
+        if (lfo.target === "pan") lfoGain.connect(pan.pan);
+        lfoNode.start(start);
+        lfoNode.stop(end + release + 0.02);
+      }
+      const addOsc = (wave: Waveform, level = 1, octave = 1) => {
+        for (let i = 0; i < unison; i++) {
+          const o = ownVoice(ctx.createOscillator()),
+            og = ownVoice(ctx.createGain());
+          applyWave(ctx, o, wave);
+          o.frequency.value = frequency(e.pitch) * octave;
+          o.detune.value = (i - (unison - 1) / 2) * (cfg.detune || 6);
+          og.gain.value = level;
+          if (lfoNode && lfo.target === "pitch") lfoGain.connect(o.detune);
+          o.connect(og).connect(f);
+          o.start(start);
+          o.stop(end + release + 0.02);
+        }
+      };
+      addOsc(cfg.wave || "sawtooth", 1 - (cfg.osc2Mix || 0) * 0.35);
+      if (cfg.osc2Wave && cfg.osc2Wave !== "off" && (cfg.osc2Mix || 0) > 0)
+        addOsc(cfg.osc2Wave, cfg.osc2Mix || 0, 0.5);
+    };
+    const drumEvent = (
+      e: import("./core.js").PlaybackEvent,
+      cfg: TrackState,
+    ) => {
+      const start = eventTime(e.step),
+        g = ownVoice(ctx.createGain()),
+        pan = ownVoice(ctx.createStereoPanner()),
+        custom = drumSamples?.get(e.pitch);
+      pan.pan.value = cfg.pan || 0;
+      g.connect(pan).connect(buses[e.clipId]);
+      if (custom) {
+        const source = ownVoice(ctx.createBufferSource()),
+          offset =
+            Math.max(0, Math.min(0.98, custom.trimStart)) *
+            custom.buffer.duration,
+          end =
+            Math.max(offset + 0.001, Math.min(1, custom.trimEnd)) *
+            custom.buffer.duration,
+          sampleDuration = end - offset,
+          rate = 2 ** (custom.tune / 12),
+          audibleDuration = sampleDuration / rate,
+          attack = Math.min(
+            audibleDuration * 0.4,
+            Math.max(0.001, custom.attack),
+          ),
+          release = Math.min(
+            audibleDuration * 0.7,
+            Math.max(0.005, custom.release),
+          );
+        source.buffer = custom.buffer;
+        source.playbackRate.value = rate;
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.linearRampToValueAtTime(
+          Math.max(0.001, e.velocity),
+          start + attack,
+        );
+        g.gain.setValueAtTime(
+          Math.max(0.001, e.velocity),
+          Math.max(start + attack, start + audibleDuration - release),
+        );
+        g.gain.linearRampToValueAtTime(0.0001, start + audibleDuration);
+        source.connect(g);
+        source.start(start, offset, sampleDuration);
+        return;
+      }
+      if (e.pitch === 0 || e.pitch === 4) {
+        const o = ownVoice(ctx.createOscillator()),
+          len = e.pitch === 0 ? 0.21 : 0.28;
+        o.type = e.pitch === 4 ? "triangle" : "sine";
+        o.frequency.setValueAtTime(e.pitch === 0 ? 150 : 125, start);
+        o.frequency.exponentialRampToValueAtTime(
+          e.pitch === 0 ? 43 : 72,
+          start + len * 0.65,
+        );
+        g.gain.setValueAtTime(
+          e.velocity * (e.pitch === 0 ? 0.45 : 0.32),
+          start,
+        );
+        g.gain.exponentialRampToValueAtTime(0.001, start + len);
+        o.connect(g);
         o.start(start);
-        o.stop(end + release + 0.02);
+        o.stop(start + len);
+      } else {
+        const length =
+            e.pitch === 2
+              ? 0.05
+              : e.pitch === 3
+                ? 0.28
+                : e.pitch === 6
+                  ? 0.65
+                  : 0.14,
+          buf = ctx.createBuffer(1, Math.ceil(sr * length), sr),
+          data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++)
+          data[i] =
+            (Math.random() * 2 - 1) *
+            Math.pow(1 - i / data.length, e.pitch === 6 ? 0.7 : 1);
+        const source = ownVoice(ctx.createBufferSource()),
+          filter = ownVoice(ctx.createBiquadFilter());
+        filter.type = [2, 3, 6].includes(e.pitch) ? "highpass" : "bandpass";
+        filter.frequency.value =
+          e.pitch === 2
+            ? 6500
+            : e.pitch === 3
+              ? 4700
+              : e.pitch === 6
+                ? 3500
+                : e.pitch === 5
+                  ? 2400
+                  : 1800;
+        g.gain.setValueAtTime(
+          e.velocity * (e.pitch === 2 ? 0.2 : e.pitch === 6 ? 0.3 : 0.24),
+          start,
+        );
+        g.gain.exponentialRampToValueAtTime(0.001, start + length);
+        source.buffer = buf;
+        source.connect(filter).connect(g);
+        source.start(start);
       }
     };
-    addOsc(cfg.wave || "sawtooth", 1 - (cfg.osc2Mix || 0) * 0.35);
-    if (cfg.osc2Wave && cfg.osc2Wave !== "off" && cfg.osc2Mix > 0)
-      addOsc(cfg.osc2Wave, cfg.osc2Mix, 0.5);
-  };
-  const drumEvent = (e: import("./core.js").PlaybackEvent, cfg: any) => {
-    const start = eventTime(e.step),
-      g = ctx.createGain(),
-      pan = ctx.createStereoPanner(),
-      custom = drumSamples?.get(e.pitch);
-    pan.pan.value = cfg.pan || 0;
-    g.connect(pan).connect(buses[e.clipId]);
-    if (custom) {
-      const source = ctx.createBufferSource(),
-        offset =
-          Math.max(0, Math.min(0.98, custom.trimStart)) *
-          custom.buffer.duration,
-        end =
-          Math.max(offset + 0.001, Math.min(1, custom.trimEnd)) *
-          custom.buffer.duration,
-        sampleDuration = end - offset,
-        rate = 2 ** (custom.tune / 12),
-        audibleDuration = sampleDuration / rate,
-        attack = Math.min(
-          audibleDuration * 0.4,
-          Math.max(0.001, custom.attack),
-        ),
-        release = Math.min(
-          audibleDuration * 0.7,
-          Math.max(0.005, custom.release),
-        );
-      source.buffer = custom.buffer;
-      source.playbackRate.value = rate;
-      g.gain.setValueAtTime(0.0001, start);
-      g.gain.linearRampToValueAtTime(
-        Math.max(0.001, e.velocity),
-        start + attack,
-      );
-      g.gain.setValueAtTime(
-        Math.max(0.001, e.velocity),
-        Math.max(start + attack, start + audibleDuration - release),
-      );
-      g.gain.linearRampToValueAtTime(0.0001, start + audibleDuration);
-      source.connect(g);
-      source.start(start, offset, sampleDuration);
-      return;
-    }
-    if (e.pitch === 0 || e.pitch === 4) {
-      const o = ctx.createOscillator(),
-        len = e.pitch === 0 ? 0.21 : 0.28;
-      o.type = e.pitch === 4 ? "triangle" : "sine";
-      o.frequency.setValueAtTime(e.pitch === 0 ? 150 : 125, start);
-      o.frequency.exponentialRampToValueAtTime(
-        e.pitch === 0 ? 43 : 72,
-        start + len * 0.65,
-      );
-      g.gain.setValueAtTime(e.velocity * (e.pitch === 0 ? 0.45 : 0.32), start);
-      g.gain.exponentialRampToValueAtTime(0.001, start + len);
-      o.connect(g);
-      o.start(start);
-      o.stop(start + len);
-    } else {
-      const length =
-          e.pitch === 2
-            ? 0.05
-            : e.pitch === 3
-              ? 0.28
-              : e.pitch === 6
-                ? 0.65
-                : 0.14,
-        buf = ctx.createBuffer(1, Math.ceil(sr * length), sr),
-        data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++)
-        data[i] =
-          (Math.random() * 2 - 1) *
-          Math.pow(1 - i / data.length, e.pitch === 6 ? 0.7 : 1);
-      const source = ctx.createBufferSource(),
-        filter = ctx.createBiquadFilter();
-      filter.type = [2, 3, 6].includes(e.pitch) ? "highpass" : "bandpass";
-      filter.frequency.value =
-        e.pitch === 2
-          ? 6500
-          : e.pitch === 3
-            ? 4700
-            : e.pitch === 6
-              ? 3500
-              : e.pitch === 5
-                ? 2400
-                : 1800;
-      g.gain.setValueAtTime(
-        e.velocity * (e.pitch === 2 ? 0.2 : e.pitch === 6 ? 0.3 : 0.24),
-        start,
-      );
-      g.gain.exponentialRampToValueAtTime(0.001, start + length);
-      source.buffer = buf;
-      source.connect(filter).connect(g);
-      source.start(start);
-    }
-  };
-  for (const e of events)
-    if (mixAudible(project, e.track)) {
-      const clip =
-        project.clips.find((clip) => clip.id === e.clipId) ||
-        activeClip(project, e.track);
-      const cfg = clipTrackState(project, clip, e.step + regionStart);
-      e.track === "drums"
-        ? drumEvent(e, cfg)
-        : e.track === "guitar"
-          ? guitarEvent(e, cfg)
-          : toneEvent(e, cfg);
-    }
+    const scheduledEvents = audibleEvents
+      .map((event) => ({ event, time: eventTime(event.step) }))
+      .sort((a, b) => a.time - b.time);
+    let nextEvent = 0;
+    const scheduleUntil = (until: number) => {
+      while (
+        nextEvent < scheduledEvents.length &&
+        scheduledEvents[nextEvent]!.time < until
+      ) {
+        const { event: e, time } = scheduledEvents[nextEvent++]!;
+        const clip = clipsById.get(e.clipId) || activeClip(project, e.track);
+        const cfg = clipTrackState(project, clip, e.step + regionStart);
+        voiceNodes = [];
+        if (cfg.kind === "gm")
+          playGmNote(
+            ctx,
+            buses[e.clipId],
+            cfg,
+            e.pitch,
+            time,
+            eventDuration(e.step, e.length),
+            e.velocity,
+            cfg.pan || 0,
+          );
+        else if (cfg.kind === "drums") drumEvent(e, cfg);
+        else if (cfg.kind === "guitar") guitarEvent(e, cfg);
+        else toneEvent(e, cfg);
+        const custom =
+          cfg.kind === "drums" ? drumSamples?.get(e.pitch) : undefined;
+        const customDuration = custom
+          ? custom.buffer.duration / 2 ** (custom.tune / 12)
+          : 0;
+        voices.push({
+          end:
+            time +
+            Math.max(
+              1,
+              customDuration,
+              eventDuration(e.step, e.length) + Math.max(0.5, cfg.release || 0),
+            ) +
+            0.25,
+          nodes: voiceNodes,
+        });
+        const bus = busRoutes.get(e.clipId)!;
+        bus.end = Math.max(bus.end, voices.at(-1)!.end + 8);
+        if (!bus.active) {
+          for (const [output, target] of bus.routes) output.connect(target);
+          bus.active = true;
+        }
+      }
+    };
+    const releaseVoices = (time: number) => {
+      for (const bus of busRoutes.values()) {
+        if (bus.active && bus.end <= time) {
+          for (const [output, target] of bus.routes) output.disconnect(target);
+          bus.active = false;
+        }
+      }
+      for (let i = voices.length - 1; i >= 0; i--) {
+        if (voices[i]!.end > time) continue;
+        for (const node of voices[i]!.nodes) node.disconnect();
+        voices.splice(i, 1);
+      }
+    };
 
-  for (const lane of song ? project.audioLanes : []) {
-    if (!mixAudible(project, lane.id)) continue;
-    const laneFx = new AudioFx(ctx, dry ? undefined : lane.effects),
-      lanePre = ctx.createGain(),
-      lanePan = ctx.createStereoPanner(),
-      laneOut = ctx.createGain();
-    lanePre.gain.value = dbToGain(lane.preGainDb ?? 0);
-    lanePan.pan.value = lane.pan;
-    laneOut.gain.value =
-      lane.volume *
-      (project.mixerGroups.find((group) => group.id === lane.groupId)?.volume ??
-        1);
-    lanePre.connect(laneFx.input);
-    laneFx.output.connect(lanePan).connect(laneOut).connect(master);
-    for (const regionItem of lane.regions) {
-      const buffer = audioAssets?.get(regionItem.assetId);
-      if (!buffer) continue;
-      const absoluteStart = regionItem.startStep - regionStart;
-      if (
-        absoluteStart >= durationSteps ||
-        absoluteStart + regionItem.lengthSteps <= 0
-      )
-        continue;
-      const rate = audioRegionRate(regionItem, project.tempo),
-        startStep = Math.max(0, absoluteStart),
-        skipSteps = Math.max(0, -absoluteStart),
-        start = eventTime(startStep),
-        offset = Math.max(
-          0,
-          Math.min(
-            buffer.duration - 0.001,
-            regionItem.offsetSeconds +
-              eventDuration(absoluteStart, skipSteps) * rate,
-          ),
-        ),
-        available = Math.max(0.001, buffer.duration - offset),
-        wanted =
-          eventDuration(
-            startStep,
+    for (const lane of song ? project.audioLanes : []) {
+      if (!mixAudible(project, lane.id)) continue;
+      const laneFx = new AudioFx(ctx, dry ? undefined : lane.effects),
+        lanePre = ctx.createGain(),
+        lanePan = ctx.createStereoPanner(),
+        laneOut = ctx.createGain();
+      lanePre.gain.value = dbToGain(lane.preGainDb ?? 0);
+      lanePan.pan.value = lane.pan;
+      laneOut.gain.value =
+        lane.volume *
+        (project.mixerGroups.find((group) => group.id === lane.groupId)
+          ?.volume ?? 1);
+      lanePre.connect(laneFx.input);
+      laneFx.output.connect(lanePan).connect(laneOut).connect(master);
+      for (const regionItem of lane.regions) {
+        const buffer = audioAssets?.get(regionItem.assetId);
+        if (!buffer) continue;
+        const absoluteStart = regionItem.startStep - regionStart;
+        if (
+          absoluteStart >= durationSteps ||
+          absoluteStart + regionItem.lengthSteps <= 0
+        )
+          continue;
+        const rate = audioRegionRate(regionItem, project.tempo),
+          startStep = Math.max(0, absoluteStart),
+          skipSteps = Math.max(0, -absoluteStart),
+          start = eventTime(startStep),
+          offset = Math.max(
+            0,
             Math.min(
-              regionItem.lengthSteps - skipSteps,
-              durationSteps - startStep,
+              buffer.duration - 0.001,
+              regionItem.offsetSeconds +
+                eventDuration(absoluteStart, skipSteps) * rate,
             ),
-          ) * rate,
-        sampleDuration = Math.min(available, wanted),
-        audible = sampleDuration / rate,
-        source = ctx.createBufferSource(),
-        gain = ctx.createGain(),
-        pan = ctx.createStereoPanner(),
-        level = Math.max(0.0001, dbToGain(regionItem.gainDb));
-      source.buffer = buffer;
-      source.playbackRate.value = rate;
-      pan.pan.value = 0;
-      gain.gain.setValueAtTime(level, start);
-      const fadeIn = Math.min(
-          audible * 0.45,
-          eventDuration(startStep, regionItem.fadeInSteps),
-        ),
-        fadeOut = Math.min(
-          audible * 0.45,
-          eventDuration(startStep, regionItem.fadeOutSteps),
-        );
-      if (fadeIn) {
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.linearRampToValueAtTime(level, start + fadeIn);
+          ),
+          available = Math.max(0.001, buffer.duration - offset),
+          wanted =
+            eventDuration(
+              startStep,
+              Math.min(
+                regionItem.lengthSteps - skipSteps,
+                durationSteps - startStep,
+              ),
+            ) * rate,
+          sampleDuration = Math.min(available, wanted),
+          audible = sampleDuration / rate,
+          source = ctx.createBufferSource(),
+          gain = ctx.createGain(),
+          pan = ctx.createStereoPanner(),
+          level = Math.max(0.0001, dbToGain(regionItem.gainDb));
+        source.buffer = buffer;
+        source.playbackRate.value = rate;
+        pan.pan.value = 0;
+        gain.gain.setValueAtTime(level, start);
+        const fadeIn = Math.min(
+            audible * 0.45,
+            eventDuration(startStep, regionItem.fadeInSteps),
+          ),
+          fadeOut = Math.min(
+            audible * 0.45,
+            eventDuration(startStep, regionItem.fadeOutSteps),
+          );
+        if (fadeIn) {
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.linearRampToValueAtTime(level, start + fadeIn);
+        }
+        if (fadeOut) {
+          gain.gain.setValueAtTime(
+            level,
+            Math.max(start + fadeIn, start + audible - fadeOut),
+          );
+          gain.gain.linearRampToValueAtTime(0.0001, start + audible);
+        }
+        const regionFx = new AudioFx(ctx, dry ? undefined : regionItem.effects);
+        source.connect(gain).connect(regionFx.input);
+        regionFx.output.connect(pan).connect(lanePre);
+        source.start(start, offset, sampleDuration);
       }
-      if (fadeOut) {
-        gain.gain.setValueAtTime(
-          level,
-          Math.max(start + fadeIn, start + audible - fadeOut),
-        );
-        gain.gain.linearRampToValueAtTime(0.0001, start + audible);
-      }
-      const regionFx = new AudioFx(ctx, dry ? undefined : regionItem.effects);
-      source.connect(gain).connect(regionFx.input);
-      regionFx.output.connect(pan).connect(lanePre);
-      source.start(start, offset, sampleDuration);
     }
-  }
-  onStage?.("render");
-  let deadline: ReturnType<typeof setTimeout> | undefined;
-  let abortListener: (() => void) | undefined;
-  let rendered: AudioBuffer;
-  try {
-    rendered = await Promise.race([
-      ctx.startRendering(),
-      new Promise<never>((_, reject) => {
-        deadline = setTimeout(
-          () =>
+    onStage?.("render");
+    if (signal?.aborted)
+      throw new DOMException("Export cancelled", "AbortError");
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    let watchdog: ReturnType<typeof setInterval> | undefined;
+    let abortListener: (() => void) | undefined;
+    let rendered: AudioBuffer;
+    let abandoned = false;
+    try {
+      rendered = await Promise.race([
+        (async () => {
+          // Firefox currently lacks OfflineAudioContext.suspend/resume.
+          if (
+            typeof ctx.suspend !== "function" ||
+            typeof ctx.resume !== "function"
+          ) {
+            scheduleUntil(Infinity);
+            return await ctx.startRendering();
+          }
+          const windowSeconds = 2;
+          scheduleUntil(windowSeconds);
+          let boundary = windowSeconds;
+          let paused = boundary < duration ? ctx.suspend(boundary) : undefined;
+          const rendering = ctx.startRendering();
+          while (paused) {
+            await Promise.race([paused, rendering]);
+            if (abandoned || signal?.aborted)
+              throw new DOMException("Export cancelled", "AbortError");
+            releaseVoices(ctx.currentTime);
+            onProgress?.(Math.min(1, ctx.currentTime / duration));
+            boundary += windowSeconds;
+            scheduleUntil(boundary);
+            paused = boundary < duration ? ctx.suspend(boundary) : undefined;
+            await ctx.resume();
+          }
+          return await rendering;
+        })(),
+        new Promise<never>((_, reject) => {
+          const fail = () =>
             reject(
               new Error("Offline render timed out during audio processing"),
-            ),
-          Math.max(1000, renderTimeoutMs),
-        );
-        abortListener = () =>
-          reject(new DOMException("Export cancelled", "AbortError"));
-        signal?.addEventListener("abort", abortListener, { once: true });
-      }),
-    ]);
+            );
+          if (renderTimeoutMs !== undefined) {
+            deadline = setTimeout(fail, Math.max(1000, renderTimeoutMs));
+          } else {
+            let lastTime = ctx.currentTime,
+              lastProgress = performance.now();
+            watchdog = setInterval(() => {
+              if (ctx.currentTime > lastTime) {
+                lastTime = ctx.currentTime;
+                lastProgress = performance.now();
+              } else if (performance.now() - lastProgress > 45000) fail();
+            }, 1000);
+          }
+          abortListener = () =>
+            reject(new DOMException("Export cancelled", "AbortError"));
+          signal?.addEventListener("abort", abortListener, { once: true });
+        }),
+      ]);
+    } finally {
+      abandoned = true;
+      clearTimeout(deadline);
+      clearInterval(watchdog);
+      if (abortListener) signal?.removeEventListener("abort", abortListener);
+    }
+    return await encodeOutput(rendered);
   } finally {
-    clearTimeout(deadline);
-    if (abortListener) signal?.removeEventListener("abort", abortListener);
+    releaseGm();
   }
-  onStage?.("encode");
-  if (signal?.aborted) throw new DOMException("Export cancelled", "AbortError");
-  return wavBlob(rendered, bitDepth, normalize, dither);
 }
 
 export { AudioFx, processAudio } from "./audio/effects";

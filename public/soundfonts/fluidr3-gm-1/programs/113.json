@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-113",
+  "kind": "program",
+  "number": 113,
+  "name": "agogo",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1130_FluidR3_GM_sf2_file.js",
+    "sha256": "d4a4d42bb672ecff1bf4cfc753da2bbcd600f9030629b05397664309def16055",
+    "bytes": 7813
+  },
+  "zones": [
+    {
+      "midi": 113,
+      "originalPitch": 7800,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.00442177,
+      "sample": {
+        "path": "samples/89bb80a5f0567bac064dc8ca185e71065fe55a8533e056be78f2c167009ca1d5.mp3",
+        "sha256": "89bb80a5f0567bac064dc8ca185e71065fe55a8533e056be78f2c167009ca1d5",
+        "bytes": 5599,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

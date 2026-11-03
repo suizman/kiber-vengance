@@ -1,4 +1,5 @@
-import { KEYS, SCALES, TRACK_META, makeNote } from "../core";
+import { trackMeta } from "../state/tracks";
+import { KEYS, SCALES, makeNote } from "../core";
 import type { NoteEvent, TrackId } from "../model";
 
 export interface MelodyTarget {
@@ -128,7 +129,7 @@ export function compileMelody(
       0,
       Math.min(14, plan.motif[index % plan.motif.length]! + variation),
     );
-    const meta = TRACK_META[target.track];
+    const meta = trackMeta(null, target.track);
     let pitch =
       Math.floor(meta.base / 12) * 12 +
       root +

@@ -1,8 +1,21 @@
 import { normalizeEffects } from "./audio/effects-model";
+import {
+  BUILTIN_META,
+  builtinKind,
+  projectTrackIds,
+  trackMeta,
+  trackKind,
+  trackState,
+} from "./state/tracks";
+export {
+  projectTrackIds,
+  trackMeta,
+  trackKind,
+  trackState,
+} from "./state/tracks";
 import type {
   AudioLane,
   AudioRegion,
-  Automation,
   AutomationLane,
   AutomationParameter,
   Clip,
@@ -19,9 +32,11 @@ import type {
   Scene,
   TrackId,
   TrackState,
+  BuiltinTrackId,
+  InstrumentKind,
 } from "./model.js";
 
-export const PROJECT_VERSION = 6 as const;
+export const PROJECT_VERSION = 7 as const;
 export const STEPS_PER_BAR = 16;
 export const STEPS = STEPS_PER_BAR;
 export const TRACKS = [
@@ -31,22 +46,7 @@ export const TRACKS = [
   "pad",
   "drums",
 ] as const satisfies readonly TrackId[];
-export const TRACK_META = {
-  lead: { label: "VOLT LEAD", color: "#ff3bd4", base: 60, low: 48, high: 96 },
-  guitar: {
-    label: "NEON GUITAR",
-    color: "#ff9f43",
-    base: 52,
-    low: 40,
-    high: 88,
-  },
-  bass: { label: "IRON BASS", color: "#2ee8ff", base: 36, low: 24, high: 67 },
-  pad: { label: "ASH VEIL", color: "#8b7cff", base: 48, low: 36, high: 84 },
-  drums: { label: "IMPACT RIG", color: "#a7ff5b", base: 0, low: 0, high: 6 },
-} satisfies Record<
-  TrackId,
-  { label: string; color: string; base: number; low: number; high: number }
->;
+export const TRACK_META = BUILTIN_META;
 export const DRUM_NAMES = [
   "KICK",
   "SNARE",
@@ -145,8 +145,11 @@ export function instrumentSettings(
   track: TrackId,
   source: Partial<TrackState> = {},
 ): InstrumentState {
-  const defaults = trackDefaults()[track];
+  const defaults = trackDefaults()[builtinKind(source.kind || track)];
   const keys = [
+    "kind",
+    "program",
+    "percussion",
     "preset",
     "wave",
     "osc2Wave",
@@ -171,7 +174,10 @@ export function instrumentSettings(
 
 export function mixAudible(project: Project, id: string): boolean {
   const all = [
-    ...TRACKS.map((track) => ({ id: track, ...project.tracks[track] })),
+    ...projectTrackIds(project).map((track) => ({
+      id: track,
+      ...project.tracks[track],
+    })),
     ...project.audioLanes,
   ];
   const source = all.find((item) => item.id === id);
@@ -236,7 +242,7 @@ export function clipTrackState(
   step?: number,
 ): TrackState {
   const cfg = {
-    ...project.tracks[clip.track],
+    ...trackState(project, clip.track),
     ...instrumentSettings(
       clip.track,
       clip.instrument || project.tracks[clip.track],
@@ -276,6 +282,8 @@ export function clipTrackState(
 }
 
 export function clipLengthSteps(clip: Clip): number {
+  if (Number.isFinite(clip.durationSteps) && clip.durationSteps! > 0)
+    return clip.durationSteps!;
   return (
     Math.max(1, clip.bars) * Math.max(1, clip.stepsPerBar || STEPS_PER_BAR)
   );
@@ -283,7 +291,7 @@ export function clipLengthSteps(clip: Clip): number {
 export function meterSteps(
   meter: { beats: number; unit: number } = { beats: 4, unit: 4 },
 ): number {
-  return Math.max(1, meter.beats) * (meter.unit === 8 ? 2 : 4);
+  return Math.max(1, meter.beats) * (16 / meter.unit);
 }
 export function frequency(midi: number): number {
   return 440 * 2 ** ((midi - 69) / 12);
@@ -298,6 +306,19 @@ export function projectAssets(
   };
   for (const sample of project.samples)
     add(sample.id, sample.name, sample.type);
+  for (const score of project.scoreSources || []) {
+    add(
+      score.assetId,
+      score.name,
+      score.mimeType || "application/octet-stream",
+    );
+    add(score.reviewAssetId, `${score.name}.review.json`, "application/json");
+    add(
+      score.musicXmlAssetId,
+      `${score.name}.musicxml`,
+      "application/vnd.recordare.musicxml+xml",
+    );
+  }
   add(
     project.sampler.assetId,
     project.sampler.name,
@@ -478,11 +499,15 @@ export function characterDefaults(track: TrackId): ClipCharacter {
       fx: fx(0.2, 0.22, 0, 0.08, 0.16, 0.62),
     },
   };
-  return { ...structuredClone(values[track]), macros: { ...DEFAULT_MACROS } };
+  return {
+    ...structuredClone(values[builtinKind(track)]!),
+    macros: { ...DEFAULT_MACROS },
+  };
 }
-function trackDefaults(): Record<TrackId, TrackState> {
+export function trackDefaults(): Record<BuiltinTrackId, TrackState> {
   return {
     lead: {
+      kind: "lead",
       volume: 0.72,
       pan: 0.08,
       mute: false,
@@ -507,6 +532,7 @@ function trackDefaults(): Record<TrackId, TrackState> {
       groupId: "music",
     },
     guitar: {
+      kind: "guitar",
       volume: 0.7,
       pan: 0.12,
       mute: false,
@@ -531,6 +557,7 @@ function trackDefaults(): Record<TrackId, TrackState> {
       groupId: "music",
     },
     bass: {
+      kind: "bass",
       volume: 0.82,
       pan: 0,
       mute: false,
@@ -555,6 +582,7 @@ function trackDefaults(): Record<TrackId, TrackState> {
       groupId: "music",
     },
     pad: {
+      kind: "pad",
       volume: 0.52,
       pan: -0.1,
       mute: false,
@@ -579,6 +607,7 @@ function trackDefaults(): Record<TrackId, TrackState> {
       groupId: "music",
     },
     drums: {
+      kind: "drums",
       volume: 0.8,
       pan: 0,
       mute: false,
@@ -778,8 +807,16 @@ function createProjectBase(): Omit<Project, "sampler"> {
     key: "C",
     scale: "minor",
     master: 0.78,
-    outputMix: { master: 1, deckA: 1, deckB: 1, cue: 1, preview: 0.7, muted: false },
+    outputMix: {
+      master: 1,
+      deckA: 1,
+      deckB: 1,
+      cue: 1,
+      preview: 0.7,
+      muted: false,
+    },
     tracks: trackDefaults(),
+    trackOrder: [...TRACKS],
     clips,
     activeClipIds: Object.fromEntries(
       TRACKS.map((track) => [track, by(track)]),
@@ -837,7 +874,7 @@ export function createProject(): Project {
 export function createEmptyProject(): Project {
   const project = createProject(),
     clips = TRACKS.map((track) =>
-      createClip(track, `${TRACK_META[track].label} 1`, 2),
+      createClip(track, `${trackMeta(null, track).label} 1`, 2),
     ),
     clipIds = Object.fromEntries(clips.map((c) => [c.track, c.id])) as Record<
       TrackId,
@@ -856,8 +893,62 @@ export function createEmptyProject(): Project {
   };
 }
 
+/** A new track shares an engine, not mixer state or clip identity. */
+export function addInstrumentTrack(
+  project: Project,
+  name: string,
+  kind: InstrumentKind = "gm",
+  program = 0,
+  percussion = false,
+): TrackId {
+  const id = `part-${cryptoId()}`;
+  const state: TrackState = {
+    ...trackDefaults()[builtinKind(kind)],
+    kind,
+    name: name.trim().slice(0, 120) || "Instrument",
+    program: Math.max(0, Math.min(127, Math.round(program))),
+    percussion,
+    volume: 0.72,
+    pan: 0,
+    solo: false,
+    mute: false,
+    color: ["#2ee8ff", "#ff3bd4", "#a7ff5b", "#ff9f43", "#8b7cff"][
+      projectTrackIds(project).length % 5
+    ]!,
+  };
+  project.tracks[id] = state;
+  project.trackOrder.push(id);
+  const clip = createClip(id, state.name!, 2, meterSteps(project.meter));
+  clip.instrument = instrumentSettings(id, state);
+  if (kind === "gm") {
+    clip.character = characterDefaults("lead");
+    clip.character.lfo.enabled = false;
+    clip.character.fx = {
+      bypass: false,
+      distortion: 0,
+      saturation: 0,
+      chorus: 0,
+      delay: 0,
+      reverb: 0.12,
+      tone: 0.5,
+    };
+    clip.character.macros = {
+      energy: 0.5,
+      darkness: 0,
+      tension: 0,
+      aggression: 0,
+      space: 0.3,
+      complexity: 0.5,
+    };
+  }
+  project.clips.push(clip);
+  project.activeClipIds[id] = clip.id;
+  for (const scene of project.arrangement) scene.clipIds[id] = clip.id;
+  return id;
+}
+
 function normalizeClip(input: any, fallback?: ClipCharacter): Clip {
-  const bars = Math.max(1, Math.min(8, +input.bars! || 1)),
+  const bars = Math.max(1, Math.min(16384, +input.bars! || 1)),
     stepsPerBar = Math.max(1, +input.stepsPerBar! || STEPS_PER_BAR),
     automation: {
       cutoff: Record<number, number>;
@@ -877,9 +968,10 @@ function normalizeClip(input: any, fallback?: ClipCharacter): Clip {
       id: n.id || cryptoId(),
       step: Math.max(0, +n.step || 0),
       pitch: +n.pitch || 0,
-      length: Math.max(0.01, +n.length || 1),
+      length: Math.max(0.000001, +n.length || 1),
       velocity: Math.max(0.01, Math.min(1, +n.velocity || 0.8)),
       offset: Math.max(-0.49, Math.min(0.49, +n.offset || 0)),
+      ...(n.notation ? { notation: structuredClone(n.notation) } : {}),
       expression: {
         pressure: n.expression?.pressure ?? n.velocity ?? 0.8,
         timbre: n.expression?.timbre ?? 0.5,
@@ -941,7 +1033,7 @@ function migrateLegacy(raw: LegacyProject, base: Project): Project {
     for (const track of TRACKS) {
       const clip = createClip(
         track,
-        `${pattern.name || "Pattern"} · ${TRACK_META[track].label}`,
+        `${pattern.name || "Pattern"} · ${trackMeta(null, track).label}`,
         pattern.bars || 1,
       );
       clip.character = legacyCharacter(raw, track);
@@ -987,9 +1079,27 @@ export function migrateProject(value: unknown): Project {
     raw = value as LegacyProject,
     source: LegacyProject = raw.clips ? raw : migrateLegacy(raw, base),
     defaults = trackDefaults(),
-    tracks = {} as Record<TrackId, TrackState>;
-  for (const id of TRACKS) {
-    const incoming = source.tracks?.[id] || defaults[id],
+    tracks = {} as Project["tracks"];
+  if (raw.version !== undefined && ![2, 3, 4, 5, 6, 7].includes(raw.version))
+    throw new Error("Unsupported project version");
+  const ids = [
+    ...new Set([
+      ...TRACKS,
+      ...Object.keys(source.tracks || {}),
+      ...(source.clips || []).map((clip: Clip) => clip.track),
+    ]),
+  ];
+  if (
+    ids.some(
+      (id) =>
+        typeof id !== "string" ||
+        !/^[a-z][a-z0-9_-]{0,95}$/.test(id) ||
+        ["constructor", "prototype", "__proto__"].includes(id),
+    )
+  )
+    throw new Error("Invalid track identifier");
+  for (const id of ids) {
+    const incoming = source.tracks?.[id] || defaults[builtinKind(id)],
       {
         arp: _arp,
         lfo: _lfo,
@@ -999,9 +1109,16 @@ export function migrateProject(value: unknown): Project {
         ...instrument
       } = incoming;
     tracks[id] = {
-      ...defaults[id],
+      ...defaults[builtinKind(id)],
       ...instrument,
-      color: instrument.color || TRACK_META[id].color,
+      kind: ["lead", "guitar", "bass", "pad", "drums", "gm"].includes(
+        instrument.kind,
+      )
+        ? instrument.kind
+        : builtinKind(id),
+      color: /^#[0-9a-f]{3,8}$/i.test(instrument.color || "")
+        ? instrument.color
+        : trackMeta(null, id).color,
     };
   }
   const clips = (source.clips || base.clips).map((c: any) =>
@@ -1016,18 +1133,18 @@ export function migrateProject(value: unknown): Project {
       legacyCharacter(source, c.track),
     ),
   );
-  for (const track of TRACKS)
+  for (const track of ids)
     if (!clips.some((c) => c.track === track))
       clips.push(
         createClip(
           track,
-          `${TRACK_META[track].label} 1`,
+          `${trackMeta({ tracks }, track).label} 1`,
           2,
           meterSteps(source.meter || base.meter),
         ),
       );
   const activeClipIds = { ...base.activeClipIds, ...source.activeClipIds };
-  for (const track of TRACKS)
+  for (const track of ids)
     if (!clips.some((c) => c.id === activeClipIds[track] && c.track === track))
       activeClipIds[track] = clips.find((c) => c.track === track)!.id;
   const arrangement = (
@@ -1039,7 +1156,10 @@ export function migrateProject(value: unknown): Project {
         ({
           id: s.id || cryptoId(),
           name: s.name || "SECTION",
-          clipIds: { ...activeClipIds, ...("clipIds" in s ? s.clipIds : {}) },
+          clipIds: {
+            ...(raw.version === 7 ? {} : activeClipIds),
+            ...("clipIds" in s ? s.clipIds : {}),
+          },
           repeats: Math.max(1, Math.min(16, +s.repeats! || 1)),
         }) as Scene,
     ),
@@ -1048,7 +1168,7 @@ export function migrateProject(value: unknown): Project {
       (sum, scene) =>
         sum +
         Math.max(
-          ...TRACKS.map((track) =>
+          ...ids.map((track) =>
             clipLengthSteps(
               clips.find((c) => c.id === scene.clipIds[track]) ||
                 clips.find((c) => c.track === track)!,
@@ -1063,7 +1183,9 @@ export function migrateProject(value: unknown): Project {
           ...createAudioLane(lane.name, lane.color),
           ...lane,
           effects: normalizeEffects(lane.effects),
-          preGainDb: Number.isFinite(lane.preGainDb) ? Math.max(-24, Math.min(12, lane.preGainDb)) : 0,
+          preGainDb: Number.isFinite(lane.preGainDb)
+            ? Math.max(-24, Math.min(12, lane.preGainDb))
+            : 0,
           regions: Array.isArray(lane.regions)
             ? lane.regions.map((region: any) => ({
                 ...createAudioRegion(
@@ -1087,6 +1209,14 @@ export function migrateProject(value: unknown): Project {
     modifiedAt: Date.now(),
     meter: { ...base.meter, ...source.meter },
     tracks,
+    trackOrder: [
+      ...new Set([
+        ...(Array.isArray(source.trackOrder)
+          ? source.trackOrder.filter((id: string) => ids.includes(id))
+          : []),
+        ...ids,
+      ]),
+    ],
     clips,
     activeClipIds,
     arrangement,
@@ -1471,7 +1601,8 @@ export function varyClip(project: Project, clip: Clip, amount = 0.5): Clip {
   return copy;
 }
 export function resizeClip(clip: Clip, bars: number): void {
-  clip.bars = Math.max(1, Math.min(8, +bars));
+  delete clip.durationSteps;
+  clip.bars = Math.max(1, Math.min(16384, +bars));
   const max = clipLengthSteps(clip);
   clip.notes = clip.notes
     .filter((n) => n.step < max)
@@ -1522,13 +1653,20 @@ export function notesAtStep(
   clip: Clip,
   track: TrackId,
   step: number,
+  interval = 1,
 ): NoteEvent[] {
   const local =
       ((step % clipLengthSteps(clip)) + clipLengthSteps(clip)) %
       clipLengthSteps(clip),
     arp = clip.character.arp;
-  if (track === "drums" || !arp.enabled)
-    return clip.notes.filter((n) => n.step === local);
+  if (trackKind(project, track) === "drums" || !arp.enabled)
+    return clip.notes
+      .filter((n) => n.step >= local - 1e-7 && n.step < local + interval - 1e-7)
+      .map((n) =>
+        n.step === local
+          ? n
+          : { ...n, step: local, offset: n.offset + n.step - local },
+      );
   if (local % arp.rate !== 0) return [];
   const held = clip.notes
     .filter((n) => n.step <= local && n.step + n.length > local)
@@ -1567,7 +1705,7 @@ export function generateClip(
   const steps = clipLengthSteps(clip),
     root = Math.max(0, KEYS.indexOf(project.key as (typeof KEYS)[number])),
     scale = SCALES[project.scale as ScaleName] || SCALES.minor,
-    base = TRACK_META[clip.track].base,
+    base = trackMeta(project, clip.track).base,
     degree = (i: number) =>
       base +
       root +
@@ -1679,7 +1817,7 @@ export function generateBacking(
     ] as Array<[TrackId, string]>) {
       const generated = createClip(
         track,
-        `${names[index] || `BASE ${index + 1}`} · ${TRACK_META[track].label}`,
+        `${names[index] || `BASE ${index + 1}`} · ${trackMeta(null, track).label}`,
         4,
         meterSteps(project.meter),
       );
@@ -1727,12 +1865,11 @@ export interface PlaybackEvent {
 }
 export function sceneLengthSteps(project: Project, scene: Scene): number {
   return Math.max(
-    ...TRACKS.map((t) =>
-      clipLengthSteps(
-        project.clips.find((c) => c.id === scene.clipIds[t]) ||
-          activeClip(project, t),
-      ),
-    ),
+    1,
+    ...Object.values(scene.clipIds)
+      .map((id) => project.clips.find((clip) => clip.id === id))
+      .filter((clip): clip is Clip => !!clip)
+      .map(clipLengthSteps),
   );
 }
 export function songDurationSteps(project: Project): number {
@@ -1806,22 +1943,25 @@ export function playbackEvents(
     for (const scene of project.arrangement) {
       const length = sceneLengthSteps(project, scene);
       for (let r = 0; r < scene.repeats; r++) {
-        for (const track of TRACKS)
-          append(
-            project.clips.find((c) => c.id === scene.clipIds[track]) ||
-              activeClip(project, track),
-            track,
-            durationSteps,
-            length,
-          );
+        for (const track of projectTrackIds(project))
+          if (scene.clipIds[track])
+            append(
+              project.clips.find((c) => c.id === scene.clipIds[track]) ||
+                activeClip(project, track),
+              track,
+              durationSteps,
+              length,
+            );
         durationSteps += length;
       }
     }
   } else {
     durationSteps = Math.max(
-      ...TRACKS.map((t) => clipLengthSteps(activeClip(project, t))),
+      ...projectTrackIds(project).map((t) =>
+        clipLengthSteps(activeClip(project, t)),
+      ),
     );
-    for (const track of TRACKS)
+    for (const track of projectTrackIds(project))
       append(activeClip(project, track), track, 0, durationSteps);
   }
   if (song) durationSteps = Math.max(durationSteps, songDurationSteps(project));
@@ -1841,7 +1981,7 @@ const SECTION_NAMES = [
 export function addArrangementScene(project: Project): Scene {
   const last = project.arrangement.at(-1),
     clipIds = {} as Record<TrackId, string>;
-  for (const track of TRACKS) {
+  for (const track of projectTrackIds(project)) {
     const clips = clipsForTrack(project, track),
       i = Math.max(
         -1,
@@ -1905,7 +2045,7 @@ export function removeArrangementScene(
   return true;
 }
 export function distributeArrangementPatterns(project: Project): boolean {
-  for (const track of TRACKS) {
+  for (const track of projectTrackIds(project)) {
     const clips = clipsForTrack(project, track);
     if (!clips.length) return false;
     project.arrangement.forEach(
@@ -1930,15 +2070,39 @@ function trackChunk(
   events: PlaybackEvent[],
   channel: number,
   drums = false,
+  program = 0,
+  name = "Instrument",
+  percussion = false,
+  programs: ReadonlyMap<string, number> = new Map(),
 ): number[] {
-  const list: MidiItem[] = [];
+  const midiChannel =
+    drums || percussion
+      ? 9
+      : channel % 15 >= 9
+        ? (channel % 15) + 1
+        : channel % 15;
+  const encodedName = [...new TextEncoder().encode(name)];
+  const list: MidiItem[] = [
+    { t: 0, order: -3, bytes: [0xff, 0x21, 1, Math.floor(channel / 15) % 128] },
+    {
+      t: 0,
+      order: -2,
+      bytes: [0xff, 3, ...variable(encodedName.length), ...encodedName],
+    },
+    { t: 0, order: -1, bytes: [0xc0 | midiChannel, program & 127] },
+  ];
+  let currentProgram = program;
   for (const n of events) {
-    const midiChannel = drums ? 9 : channel,
-      pitch = drums
+    const pitch = drums
         ? [36, 38, 42, 46, 45, 39, 49][n.pitch] || 36
         : Math.round(n.basePitch),
       start = Math.max(0, Math.round(n.step * 120)),
       end = Math.max(start + 1, Math.round((n.step + n.length) * 120));
+    const nextProgram = programs.get(n.clipId) ?? program;
+    if (nextProgram !== currentProgram) {
+      list.push({ t: start, order: 1, bytes: [0xc0 | midiChannel, nextProgram & 127] });
+      currentProgram = nextProgram;
+    }
     if (!drums) {
       const bend = Math.max(
         0,
@@ -2049,12 +2213,16 @@ export function encodeMidi(
   }
   meta.push(0, 0xff, 0x2f, 0);
   chunks.push(meta);
-  TRACKS.forEach((track, i) =>
+  projectTrackIds(project).forEach((track, i) =>
     chunks.push(
       trackChunk(
         events.filter((e) => e.track === track),
         i,
-        track === "drums",
+        trackKind(project, track) === "drums",
+        activeClip(project, track).instrument.program || 0,
+        trackMeta(project, track).label,
+        activeClip(project, track).instrument.percussion || false,
+        new Map(project.clips.map(clip => [clip.id, clip.instrument.program || 0])),
       ),
     ),
   );
@@ -2073,31 +2241,19 @@ export function encodeMidi(
   return new Uint8Array(bytes);
 }
 
-export class History<T = Project> {
-  readonly limit: number;
-  past: T[] = [];
-  future: T[] = [];
-  constructor(limit = 60) {
-    this.limit = limit;
-  }
-  push(value: T): void {
-    this.past.push(structuredClone(value));
-    if (this.past.length > this.limit) this.past.shift();
-    this.future = [];
-  }
-  undo(current: T): T {
-    if (!this.past.length) return current;
-    this.future.push(structuredClone(current));
-    return this.past.pop()!;
-  }
-  redo(current: T): T {
-    if (!this.future.length) return current;
-    this.past.push(structuredClone(current));
-    return this.future.pop()!;
-  }
-}
+export { History } from "./state/history";
 
 export function normalizeOutputMix(value: any = {}) {
-  const gain = (key: string, fallback: number) => Number.isFinite(value?.[key]) ? Math.max(0, Math.min(2, value[key])) : fallback;
-  return { master: gain("master", 1), deckA: gain("deckA", 1), deckB: gain("deckB", 1), cue: gain("cue", 1), preview: gain("preview", .7), muted: value?.muted === true };
+  const gain = (key: string, fallback: number) =>
+    Number.isFinite(value?.[key])
+      ? Math.max(0, Math.min(2, value[key]))
+      : fallback;
+  return {
+    master: gain("master", 1),
+    deckA: gain("deckA", 1),
+    deckB: gain("deckB", 1),
+    cue: gain("cue", 1),
+    preview: gain("preview", 0.7),
+    muted: value?.muted === true,
+  };
 }

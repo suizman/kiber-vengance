@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-100",
+  "kind": "program",
+  "number": 100,
+  "name": "fx 5 brightness",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1000_FluidR3_GM_sf2_file.js",
+    "sha256": "14b0b60360f487d38f3d1a9ab8ae62908f40826dae2d235740edd1b1c5425f9c",
+    "bytes": 18691
+  },
+  "zones": [
+    {
+      "midi": 100,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 0.03303855,
+      "sample": {
+        "path": "samples/21074c2086e9c7de8fc4d83d9d1ee5515b0e4cceb09a1f57aa57ffb4ca0d8c88.mp3",
+        "sha256": "21074c2086e9c7de8fc4d83d9d1ee5515b0e4cceb09a1f57aa57ffb4ca0d8c88",
+        "bytes": 13762,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

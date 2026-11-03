@@ -1,5 +1,9 @@
 export const trackIds = ["lead", "guitar", "bass", "pad", "drums"] as const;
-export type TrackId = (typeof trackIds)[number];
+export type BuiltinTrackId = (typeof trackIds)[number];
+/** Stable project identity; instrument choice is independent of a track's ID. */
+export type TrackId = string;
+export type InstrumentKind = BuiltinTrackId | "gm";
+export type MeterUnit = 1 | 2 | 4 | 8 | 16 | 32 | 64;
 export type Waveform =
   "sine" | "square" | "sawtooth" | "triangle" | "pulse" | "metal";
 export type FilterMode = "lowpass" | "highpass" | "bandpass";
@@ -25,6 +29,12 @@ export interface NoteEvent {
   velocity: number;
   offset: number;
   expression: NoteExpression;
+  notation?: {
+    staff: number;
+    voice: string;
+    lyric?: string;
+    sourceId?: string;
+  };
 }
 export interface Automation {
   cutoff: Record<number, number>;
@@ -76,12 +86,17 @@ export interface Clip {
   name: string;
   bars: number;
   stepsPerBar: number;
+  durationSteps?: number;
   notes: NoteEvent[];
   automation: Automation;
   character: ClipCharacter;
   instrument: InstrumentState;
 }
 export interface TrackState {
+  kind: InstrumentKind;
+  name?: string;
+  program?: number;
+  percussion?: boolean;
   volume: number;
   pan: number;
   mute: boolean;
@@ -108,6 +123,9 @@ export interface TrackState {
 // Mixer settings remain on TrackState; its instrument fields also support legacy files.
 export type InstrumentState = Pick<
   TrackState,
+  | "kind"
+  | "program"
+  | "percussion"
   | "preset"
   | "wave"
   | "osc2Wave"
@@ -331,7 +349,7 @@ export interface MeterEvent {
   id: string;
   step: number;
   beats: number;
-  unit: 4 | 8;
+  unit: MeterUnit;
 }
 export interface MidiMapping {
   id: string;
@@ -349,18 +367,29 @@ export interface MasteringSettings {
   referenceLevel: number;
 }
 export interface Project {
-  version: 6;
+  version: 7;
   id: string;
   title: string;
   modifiedAt: number;
   tempo: number;
   swing: number;
-  meter: { beats: number; unit: 4 | 8 };
+  meter: { beats: number; unit: MeterUnit };
   key: string;
   scale: string;
   master: number;
   outputMix?: OutputMix;
-  tracks: Record<TrackId, TrackState>;
+  trackOrder: TrackId[];
+  tracks: Record<TrackId, TrackState> & Record<BuiltinTrackId, TrackState>;
+  scoreSources?: Array<{
+    id: string;
+    name: string;
+    format: string;
+    assetId: string;
+    mimeType?: string;
+    reviewAssetId?: string;
+    musicXmlAssetId?: string;
+    partTracks: TrackId[];
+  }>;
   clips: Clip[];
   activeClipIds: Record<TrackId, string>;
   arrangement: Scene[];
@@ -393,11 +422,13 @@ export function isProject(value: unknown): value is Project {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<Project>;
   return (
-    candidate.version === 6 &&
+    candidate.version === 7 &&
     typeof candidate.title === "string" &&
     Array.isArray(candidate.clips) &&
     Array.isArray(candidate.arrangement) &&
-    trackIds.every(
+    Array.isArray(candidate.trackOrder) &&
+    candidate.trackOrder.length > 0 &&
+    candidate.trackOrder.every(
       (track) => typeof candidate.activeClipIds?.[track] === "string",
     )
   );

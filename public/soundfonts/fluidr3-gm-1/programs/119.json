@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-119",
+  "kind": "program",
+  "number": 119,
+  "name": "reverse cymbal",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1190_FluidR3_GM_sf2_file.js",
+    "sha256": "123ae3eb814feedea6a6dbd72438529626322c0de9a6896dd2391e7f80f1e12a",
+    "bytes": 46470
+  },
+  "zones": [
+    {
+      "midi": 119,
+      "originalPitch": 7900,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": -1,
+      "loopEnd": -2,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": false,
+      "anchor": 1.04582763,
+      "sample": {
+        "path": "samples/b23fca68af67a8f650ad6075a5504e927e9892cc63797b8450e7fe0e8a85cecc.mp3",
+        "sha256": "b23fca68af67a8f650ad6075a5504e927e9892cc63797b8450e7fe0e8a85cecc",
+        "bytes": 34591,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

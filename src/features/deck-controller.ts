@@ -1,8 +1,9 @@
+import { projectTrackIds } from "../state/tracks";
 import type { DeckContext } from "../state/contracts";
 import type { DeckId } from "../audio/deck";
 import { waveformPeaks } from "../audio/waveform-cache";
 import { renderWav } from "../audio";
-import { meterSteps, TRACKS, activeClip, clipLengthSteps } from "../core";
+import { meterSteps, activeClip, clipLengthSteps } from "../core";
 import { t as msg } from "../ui/i18n";
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
@@ -192,7 +193,7 @@ export function bindDeck(
           (bars * meterSteps(ctx.project.meter) * 60) / ctx.project.tempo / 4,
         targetFrames = Math.max(1, Math.round(targetSeconds * rate)),
         sourceSteps = Math.max(
-          ...TRACKS.map((track) =>
+          ...projectTrackIds(ctx.project).map((track) =>
             clipLengthSteps(activeClip(ctx.project, track)),
           ),
         ),

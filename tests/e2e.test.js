@@ -37,8 +37,8 @@ for (const mode of ['development', 'production']) {
         await page.locator('#scratchBars').selectOption('1');
         await page.locator('#scratchCaptureBtn').click();
       }
-      await page.waitForFunction(() => globalThis.__kvDiagnostics().scratchReady, null, { timeout: 20000 });
-      assert.ok((await page.evaluate(() => globalThis.__kvDiagnostics())).scratchFrames > 1000);
+      await page.waitForFunction(async () => globalThis.__kvDiagnostics().scratchReady, null, { timeout: 20000 });
+      assert.ok((await page.evaluate(async () => globalThis.__kvDiagnostics())).scratchFrames > 1000);
       assert.equal(await page.locator('#scratchPlayBtn').isEnabled(), true);
       assert.match(await page.locator('#scratchStatus').textContent(), action === 'import' ? /firefox-deck\.wav/ : /BUFFER ARMED/);
     }
@@ -59,15 +59,15 @@ test('complete composition, live input, persistence and export work in Firefox',
   await page.locator('#undoBtn').click();assert.equal(await page.locator('#clipSelect option').count(),count);
   await page.locator('#redoBtn').click();assert.equal(await page.locator('#clipSelect option').count(),count+1);
   await goToView(page,'arrange');const scenes=await page.locator('.scene').count();await page.locator('#addSceneBtn').click();assert.equal(await page.locator('.scene').count(),scenes+1);
-  await page.locator('#playBtn').click();await page.waitForFunction(()=>globalThis.__kvDiagnostics().schedulerActive);
-  await page.locator('#pauseBtn').click();await page.waitForFunction(()=>!globalThis.__kvDiagnostics().schedulerActive);
+  await page.locator('#playBtn').click();await page.waitForFunction(async () =>globalThis.__kvDiagnostics().schedulerActive);
+  await page.locator('#pauseBtn').click();await page.waitForFunction(async () =>!globalThis.__kvDiagnostics().schedulerActive);
   await goToView(page,'forge');
   const liveKey=page.locator('#keyboard .key').first();await liveKey.scrollIntoViewIfNeeded();const box=await liveKey.boundingBox();assert.ok(box);
-  await page.mouse.move(box.x+box.width/2,box.y+box.height*.8);await page.mouse.down();await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===1);await page.mouse.up();await page.waitForFunction(()=>globalThis.__kvDiagnostics().liveVoices===0);
+  await page.mouse.move(box.x+box.width/2,box.y+box.height*.8);await page.mouse.down();await page.waitForFunction(async () =>globalThis.__kvDiagnostics().liveVoices===1);await page.mouse.up();await page.waitForFunction(async () =>globalThis.__kvDiagnostics().liveVoices===0);
   await page.locator('#exportAsBtn').click();await page.locator('.export-advanced').nth(1).locator('summary').click();
   const downloadPromise=page.waitForEvent('download');await page.locator('[data-export="clip-wav"]').click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/\.wav$/);assert.equal(await download.failure(),null);
-  await page.waitForFunction(()=>Boolean(globalThis.localStorage.getItem('kiber-vengance-project-v6')));
-  const stored=await page.evaluate(()=>JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')));assert.equal(stored.version,6);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));
+  await page.waitForFunction(async () =>Boolean(await globalThis.__readSavedProject()));
+  const stored=await page.evaluate(async () =>(await globalThis.__readSavedProject()));assert.equal(stored.version,7);assert.ok(stored.clips.length>=10);assert.ok(stored.clips.every(clip=>clip.character?.fx&&clip.character?.macros));
   await page.reload();await page.locator('.note-block').first().waitFor();assert.equal(await page.locator('#clipSelect option').count(),count+1);assert.deepEqual(errors,[]);
 });
 
@@ -99,22 +99,22 @@ for (const kind of ['firefox', 'chromium']) {
     await page.locator('#preset').selectOption('Razor Choir');
     await page.locator('#clipSelect').selectOption(ids[0]);
     assert.equal(await page.locator('#preset').inputValue(), 'Neon Talon');
-    await page.waitForFunction(() => {
-      const p = JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6') || 'null');
+    await page.waitForFunction(async () => {
+      const p = (await globalThis.__readSavedProject());
       return p?.clips.some(c => c.instrument?.preset === 'Solar Vengeance');
     });
     // Let the latest edit settle before injecting a storage fixture; pagehide now flushes pending saves.
-    await page.waitForFunction(() => globalThis.document.querySelector('#saveState')?.textContent === 'Saved on this device');
-    await page.evaluate(() => {
-      const key = 'kiber-vengance-project-v6', p = JSON.parse(globalThis.localStorage.getItem(key));
+    await page.waitForFunction(async () => globalThis.document.querySelector('#saveState')?.textContent === 'Saved on this device');
+    await page.evaluate(async () => {
+      const p = await globalThis.__readSavedProject();
       p.midiMappings = [{ id: 'clip-cutoff', channel: 0, controller: 21, target: 'track.lead.cutoff', min: 0, max: 1 }];
-      globalThis.localStorage.setItem(key, JSON.stringify(p));
+      await globalThis.__writeSavedProject(p);
     });
     await page.reload(); await setSoundInspector(page, true);
     await page.locator('#clipSelect').selectOption(ids[1]);
     assert.equal(await page.locator('#preset').inputValue(), 'Solar Vengeance');
-    await page.waitForFunction(() => typeof globalThis.__clipMidi?.onmidimessage === 'function');
-    await page.evaluate(() => globalThis.__clipMidi.onmidimessage({ data: [0xb0, 21, 64] }));
+    await page.waitForFunction(async () => typeof globalThis.__clipMidi?.onmidimessage === 'function');
+    await page.evaluate(async () => globalThis.__clipMidi.onmidimessage({ data: [0xb0, 21, 64] }));
     await page.locator('#clipSelect').selectOption(ids[0]);
     assert.equal(+await page.locator('[data-dial="cutoff"] [role="slider"]').getAttribute('aria-valuenow'), 5600);
     await page.locator('#clipSelect').selectOption(ids[1]);
@@ -124,10 +124,10 @@ for (const kind of ['firefox', 'chromium']) {
     await page.locator('#saveUserPresetBtn').click();
     await page.locator('[data-request-dialog] input[name=name]').fill('Clip Solar');
     await page.locator('[data-request-dialog] button[type=submit]').click();
-    const saved = await page.evaluate(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-user-presets-v1')).at(-1));
+    const saved = await page.evaluate(async () => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-user-presets-v1')).at(-1));
     assert.equal(saved.instrument.preset, 'Solar Vengeance');
     assert.equal(saved.instrument.volume, undefined);
-    const beforeMixer = await page.evaluate(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).tracks.lead);
+    const beforeMixer = await page.evaluate(async () => (await globalThis.__readSavedProject()).tracks.lead);
     // Old user banks bundled mixer state: importing one must not mute/change the track.
     const legacyPreset = { ...saved, id: 'legacy-clip-test', name: 'Legacy Clip', instrument: { ...saved.instrument, preset: 'Legacy Clip', wave: 'triangle', volume: 0, pan: -1, mute: true, solo: true } };
     await page.locator('#importPresetBank').setInputFiles({ name: 'legacy-bank.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'kiber-vengance-preset-bank', presets: [legacyPreset] })) });
@@ -137,8 +137,8 @@ for (const kind of ['firefox', 'chromium']) {
     assert.equal(await page.locator('#waveSelect').inputValue(), 'triangle');
     await page.locator('#clipSelect').selectOption(ids[0]);
     assert.equal(await page.locator('#preset').inputValue(), 'Neon Talon');
-    await page.waitForFunction(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).clips.some(c => c.instrument?.preset === 'Legacy Clip'));
-    const afterMixer = await page.evaluate(() => JSON.parse(globalThis.localStorage.getItem('kiber-vengance-project-v6')).tracks.lead);
+    await page.waitForFunction(async () => (await globalThis.__readSavedProject()).clips.some(c => c.instrument?.preset === 'Legacy Clip'));
+    const afterMixer = await page.evaluate(async () => (await globalThis.__readSavedProject()).tracks.lead);
     assert.deepEqual(afterMixer, beforeMixer);
     const results = await page.evaluate(async () => {
       const { createEmptyProject, activeClip, duplicateClip, makeNote } = await import('/core.js');
@@ -189,17 +189,17 @@ for (const kind of ['firefox', 'chromium']) {
     const button = page.locator('#clipStartBtn');
     assert.equal(await button.getAttribute('aria-label'), 'Play or resume active clips');
     await page.locator('#clipPosition').fill('8'); await button.click();
-    await page.waitForFunction(() => globalThis.__kvDiagnostics().schedulerActive && globalThis.__kvDiagnostics().position >= 11);
+    await page.waitForFunction(async () => globalThis.__kvDiagnostics().schedulerActive && globalThis.__kvDiagnostics().position >= 11);
     assert.equal(await button.getAttribute('aria-label'), 'Pause active clips');
     await button.click();
-    assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).schedulerActive, false);
+    assert.equal((await page.evaluate(async () => globalThis.__kvDiagnostics())).schedulerActive, false);
     const paused = +await page.locator('#clipPosition').inputValue();
     assert.ok(paused >= 8);
     await page.waitForTimeout(300);
     assert.equal(+await page.locator('#clipPosition').inputValue(), paused);
     assert.equal(await button.textContent(), '▶ CLIP');
     await button.click();
-    await page.waitForFunction(start => {
+    await page.waitForFunction(async start => {
       const d = globalThis.__kvDiagnostics();
       return d.schedulerActive && !d.songMode && d.position >= start && d.position < start + 4;
     }, paused);
@@ -211,12 +211,12 @@ for (const kind of ['firefox', 'chromium']) {
     assert.equal(await button.textContent(), '▶ CLIP');
     await goToView(page, 'arrange'); await page.locator('#globalStartBtn').click();
     await goToView(page, 'forge');
-    assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).songMode, true);
+    assert.equal((await page.evaluate(async () => globalThis.__kvDiagnostics())).songMode, true);
     assert.equal(await button.textContent(), '▶ CLIP');
     await button.click();
-    await page.waitForFunction(() => globalThis.__kvDiagnostics().schedulerActive && !globalThis.__kvDiagnostics().songMode);
+    await page.waitForFunction(async () => globalThis.__kvDiagnostics().schedulerActive && !globalThis.__kvDiagnostics().songMode);
     await button.click();
-    assert.equal((await page.evaluate(() => globalThis.__kvDiagnostics())).schedulerActive, false);
+    assert.equal((await page.evaluate(async () => globalThis.__kvDiagnostics())).schedulerActive, false);
   });
 }
 

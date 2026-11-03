@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-097",
+  "kind": "program",
+  "number": 97,
+  "name": "fx 2 soundtrack",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0970_FluidR3_GM_sf2_file.js",
+    "sha256": "e690a382f0b9555777da564ff9797099d425e0c563abdbd74072004ae296a2fc",
+    "bytes": 28401
+  },
+  "zones": [
+    {
+      "midi": 97,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 36638,
+      "loopEnd": 51214,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.67861676,
+      "sample": {
+        "path": "samples/d2fbe66d82f6579d7d4ad8b3177261caf808d0dd9b480623d6c658bc22bdc52b.mp3",
+        "sha256": "d2fbe66d82f6579d7d4ad8b3177261caf808d0dd9b480623d6c658bc22bdc52b",
+        "bytes": 21036,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

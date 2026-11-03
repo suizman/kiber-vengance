@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-125",
+  "kind": "program",
+  "number": 125,
+  "name": "helicopter",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/1250_FluidR3_GM_sf2_file.js",
+    "sha256": "fa198f2d22048ee75f5f085e838a83f48d1949a4b36d4beca9f412ca7a7a4d81",
+    "bytes": 14370
+  },
+  "zones": [
+    {
+      "midi": 125,
+      "originalPitch": 6000,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 6693,
+      "loopEnd": 21235,
+      "coarseTune": 0,
+      "fineTune": 39,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.21143749,
+      "sample": {
+        "path": "samples/ff4a971bd4fbded330c512cd752cdbd9d2bf1f43599431ec3a0847298c245dcb.mp3",
+        "sha256": "ff4a971bd4fbded330c512cd752cdbd9d2bf1f43599431ec3a0847298c245dcb",
+        "bytes": 10521,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

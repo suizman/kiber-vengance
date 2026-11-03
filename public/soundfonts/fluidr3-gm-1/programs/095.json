@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-095",
+  "kind": "program",
+  "number": 95,
+  "name": "pad 8 sweep",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0950_FluidR3_GM_sf2_file.js",
+    "sha256": "773094ff7b2fbee5df5a57ea2a21a80179b532fe5ebf14d40fe77d0a4b9b14b3",
+    "bytes": 28118
+  },
+  "zones": [
+    {
+      "midi": 95,
+      "originalPitch": 8400,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 108,
+      "loopStart": 36638,
+      "loopEnd": 51214,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 44100,
+      "ahdsr": true,
+      "anchor": 0.67861676,
+      "sample": {
+        "path": "samples/b6a512af385fbd4e08eaa81fa3c45a9ba541aba1bdb2e0e6f48c2f6539d6c75e.mp3",
+        "sha256": "b6a512af385fbd4e08eaa81fa3c45a9ba541aba1bdb2e0e6f48c2f6539d6c75e",
+        "bytes": 20826,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "program-016",
+  "kind": "program",
+  "number": 16,
+  "name": "drawbar organ",
+  "license": "MIT",
+  "source": {
+    "url": "https://raw.githubusercontent.com/surikov/webaudiofontdata/23ca907d4370a04fd89ca483a92915e4d6159ab9/sound/0160_FluidR3_GM_sf2_file.js",
+    "sha256": "d92842129c792db9984ea5827e3c6630c03bda428ebae75036e3fa99559274ba",
+    "bytes": 38861
+  },
+  "zones": [
+    {
+      "midi": 16,
+      "originalPitch": 7200,
+      "keyRangeLow": 0,
+      "keyRangeHigh": 127,
+      "loopStart": 11297,
+      "loopEnd": 49216,
+      "coarseTune": 0,
+      "fineTune": 0,
+      "sampleRate": 32000,
+      "ahdsr": true,
+      "anchor": 0.00421875,
+      "sample": {
+        "path": "samples/3db38ddc359e822208e4efe583b0053303e4277e26c6534458a051a57bb99740.mp3",
+        "sha256": "3db38ddc359e822208e4efe583b0053303e4277e26c6534458a051a57bb99740",
+        "bytes": 28881,
+        "mime": "audio/mpeg",
+        "format": "mp3"
+      }
+    }
+  ]
+}

@@ -1,139 +1,37 @@
-import {
-  requestFields,
-  requestText,
-  requestNumber,
-  requestConfirmation,
-} from "../ui/dialogs";
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
-
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
-
-import { mountDial } from "../ui/components/dial";
-
-import { studioBridge, type StudioView } from "../ui/bridge";
+import { songDurationSteps, projectSeconds } from "../core";
+import { projectTrackIds, trackMeta } from "../state/tracks";
+import { requestText, requestConfirmation } from "../ui/dialogs";
+import { t as msg, translate } from "../ui/i18n";
 
 import {
-  createProject,
-  createEmptyProject,
-  migrateProject,
   activeClip,
   clipsForTrack,
   createClip,
-  clipLengthSteps,
   meterSteps,
-  setProjectMeter,
   makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
-  resizeClip,
-  quantizeClip,
-  automationValue,
   generateClip,
-  generateBacking,
-  encodeMidi,
-  playbackEvents,
-  History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
-  addArrangementScene,
   duplicateArrangementScene,
   moveArrangementScene,
   removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
   duplicateArrangementSelection,
   removeArrangementSelection,
-  dbToGain,
-  gainToDb,
-  createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
-  detectTransientSlices,
-  transformNotes,
-  cryptoId,
-  samplerDefaults,
 } from "../core.js";
 
-import { AudioEngine, renderWav } from "../audio.js";
+import type { Clip, TrackId } from "../model.js";
 
-import type {
-  Clip,
-  AudioLane,
-  AudioRegion,
-  AutomationLane,
-  MidiMapping,
-  ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
-} from "../model.js";
+import type { ArrangementContext } from "../state/contracts";
 
-import type { RuntimeContext } from "../app";
-
-type Language = "en" | "es";
-
-type QuickExportKind =
-  | "wav"
-  | "midi"
-  | "project"
-  | "clip-wav"
-  | "clip-midi"
-  | "stems"
-  | "bundle"
-  | "performance";
-
-type QuickTarget = {
-  handle: any | null;
-  fallback: boolean;
-  cancelled: boolean;
-  name: string;
-  type: string;
-};
-
-type UserPreset = {
-  id: string;
-  name: string;
-  track: TrackId;
-  tags: string[];
-  instrument: import("../model.js").InstrumentState;
-  character: any;
-};
-
-type CommandAction = {
-  label: string;
-  labelEs: string;
-  group: string;
-  groupEs: string;
-  shortcut: string;
-  icon: string;
-  keywords: string;
-  run: () => void;
-};
-
-export function renderArrangement(ctx: RuntimeContext) {
+export function renderArrangement(ctx: ArrangementContext) {
   const options = (track: TrackId, id: string) =>
+      `<option value="" ${!id ? "selected" : ""}>${ctx.L("Silent", "Silencio")}</option>` +
       clipsForTrack(ctx.project, track)
         .map(
           (c) =>
             `<option value="${c.id}" ${c.id === id ? "selected" : ""}>${ctx.esc(c.name)} · ${c.bars}b</option>`,
         )
         .join(""),
-    { durationSteps } = playbackEvents(ctx.project, { song: true }),
-    seconds = (durationSteps * 60) / ctx.project.tempo / 4;
+    durationSteps = songDurationSteps(ctx.project),
+    seconds = projectSeconds(ctx.project, durationSteps);
   ctx.$("#songStats").textContent =
     ctx.language === "es"
       ? `${ctx.project.arrangement.length} SECCIONES · ${Math.ceil(durationSteps / meterSteps(ctx.project.meter))} COMPASES · ${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`
@@ -164,12 +62,22 @@ export function renderArrangement(ctx: RuntimeContext) {
   ctx.$("#arrangement").innerHTML = ctx.project.arrangement
     .map(
       (s: any, i: number) =>
-        `<article class="scene ${ctx.selectedScenes.has(i) ? "selected" : ""} ${ctx.currentScene === i && ctx.engine.playing ? "playing" : ""}" data-scene="${i}" tabindex="0"><div class="scene-top"><span class="drag-handle" draggable="true">⠿</span><input data-scene-name aria-label="${msg("ui_f2c6b564bd81")} ${i + 1}" value="${ctx.esc(s.name)}"><button data-action="remove" aria-label="${msg("ui_e7eaff78b315")} ${i + 1}" ${ctx.project.arrangement.length === 1 ? "disabled" : ""}>×</button></div><div class="scene-clips">${TRACKS.map((t) => `<label style="--track:${TRACK_META[t].color}"><span>${TRACK_META[t].label}</span><select data-scene-track="${t}">${options(t, s.clipIds[t])}</select></label>`).join("")}</div><div class="scene-bottom"><label class="scene-repeats"><span>${msg("ui_830d819ef9a5")}</span><input data-repeats type="number" min="1" max="16" value="${s.repeats}"></label><div class="scene-actions"><button class="scene-load-compose" data-action="load-compose" aria-label="${translate("LOAD TO COMPOSE", "CARGAR EN COMPOSE")}: ${ctx.esc(s.name)}">${translate("LOAD TO COMPOSE", "CARGAR EN COMPOSE")}</button><button data-action="left" aria-label="${msg("ui_f1e7f81f8b87")}" ${i === 0 ? "disabled" : ""}>←</button><button data-action="duplicate" aria-label="${msg("ui_2dc7e40019d0")}">⧉</button><button data-action="right" aria-label="${msg("ui_0d1132856d9d")}" ${i === ctx.project.arrangement.length - 1 ? "disabled" : ""}>→</button></div><em>${String(i + 1).padStart(2, "0")}</em></div></article>`,
+        `<article class="scene ${ctx.selectedScenes.has(i) ? "selected" : ""} ${ctx.currentScene === i && ctx.engine.playing ? "playing" : ""}" data-scene="${i}" tabindex="0"><div class="scene-top"><span class="drag-handle" draggable="true">⠿</span><input data-scene-name aria-label="${msg("ui_f2c6b564bd81")} ${i + 1}" value="${ctx.esc(s.name)}"><button data-action="remove" aria-label="${msg("ui_e7eaff78b315")} ${i + 1}" ${ctx.project.arrangement.length === 1 ? "disabled" : ""}>×</button></div><div class="scene-clips">${projectTrackIds(
+          ctx.project,
+        )
+          .map(
+            (t) =>
+              `<label style="--track:${trackMeta(ctx.project, t).color}"><span>${ctx.esc(trackMeta(ctx.project, t).label)}</span><select data-scene-track="${t}">${options(t, s.clipIds[t])}</select></label>`,
+          )
+          .join(
+            "",
+          )}</div><div class="scene-bottom"><label class="scene-repeats"><span>${msg("ui_830d819ef9a5")}</span><input data-repeats type="number" min="1" max="16" value="${s.repeats}"></label><div class="scene-actions"><button class="scene-load-compose" data-action="load-compose" aria-label="${translate("LOAD TO COMPOSE", "CARGAR EN COMPOSE")}: ${ctx.esc(s.name)}">${translate("LOAD TO COMPOSE", "CARGAR EN COMPOSE")}</button><button data-action="left" aria-label="${msg("ui_f1e7f81f8b87")}" ${i === 0 ? "disabled" : ""}>←</button><button data-action="duplicate" aria-label="${msg("ui_2dc7e40019d0")}">⧉</button><button data-action="right" aria-label="${msg("ui_0d1132856d9d")}" ${i === ctx.project.arrangement.length - 1 ? "disabled" : ""}>→</button></div><em>${String(i + 1).padStart(2, "0")}</em></div></article>`,
     )
     .join("");
   ctx.$$(".scene").forEach((card) => {
     const i = +card.dataset.scene,
       s = ctx.project.arrangement[i];
+    if (!s) return;
     card.querySelector("[data-scene-name]").onchange = (e: any) => {
       ctx.snapshot();
       s.name = e.target.value.trim() || `SECTION ${i + 1}`;
@@ -311,7 +219,7 @@ export function renderArrangement(ctx: RuntimeContext) {
   );
 }
 
-export function focusScene(ctx: RuntimeContext, i: number) {
+export function focusScene(ctx: ArrangementContext, i: number) {
   setTimeout(
     () =>
       document.querySelector(`.scene[data-scene="${i}"]`)?.scrollIntoView({
@@ -323,7 +231,7 @@ export function focusScene(ctx: RuntimeContext, i: number) {
   );
 }
 
-export function setupArrangeTools(ctx: RuntimeContext) {
+export function setupArrangeTools(ctx: ArrangementContext) {
   ctx.$("#arrangeSelectAllBtn").onclick = () => {
     ctx.selectedScenes = new Set(
       ctx.project.arrangement.map((_scene: any, index: number) => index),
@@ -390,6 +298,7 @@ export function setupArrangeTools(ctx: RuntimeContext) {
         1,
         meterSteps(ctx.project.meter),
       );
+    if (!source) return;
     const sourceDrum =
       ctx.project.clips.find(
         (clip: Clip) => clip.id === source.clipIds.drums,
@@ -421,7 +330,7 @@ export function setupArrangeTools(ctx: RuntimeContext) {
       step: ctx.globalStartStep,
       color: ["#2ee8ff", "#ff3bd4", "#a7ff5b", "#ff9f43"][
         ctx.project.markers.length % 4
-      ],
+      ]!,
     });
     ctx.project.markers.sort((a: any, b: any) => a.step - b.step);
     ctx.changed(true);
@@ -457,7 +366,7 @@ export function setupArrangeTools(ctx: RuntimeContext) {
   ctx.$("#arrangeLoopEnd").onchange = loopChange;
 }
 
-export function renderTempoMap(ctx: RuntimeContext) {
+export function renderTempoMap(ctx: ArrangementContext) {
   const root = ctx.$("#arrangeMarkers");
   if (!root) return;
   for (const event of ctx.project.tempoMap || []) {

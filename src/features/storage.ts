@@ -1,93 +1,23 @@
-import {
-  requestFields,
-  requestText,
-  requestNumber,
-  requestConfirmation,
-} from "../ui/dialogs";
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
-
-import { mountKeyboard, releaseAllKeyboards } from "../ui/components/keyboard";
-
-import { mountDial } from "../ui/components/dial";
-
-import { studioBridge, type StudioView } from "../ui/bridge";
+import { trackState } from "../state/tracks";
+import { projectTrackIds, trackMeta } from "../state/tracks";
+import { requestText } from "../ui/dialogs";
+import { t as msg } from "../ui/i18n";
 
 import {
   projectAssets,
   renderAssets,
-  createProject,
-  createEmptyProject,
   migrateProject,
-  activeClip,
-  clipsForTrack,
-  createClip,
-  clipLengthSteps,
-  meterSteps,
-  setProjectMeter,
-  makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
-  resizeClip,
-  quantizeClip,
-  automationValue,
-  generateClip,
-  generateBacking,
   encodeMidi,
-  playbackEvents,
-  History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
-  addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
-  createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
-  detectTransientSlices,
-  transformNotes,
-  cryptoId,
-  samplerDefaults,
 } from "../core.js";
 
-import { AudioEngine, renderWav } from "../audio.js";
+import { renderWav } from "../audio.js";
 
-import type {
-  AudioLane,
-  AudioRegion,
-  AutomationLane,
-  MidiMapping,
-  ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
-} from "../model.js";
+import type { PerformanceTake } from "../model.js";
 
-import type { RuntimeContext } from "../app";
-
-type Language = "en" | "es";
+import type { StorageContext } from "../state/contracts";
 
 type QuickExportKind =
+  | "ogg"
   | "wav"
   | "midi"
   | "project"
@@ -105,28 +35,8 @@ type QuickTarget = {
   type: string;
 };
 
-type UserPreset = {
-  id: string;
-  name: string;
-  track: TrackId;
-  tags: string[];
-  instrument: import("../model.js").InstrumentState;
-  character: any;
-};
-
-type CommandAction = {
-  label: string;
-  labelEs: string;
-  group: string;
-  groupEs: string;
-  shortcut: string;
-  icon: string;
-  keywords: string;
-  run: () => void;
-};
-
 export function download(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   data: any,
   name: string,
   type = "application/octet-stream",
@@ -139,7 +49,7 @@ export function download(
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-export function assetDb(ctx: RuntimeContext) {
+export function assetDb(ctx: StorageContext) {
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(ctx.ASSET_DB, 1);
     request.onupgradeneeded = () => {
@@ -150,7 +60,7 @@ export function assetDb(ctx: RuntimeContext) {
   });
 }
 
-export async function putAsset(ctx: RuntimeContext, id: string, blob: Blob) {
+export async function putAsset(ctx: StorageContext, id: string, blob: Blob) {
   const db = await ctx.assetDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction("assets", "readwrite");
@@ -162,7 +72,7 @@ export async function putAsset(ctx: RuntimeContext, id: string, blob: Blob) {
   });
 }
 
-export async function getAsset(ctx: RuntimeContext, id: string) {
+export async function getAsset(ctx: StorageContext, id: string) {
   const db = await ctx.assetDb();
   return new Promise<Blob | null>((resolve, reject) => {
     const request = db
@@ -174,7 +84,7 @@ export async function getAsset(ctx: RuntimeContext, id: string) {
   });
 }
 
-export async function deleteAsset(ctx: RuntimeContext, id: string) {
+export async function deleteAsset(ctx: StorageContext, id: string) {
   const db = await ctx.assetDb();
   await new Promise<void>((resolve, reject) => {
     const request = db
@@ -186,11 +96,26 @@ export async function deleteAsset(ctx: RuntimeContext, id: string) {
   });
 }
 
-export function renderExportTargets(ctx: RuntimeContext) {
+export function renderExportTargets(ctx: StorageContext) {
   const stems = ctx.$(".stem-selection");
   stems
     ?.querySelectorAll("[data-audio-stem]")
     .forEach((node: Element) => node.remove());
+  stems
+    ?.querySelectorAll("label:has([data-stem]):not(:has([data-stem=master]))")
+    .forEach((node: Element) => node.remove());
+  for (const id of projectTrackIds(ctx.project)) {
+    const label = document.createElement("label"),
+      input = document.createElement("input");
+    input.type = "checkbox";
+    input.dataset.stem = id;
+    input.checked = true;
+    label.append(
+      input,
+      document.createTextNode(trackMeta(ctx.project, id).label),
+    );
+    stems?.append(label);
+  }
   for (const lane of ctx.project.audioLanes) {
     const label = document.createElement("label"),
       input = document.createElement("input");
@@ -205,6 +130,7 @@ export function renderExportTargets(ctx: RuntimeContext) {
   const target = ctx.$("#exportTargets");
   if (!target) return;
   const labels: Record<QuickExportKind, string> = {
+      ogg: "Song OGG",
       wav: "Song WAV",
       midi: "Song MIDI",
       project: "Project JSON",
@@ -231,7 +157,7 @@ export function renderExportTargets(ctx: RuntimeContext) {
 }
 
 export async function forgetExportTarget(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   kind: QuickExportKind,
 ) {
   ctx.quickHandles.delete(kind);
@@ -245,7 +171,7 @@ export async function forgetExportTarget(
 }
 
 export async function prepareQuickExport(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   kind: QuickExportKind,
   name: string,
   type: string,
@@ -288,7 +214,7 @@ export async function prepareQuickExport(
 }
 
 export async function writeQuickExport(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   target: QuickTarget,
   data: any,
 ) {
@@ -306,13 +232,13 @@ export async function writeQuickExport(
 }
 
 export async function quickExportProject(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   forcePicker = false,
 ) {
   await ctx.performExport("project", forcePicker);
 }
 
-export function safeName(ctx: RuntimeContext) {
+export function safeName(ctx: StorageContext) {
   return (
     ctx.project.title
       .toLowerCase()
@@ -321,8 +247,8 @@ export function safeName(ctx: RuntimeContext) {
   );
 }
 
-export function renderVersions(ctx: RuntimeContext) {
-  const list = ctx.loadVersions();
+export async function renderVersions(ctx: StorageContext) {
+  const list = await ctx.loadVersions();
   ctx.$("#versionsList").innerHTML = list.length
     ? list
         .map(
@@ -333,9 +259,13 @@ export function renderVersions(ctx: RuntimeContext) {
     : `<p>${msg("ui_8d5375527bca")}</p>`;
   ctx.$$("[data-restore]").forEach(
     (b: any) =>
-      (b.onclick = () => {
+      (b.onclick = async () => {
+        const stored = await ctx.projectRepository.getVersion(
+          list[+b.dataset.restore].id,
+        );
+        if (!stored) throw new Error("Saved version is unavailable");
         ctx.snapshot();
-        ctx.project = migrateProject(list[+b.dataset.restore].project);
+        ctx.project = migrateProject(stored);
         ctx.engine.project = ctx.project;
         ctx.selectedNotes.clear();
         ctx.changed(true);
@@ -345,42 +275,39 @@ export function renderVersions(ctx: RuntimeContext) {
   );
   ctx.$$("[data-delete-version]").forEach(
     (b: any) =>
-      (b.onclick = () => {
-        list.splice(+b.dataset.deleteVersion, 1);
-        localStorage.setItem(ctx.VERSIONS, JSON.stringify(list));
-        ctx.renderVersions();
+      (b.onclick = async () => {
+        await ctx.projectRepository.deleteVersion(
+          list[+b.dataset.deleteVersion].id,
+        );
+        await ctx.renderVersions();
       }),
   );
 }
 
-export function loadVersions(ctx: RuntimeContext) {
+export async function loadVersions(ctx: StorageContext) {
   try {
-    return JSON.parse(localStorage.getItem(ctx.VERSIONS) || "[]") || [];
+    await ctx.projectRepository.importLegacyVersions(
+      localStorage.getItem(ctx.VERSIONS) || "[]",
+    );
+    return await ctx.projectRepository.listVersions();
   } catch {
     return [];
   }
 }
 
-export async function saveVersion(ctx: RuntimeContext) {
+export async function saveVersion(ctx: StorageContext) {
   const label = await requestText(
     msg("ui_023da0f86b7b"),
     `${ctx.project.title} · ${new Date().toLocaleTimeString(ctx.language)}`,
   );
   if (!label) return;
-  const list = ctx.loadVersions();
-  list.unshift({
-    id: crypto.randomUUID(),
-    label,
-    date: Date.now(),
-    project: structuredClone(ctx.project),
-  });
-  localStorage.setItem(ctx.VERSIONS, JSON.stringify(list.slice(0, 20)));
-  ctx.renderVersions();
+  await ctx.projectRepository.saveVersion(ctx.project, label);
+  await ctx.renderVersions();
   ctx.toast(msg("ui_ea697be09cd5"));
 }
 
 export async function missingProjectAssets(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   assets = projectAssets(ctx.project),
 ) {
   const missing = [];
@@ -389,7 +316,7 @@ export async function missingProjectAssets(
   return missing;
 }
 
-export async function showMissingAssets(ctx: RuntimeContext) {
+export async function showMissingAssets(ctx: StorageContext) {
   const missing = await missingProjectAssets(ctx);
   document.querySelector("#missingAssetsDialog")?.remove();
   if (!missing.length) return;
@@ -398,8 +325,8 @@ export async function showMissingAssets(ctx: RuntimeContext) {
   dialog.className = "dialog";
   const title = document.createElement("h2");
   title.textContent = ctx.L(
-    "Missing audio files",
-    "Archivos de audio ausentes",
+    "Missing project files",
+    "Archivos del proyecto ausentes",
   );
   const description = document.createElement("p");
   description.textContent = ctx.L(
@@ -412,7 +339,7 @@ export async function showMissingAssets(ctx: RuntimeContext) {
       input = document.createElement("input");
     label.textContent = `${asset.name} (${asset.id}) `;
     input.type = "file";
-    input.accept = "audio/*";
+    input.accept = asset.type.startsWith("audio/") ? "audio/*" : "";
     input.onchange = async () => {
       if (!input.files?.[0]) return;
       try {
@@ -441,7 +368,7 @@ export async function showMissingAssets(ctx: RuntimeContext) {
   dialog.showModal();
 }
 
-export async function loadAudioAssets(ctx: RuntimeContext) {
+export async function loadAudioAssets(ctx: StorageContext) {
   const ids = new Set<string>();
   for (const lane of ctx.project.audioLanes || [])
     for (const region of lane.regions) ids.add(region.assetId);
@@ -459,7 +386,7 @@ export async function loadAudioAssets(ctx: RuntimeContext) {
 }
 
 export function setExportProgress(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   value: number,
   status?: string,
 ) {
@@ -468,9 +395,10 @@ export function setExportProgress(
 }
 
 export async function exportWav(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   song: boolean,
   target?: QuickTarget,
+  format: "wav" | "ogg" = "wav",
 ) {
   const st = ctx.$("#renderStatus"),
     buttons = ctx.$$("#exportDialog button");
@@ -487,8 +415,13 @@ export async function exportWav(
     ),
   );
   try {
-    const wav = await renderWav(ctx.project, { song, ...ctx.wavOptions() }),
-      name = `${ctx.safeName()}${song ? "-song" : "-clips"}.wav`;
+    const wav = await renderWav(ctx.project, {
+        song,
+        ...ctx.wavOptions(),
+        format,
+        oggQuality: +ctx.$("#oggQuality").value,
+      }),
+      name = `${ctx.safeName()}${song ? "-song" : "-clips"}.${format}`;
     ctx.setExportProgress(90, msg("ui_70e8b5b54433"));
     if (target) await ctx.writeQuickExport(target, wav);
     else ctx.download(wav, name);
@@ -511,7 +444,7 @@ export async function exportWav(
   }
 }
 
-export function crc32(ctx: RuntimeContext, bytes: Uint8Array) {
+export function crc32(ctx: StorageContext, bytes: Uint8Array) {
   let crc = 0xffffffff;
   for (const byte of bytes) {
     crc ^= byte;
@@ -521,7 +454,7 @@ export function crc32(ctx: RuntimeContext, bytes: Uint8Array) {
 }
 
 export async function zipFiles(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   files: Array<{ name: string; data: Blob }>,
 ) {
   const encoder = new TextEncoder(),
@@ -605,7 +538,7 @@ export async function zipFiles(
   );
 }
 
-export async function readStoreZip(ctx: RuntimeContext, blob: Blob) {
+export async function readStoreZip(ctx: StorageContext, blob: Blob) {
   const bytes = new Uint8Array(await blob.arrayBuffer()),
     view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
     decoder = new TextDecoder(),
@@ -637,7 +570,7 @@ export async function readStoreZip(ctx: RuntimeContext, blob: Blob) {
   return files;
 }
 
-export async function importProjectFile(ctx: RuntimeContext, file: File) {
+export async function importProjectFile(ctx: StorageContext, file: File) {
   if (file.name.toLowerCase().endsWith(".zip")) {
     const files = await ctx.readStoreZip(file),
       entry = [...files.entries()].find(([name]) =>
@@ -717,8 +650,9 @@ export async function importProjectFile(ctx: RuntimeContext, file: File) {
   return migrateProject(JSON.parse(await file.text()));
 }
 
-export function exportName(ctx: RuntimeContext, kind: QuickExportKind) {
+export function exportName(ctx: StorageContext, kind: QuickExportKind) {
   const suffix: Record<QuickExportKind, string> = {
+    ogg: "-song.ogg",
     wav: "-song.wav",
     midi: "-song.mid",
     project: ".kiber.json",
@@ -732,7 +666,7 @@ export function exportName(ctx: RuntimeContext, kind: QuickExportKind) {
 }
 
 export async function performExport(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   kind: QuickExportKind,
   forcePicker = false,
 ) {
@@ -750,7 +684,7 @@ export async function performExport(
     ctx.toast(msg("ui_8631a6aeb0e3"));
     return;
   }
-  if (["wav", "clip-wav", "stems", "bundle"].includes(kind)) {
+  if (["wav", "ogg", "clip-wav", "stems", "bundle"].includes(kind)) {
     try {
       let sources = projectAssets(ctx.project);
       if (kind !== "bundle") {
@@ -763,9 +697,9 @@ export async function performExport(
           );
           if (!selected.has("master")) {
             rendering = structuredClone(ctx.project);
-            for (const id of TRACKS) {
-              rendering.tracks[id].mute = !selected.has(id);
-              rendering.tracks[id].solo = false;
+            for (const id of projectTrackIds(ctx.project)) {
+              trackState(rendering, id).mute = !selected.has(id);
+              trackState(rendering, id).solo = false;
             }
             rendering.audioLanes = rendering.audioLanes.filter(
               (lane: import("../model").AudioLane) =>
@@ -805,7 +739,7 @@ export async function performExport(
   if (target.cancelled) return;
   try {
     let data: Blob | string | Uint8Array;
-    if (kind === "wav" || kind === "clip-wav") {
+    if (kind === "wav" || kind === "ogg" || kind === "clip-wav") {
       try {
         localStorage.setItem(ctx.LAST_EXPORT, kind);
       } catch {
@@ -816,7 +750,11 @@ export async function performExport(
           ),
         );
       }
-      await ctx.exportWav(kind === "wav", target);
+      await ctx.exportWav(
+        kind !== "clip-wav",
+        target,
+        kind === "ogg" ? "ogg" : "wav",
+      );
       ctx.renderExportTargets();
       return;
     } else if (kind === "midi" || kind === "clip-midi")
@@ -851,18 +789,18 @@ export async function performExport(
   }
 }
 
-export async function quickExportWav(ctx: RuntimeContext, forcePicker = false) {
+export async function quickExportWav(ctx: StorageContext, forcePicker = false) {
   await ctx.performExport("wav", forcePicker);
 }
 
 export async function quickExportMidi(
-  ctx: RuntimeContext,
+  ctx: StorageContext,
   forcePicker = false,
 ) {
   await ctx.performExport("midi", forcePicker);
 }
 
-export function repeatLastExport(ctx: RuntimeContext) {
+export function repeatLastExport(ctx: StorageContext) {
   const kind = (localStorage.getItem(ctx.LAST_EXPORT) ||
     "wav") as QuickExportKind;
   ctx.performExport(kind, false);

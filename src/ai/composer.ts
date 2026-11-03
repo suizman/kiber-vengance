@@ -1,4 +1,5 @@
-import { KEYS, SCALES, TRACK_META, makeNote } from "../core";
+import { trackMeta, projectTrackIds } from "../state/tracks";
+import { KEYS, SCALES, makeNote } from "../core";
 import type { NoteEvent, Project, TrackId } from "../model";
 import type { MelodyPlan, MelodyTarget } from "./melody";
 
@@ -44,7 +45,7 @@ export function captureMusicalContext(
   );
   if (!source) throw new Error("Select a clip first.");
   const voices: ContextVoice[] = [];
-  for (const id of ["bass", "pad", "guitar", "lead"] as const) {
+  for (const id of projectTrackIds(project).filter(id => id !== "drums")) {
     if (id === track) continue;
     const clip = project.clips.find(
       (c) => c.id === project.activeClipIds[id] && c.track === id,
@@ -191,7 +192,7 @@ export function composeMelody(
   validateComposition(options);
   const scale: readonly number[] = SCALES[target.scale as keyof typeof SCALES];
   const root = KEYS.indexOf(target.key as (typeof KEYS)[number]);
-  const meta = TRACK_META[target.track];
+  const meta = trackMeta(null, target.track);
   if (
     !scale ||
     root < 0 ||
@@ -436,7 +437,7 @@ export function replaceMelodyBars(
   ].sort((a, b) => onset(a) - onset(b));
   const scale: readonly number[] = SCALES[target.scale as keyof typeof SCALES];
   const root = KEYS.indexOf(target.key as (typeof KEYS)[number]);
-  const meta = TRACK_META[target.track];
+  const meta = trackMeta(null, target.track);
   const center =
     meta.low +
     (meta.high - meta.low) *

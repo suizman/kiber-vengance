@@ -1,129 +1,20 @@
 import { mountLevel } from "../ui/level-control";
 import { waveformPeaks } from "../audio/waveform-cache";
-import { t as msg, setLanguage, translateDOM, translate } from "../ui/i18n";
+import { t as msg } from "../ui/i18n";
 
-import { mountKeyboard, releaseAllKeyboards, revealKeyboardKey } from "../ui/components/keyboard";
+import { mountKeyboard, revealKeyboardKey } from "../ui/components/keyboard";
 
-import { mountDial } from "../ui/components/dial";
+import { cryptoId, samplerDefaults } from "../core.js";
 
-import { studioBridge, type StudioView } from "../ui/bridge";
+import type { SamplerInstrument } from "../model.js";
 
-import {
-  createProject,
-  createEmptyProject,
-  migrateProject,
-  activeClip,
-  clipsForTrack,
-  createClip,
-  clipLengthSteps,
-  meterSteps,
-  setProjectMeter,
-  makeNote,
-  duplicateClip,
-  deleteClip,
-  varyClip,
-  resizeClip,
-  quantizeClip,
-  automationValue,
-  generateClip,
-  generateBacking,
-  encodeMidi,
-  playbackEvents,
-  History,
-  TRACKS,
-  TRACK_META,
-  DRUM_NAMES,
-  SCALES,
-  KEYS,
-  addArrangementScene,
-  duplicateArrangementScene,
-  moveArrangementScene,
-  removeArrangementScene,
-  distributeArrangementPatterns,
-  isInScale,
-  createPerformanceTake,
-  quantizePerformanceTake,
-  captureLauncherScenes,
-  duplicateArrangementSelection,
-  removeArrangementSelection,
-  dbToGain,
-  gainToDb,
-  createAudioLane,
-  createAudioRegion,
-  audioRegionRate,
-  createAutomationLane,
-  detectTransientSlices,
-  transformNotes,
-  cryptoId,
-  samplerDefaults,
-} from "../core.js";
+import type { SamplerContext } from "../state/contracts";
 
-import { AudioEngine, renderWav } from "../audio.js";
-
-import type {
-  AudioLane,
-  AudioRegion,
-  AutomationLane,
-  MidiMapping,
-  ModulationRoute,
-  NoteEvent,
-  NoteExpression,
-  PerformanceEvent,
-  PerformanceTake,
-  Project,
-  SampleAsset,
-  SamplerInstrument,
-  TrackId,
-  TrackState,
-} from "../model.js";
-
-import type { RuntimeContext } from "../app";
-
-type Language = "en" | "es";
-
-type QuickExportKind =
-  | "wav"
-  | "midi"
-  | "project"
-  | "clip-wav"
-  | "clip-midi"
-  | "stems"
-  | "bundle"
-  | "performance";
-
-type QuickTarget = {
-  handle: any | null;
-  fallback: boolean;
-  cancelled: boolean;
-  name: string;
-  type: string;
-};
-
-type UserPreset = {
-  id: string;
-  name: string;
-  track: TrackId;
-  tags: string[];
-  instrument: import("../model.js").InstrumentState;
-  character: any;
-};
-
-type CommandAction = {
-  label: string;
-  labelEs: string;
-  group: string;
-  groupEs: string;
-  shortcut: string;
-  icon: string;
-  keywords: string;
-  run: () => void;
-};
-
-export function samplerSettings(ctx: RuntimeContext): SamplerInstrument {
+export function samplerSettings(ctx: SamplerContext): SamplerInstrument {
   return ctx.project.sampler || (ctx.project.sampler = samplerDefaults());
 }
 
-export function setupSamplerOctaveControls(ctx: RuntimeContext) {
+export function setupSamplerOctaveControls(ctx: SamplerContext) {
   if (ctx.$("#samplerOctaveValue")) return;
   ctx
     .$("#samplerArm")
@@ -215,11 +106,11 @@ export function setupSamplerOctaveControls(ctx: RuntimeContext) {
   decorate();
 }
 
-export function samplerNoteName(ctx: RuntimeContext, pitch: number) {
+export function samplerNoteName(ctx: SamplerContext, pitch: number) {
   return `${ctx.pitchNames[((pitch % 12) + 12) % 12]}${Math.floor(pitch / 12) - 1}`;
 }
 
-export function drawSamplerWaveform(ctx: RuntimeContext) {
+export function drawSamplerWaveform(ctx: SamplerContext) {
   const canvas = ctx.$("#samplerWaveform") as HTMLCanvasElement | null,
     buffer = ctx.engine.samplerBuffer;
   if (!canvas) return;
@@ -266,7 +157,7 @@ export function drawSamplerWaveform(ctx: RuntimeContext) {
 }
 
 export function startSamplerPerformance(
-  ctx: RuntimeContext,
+  ctx: SamplerContext,
   source: string,
   pitch: number,
   velocity = 0.85,
@@ -292,7 +183,7 @@ export function startSamplerPerformance(
 }
 
 export function endSamplerPerformance(
-  ctx: RuntimeContext,
+  ctx: SamplerContext,
   source: string,
   element?: HTMLElement | null,
 ) {
@@ -309,7 +200,7 @@ export function endSamplerPerformance(
   }
 }
 
-export function renderSamplerKeyboard(ctx: RuntimeContext) {
+export function renderSamplerKeyboard(ctx: SamplerContext) {
   if (!ctx.$("#samplerKeyboard")) return;
   const settings = ctx.samplerSettings();
   mountKeyboard(ctx.$("#samplerKeyboard"), {
@@ -368,7 +259,7 @@ export function renderSamplerKeyboard(ctx: RuntimeContext) {
   ctx.drawSamplerWaveform();
 }
 
-export async function loadSamplerAsset(ctx: RuntimeContext) {
+export async function loadSamplerAsset(ctx: SamplerContext) {
   const settings = ctx.samplerSettings();
   if (!settings.assetId) {
     ctx.loadedSamplerAssetId = null;
@@ -391,7 +282,7 @@ export async function loadSamplerAsset(ctx: RuntimeContext) {
   ctx.renderSamplerKeyboard();
 }
 
-export function setupSamplerKeyboard(ctx: RuntimeContext) {
+export function setupSamplerKeyboard(ctx: SamplerContext) {
   if (ctx.$("#samplerLab")) return;
   ctx
     .$(".audio-ruler")
@@ -468,8 +359,20 @@ export function setupSamplerKeyboard(ctx: RuntimeContext) {
         else ctx.renderSamplerKeyboard();
       }),
   );
-  const gainLabel=ctx.$('#samplerGain').closest('label');gainLabel.hidden=true;
-  const level=document.createElement('div');level.className='sampler-level';gainLabel.after(level);
-  mountLevel(level,{label:ctx.L('Sampler volume','Volumen del sampler'),get:()=>ctx.samplerSettings().gain,set:value=>{ctx.samplerSettings().gain=value;ctx.engine.setProject(ctx.project);},start:ctx.snapshot,commit:()=>ctx.changed()});
+  const gainLabel = ctx.$("#samplerGain").closest("label");
+  gainLabel.hidden = true;
+  const level = document.createElement("div");
+  level.className = "sampler-level";
+  gainLabel.after(level);
+  mountLevel(level, {
+    label: ctx.L("Sampler volume", "Volumen del sampler"),
+    get: () => ctx.samplerSettings().gain,
+    set: (value) => {
+      ctx.samplerSettings().gain = value;
+      ctx.engine.setProject(ctx.project);
+    },
+    start: ctx.snapshot,
+    commit: () => ctx.changed(),
+  });
   ctx.loadSamplerAsset();
 }
