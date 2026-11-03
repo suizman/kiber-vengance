@@ -252,5 +252,108 @@
     "Keyboard close and focusable controls",
     "No serious/critical axe violations"
   ],
-  "chromiumTouchScroll": "CDP touch swipe moved the body; close control remained visible"
+  "chromiumTouchScroll": "CDP touch swipe moved the body; close control remained visible",
+  "production": {
+    "siteVersion": 42,
+    "runtimeCommit": "0d71aed",
+    "siteSourceCommit": "20bc68e3663e4a380cc9377bfbda07336f1c634d",
+    "deploymentStatus": "succeeded",
+    "deploymentId": "appgdep_6aea6da16ba08191bf8d51cd1e1401b0",
+    "verification": {
+      "checkedAt": "2026-11-03T23:27:05.849Z",
+      "url": "https://studio.suizman.org",
+      "cases": [
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 320,
+            "height": 568
+          },
+          "language": "en",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 320,
+            "height": 568
+          },
+          "language": "es",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 390,
+            "height": 720
+          },
+          "language": "en",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 390,
+            "height": 720
+          },
+          "language": "es",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 844,
+            "height": 390
+          },
+          "language": "en",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 844,
+            "height": 390
+          },
+          "language": "es",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 1366,
+            "height": 900
+          },
+          "language": "en",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        },
+        {
+          "browser": "chromium",
+          "viewport": {
+            "width": 1366,
+            "height": 900
+          },
+          "language": "es",
+          "scale": "120%",
+          "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+        }
+      ],
+      "physicalIPhone": "not tested"
+    },
+    "actionsVerified": [
+      "Appearance dialog",
+      "Local AI dialog without inference",
+      "Minimal project creation",
+      "Named snapshot creation",
+      "Keyboard close and focusable controls",
+      "No serious/critical axe violations"
+    ],
+    "uncaughtPageErrors": []
+  }
 }
