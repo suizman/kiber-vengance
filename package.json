@@ -4,6 +4,9 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "type": "module",
+  "overrides": {
+    "minimatch": "11.0.1"
+  },
   "scripts": {
     "dev": "vite",
     "test": "node --test tests/core.test.js tests/ai.test.js tests/presets.test.js tests/refactor.test.js tests/release.test.js tests/scores.test.js",

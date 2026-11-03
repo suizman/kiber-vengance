@@ -6,6 +6,10 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-11-03.
 
+## Development dependency correction (2026-11-03)
+
+The final GitHub push surfaced GHSA-g3hv-75wg-m249 for ESLint's development-only minimatch dependency. The matcher is pinned through a package override to 11.0.1 instead of accepting npm's suggested ESLint downgrade. No application/companion runtime dependency changed. Lint and typecheck pass; `npm audit` now reports zero vulnerabilities. This also refreshes the distributed source offer; final artifact/deployment evidence is appended after confirmation.
+
 ## Studio v7 — score import and performance refactor (2026-11-03)
 
 - Implemented the accepted end-to-end audit/refactor and local score workflow. Current schema is v7 with v2–v6 migration; track order and General MIDI instruments are dynamic, while the original five instrument IDs remain compatible. Source scores, review data and corrected XML use the existing binary-asset/package lifecycle. New imported sections preserve older arrangement assignments. Fractional timing, acoustic voices and per-clip programs reach live playback and exports.

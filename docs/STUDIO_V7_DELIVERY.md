@@ -67,3 +67,7 @@ Physical iPhone/Safari, microphones/headphone routing, Apple M3 and Radeon GPU e
 - A real Chromium session on the public custom domain verified footer `709e0e0`, the mobile title layout, a two-part MusicXML review, acoustic audition, insertion into seven total tracks and seven mixer channels. The reader manifest, worker and public source archive returned HTTP 200; there were no page errors or failed same-origin responses. See [production verification](production-v7-verification.json).
 
 This publication record is a documentation-only follow-up and does not require rebuilding the deployed runtime.
+
+## Development dependency follow-up
+
+GitHub reported GHSA-g3hv-75wg-m249 while the publication record was pushed. The affected `minimatch@10.2.6` was used only by ESLint; it was absent from browser bundles. A pinned override to **11.0.1** fixes the glob-pattern denial-of-service advisory without downgrading ESLint. The lockfile changes only that matcher and its new development dependency. Lint, type checking and `npm audit` pass with **zero reported vulnerabilities**. A refreshed artifact and publication record follow below so the distributed source offer includes the corrected development environment.
