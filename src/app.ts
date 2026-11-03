@@ -1002,7 +1002,7 @@ const staticCopy: Array<[string, string, string]> = [
   ],
   ["#generateBackingBtn", "GENERATE BACKING", "GENERAR BASE"],
   ["#projectMenu .eyebrow", "PROJECT CORE", "NÚCLEO DEL PROYECTO"],
-  ["#projectMenu h2", "VERSIONS & RECOVERY", "VERSIONES Y RECUPERACIÓN"],
+  ["#projectMenu h2", "Project & settings", "Proyecto y ajustes"],
   ["#menuLanguageLabel", "INTERFACE LANGUAGE", "IDIOMA DE LA INTERFAZ"],
   ["#importProjectLabel", "Import project JSON", "Importar proyecto JSON"],
   ["#newBtn", "New demo project", "Nuevo proyecto de demostración"],
@@ -2869,6 +2869,7 @@ $("#menuBtn").onclick = () => {
   renderVersions();
   renderExportTargets();
   open("#projectMenu");
+  $("#projectMenu .project-menu-body").scrollTop = 0;
 };
 $("#exportBtn").onclick = repeatLastExport;
 $("#exportAsBtn").onclick = () => open("#exportDialog");

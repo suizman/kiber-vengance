@@ -903,7 +903,7 @@ export function setupProjectTemplates(ctx: WorkflowContext) {
       .$("#newBtn")
       .insertAdjacentHTML(
         "beforebegin",
-        '<label class="ui-scale-control"><span>PROJECT TEMPLATE</span><select id="projectTemplate"><option value="cinematic">CINEMATIC DEMO</option><option value="minimal">MINIMAL SIGNAL</option><option value="performance">PERFORMANCE RIG</option><option value="audio">AUDIO / RESAMPLE</option></select><button id="applyTemplateBtn">CREATE</button></label>',
+        '<div class="project-template-control"><label for="projectTemplate">PROJECT TEMPLATE</label><div class="project-template-actions"><select id="projectTemplate"><option value="cinematic">CINEMATIC DEMO</option><option value="minimal">MINIMAL SIGNAL</option><option value="performance">PERFORMANCE RIG</option><option value="audio">AUDIO / RESAMPLE</option></select><button id="applyTemplateBtn">CREATE</button></div></div>',
       );
   ctx.$("#applyTemplateBtn").onclick = () => {
     const type = ctx.$("#projectTemplate").value,

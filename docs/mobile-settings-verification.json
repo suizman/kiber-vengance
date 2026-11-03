@@ -1,0 +1,256 @@
+{
+  "checkedAt": "2026-11-03T23:22:05.160Z",
+  "url": "http://127.0.0.1:4173",
+  "cases": [
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "chromium",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "firefox",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 844,
+        "height": 390
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "language": "en",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    },
+    {
+      "browser": "webkit",
+      "viewport": {
+        "width": 1366,
+        "height": 900
+      },
+      "language": "es",
+      "scale": "120%",
+      "checks": "text fits, contained width, reachable bottom, fixed close, reopen at top"
+    }
+  ],
+  "physicalIPhone": "not tested",
+  "actionsVerified": [
+    "Appearance dialog",
+    "Local AI dialog without inference",
+    "Minimal project creation",
+    "Named snapshot creation",
+    "Keyboard close and focusable controls",
+    "No serious/critical axe violations"
+  ],
+  "chromiumTouchScroll": "CDP touch swipe moved the body; close control remained visible"
+}

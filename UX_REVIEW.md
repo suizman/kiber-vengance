@@ -1,5 +1,11 @@
 # UX consistency review
 
+## Mobile project/settings layout — 2026-11-03
+
+The project menu now uses a fixed title/44 px close control and a separate scrolling body within the dynamic viewport and safe areas. Its title identifies both project actions and settings. Language, scale and template values have readable 16 px text, sufficient line/padding space and consistent 48 px select boxes; native option picking remains available, with native appearance restored in forced-colors mode. Narrow layouts put each value below its label and the template action below its selector. The scale label participates in EN/ES translation. Opening the menu resets its body to the top, while existing appearance/AI and project/version actions retain their behavior.
+
+The reported value clipping was reproduced in Linux WebKit and visually corrected. Responsive and action checks passed in Chromium, Firefox and WebKit, including portrait/landscape, 320 px width and 120% scale; Chromium touch scrolling was also exercised. These checks do not constitute a physical iPhone test. Current evidence and publication are recorded in `PROJECT_MEMORY.md`.
+
 ## Mobile error feedback and keyboard holds — 2026-11-03
 
 The shared Compose/Live/sampler/drum playing surface now suppresses native long-press menus and text callouts, while preserving sustained notes, release cleanup and editing menus outside the keyboard. Browser-injected Playlist errors and source-redacted startup events remain in a bounded local compatibility report instead of being mislabeled as audio-engine failures. Actionable application errors remain visible, use localized Studio wording and wrap within mobile toast bounds. The exact native Playlist signature was traced to Brave iOS; the separate generic startup event has no attributable source. Automated browser evidence and physical-device limits are recorded in `PROJECT_MEMORY.md` and `docs/RELIABILITY.md`.

@@ -6,6 +6,14 @@ Keep this versioned memory focused on shared project decisions, verified behavio
 
 Last updated: 2026-11-03.
 
+## Mobile project/settings panel (2026-11-03)
+
+Reproduced the reported native-select text clipping in WebKit. The project menu combined inherited 30–31 px select heights with padded controls and larger touch text; its close button also scrolled away with a long list of actions. The menu now has a separate fixed header and an internally scrolling body, bounded by the dynamic viewport and safe-area insets. Reopening starts at the top. The bilingual title is Project & settings / Proyecto y ajustes, reflecting the panel's contents.
+
+Language, scale and template selects use a consistent 48 px control with 16 px text, explicit line height and an appearance that avoids WebKit's clipped native menulist painting while retaining the system option picker. Fields occupy the available width; the template action stacks below its select on narrow screens. The template's label explicitly names its select, and interface scale now translates into Spanish. Appearance/AI shortcuts still use the existing handlers inside the scrolling body; project creation, versions, import/export and libraries keep their IDs and behavior.
+
+Validation passed: typecheck/build/lint and 85 unit tests, all 68 existing Chromium/Firefox browser workflows, then 24 focused combinations of Chromium/Firefox/WebKit, EN/ES and 320×568, 390×720, 844×390 and 1366×900 at 120% interface scale. Checks covered text space, viewport bounds, reaching the bottom, visible close control, reopening at the top, accessibility, appearance/AI navigation, real template creation and named snapshots. A Chromium CDP touch swipe also scrolled the body while the close control stayed visible. Physical iPhone/Brave verification remains unclaimed. Evidence is in `docs/mobile-settings-verification.json`; publication is recorded after deployment succeeds.
+
 ## Mobile browser errors and held keyboards (2026-11-03)
 
 The iPhone/Brave report showed an opaque `Script error.` on load and an exception mentioning `window.__firefox__.playlistLongPressed_…` on a held key. Brave's pinned upstream iOS code confirms the latter is a native Playlist hook; the opaque startup event alone does not establish its cause. Previously every global error was shown as `ENGINE ERROR`, including injected browser code.

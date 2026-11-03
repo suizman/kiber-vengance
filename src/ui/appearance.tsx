@@ -280,7 +280,7 @@ export function setupAppearance() {
   menuButton.id = "menuSettingsBtn";
   menuButton.type = "button";
   menuButton.onclick = () => openSettings();
-  document.querySelector("#projectMenu h2")?.after(menuButton);
+  document.querySelector("#projectMenu .project-menu-body")?.prepend(menuButton);
   const labels = () => {
     const title = getLanguage() === "es" ? "Configuración" : "Settings";
     button.textContent = "⚙";

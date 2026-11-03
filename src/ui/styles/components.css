@@ -1183,14 +1183,112 @@ dialog {
   background: #2a4545;
   border-color: #578b85;
 }
-#projectMenu > button:not(.dialog-close),
-#projectMenu > .file-button {
+#projectMenu {
+  box-sizing: border-box;
+  width: min(540px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  padding: 0;
+  overflow: hidden;
+}
+#projectMenu[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.project-menu-header {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px;
+  border-bottom: 1px solid var(--line2);
+}
+.project-menu-header > div {
+  min-width: 0;
+}
+#projectMenu h2 {
+  margin: 6px 0 0;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+#projectMenu .dialog-close {
+  position: static;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 22px;
+}
+.project-menu-body {
+  min-height: 0;
+  padding: 4px 20px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 12px;
+  scrollbar-gutter: stable;
+}
+#projectMenu :is(.menu-language, .ui-scale-control, .project-template-control) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  margin: 16px 0;
+  padding: 0;
+  color: var(--muted);
+}
+.project-template-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+#projectMenu select {
+  /* Native WebKit menulists clip padded text when legacy fixed heights survive. */
+  appearance: none;
+  -webkit-appearance: none;
+  height: auto;
+  min-height: 48px;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  font-size: 16px;
+  line-height: 1.5;
+  background-color: var(--panel2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23b7c3d7' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+}
+#projectMenu .project-menu-body > button,
+#projectMenu .project-menu-body > .file-button {
+  display: flex;
+  align-items: center;
   width: 100%;
   min-height: 44px;
   font-size: 13px;
   padding: 10px 14px;
   margin: 8px 0;
+}
+@media (max-width: 520px) {
+  .project-menu-header {
+    padding: 16px;
+  }
+  .project-menu-body {
+    padding: 4px 16px 16px;
+  }
+  .project-template-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (forced-colors: active) {
+  #projectMenu select {
+    appearance: auto;
+    -webkit-appearance: auto;
+    background-image: none;
+  }
 }
 .help-grid {
   gap: 12px;
